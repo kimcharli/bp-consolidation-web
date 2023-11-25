@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% block head %}
+    <title>{% block title %}{% endblock %} Blueprint Consolidation</title>
+    <link rel="icon" href="{{ url_for('static', path='/images/favicon.png') }}" sizes="32x32" />
+
+    <!-- CSS -->
+    <link href="{{ url_for('static', path='/css/style.css') }}" rel="stylesheet">
+
+    {% endblock %}
+</head>
+
+<body>
+    <div class="wrapper">
+        {% include 'include/sidebar.html' %}
+        <!-- Page Content  -->
+        <div id="content">
+            {% include 'include/topnav.html' %}
+            {% block page_content %}
+            {% endblock %}
+        </div>
+    </div>
+
+    {% block scripts %}
+
+
+    {% endblock %}
+</body>
+
+</html>
