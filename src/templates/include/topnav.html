@@ -1,3 +1,24 @@
-<nav class="navbar">
-    <a href="/">home</a> <a href="/graphql">graphql</a>
-</nav>
+        <!-- navbar begin @topnav -->
+        <nav class="navbar">
+            <div class="teal">
+                <a href="/">home</a> <a href="/graphql">graphql</a>     
+                <div>
+                    <form hx-post='/test' hx-ext='json-enc' hx-target="#test-response-div">
+                        <label>
+                            Search: 
+                            <input name="search" value="v1">
+                        </label>
+                        <label>
+                            Type:
+                            <input name="type" value="st1">
+                        </label>
+                        <input type="submit" value="Submit">            
+                        <label>
+                            Return Context:
+                            <textarea id="test-response-div"></textarea>
+                        </label>
+                    </form>
+                </div>
+            </div>
+        </nav>
+        <!-- navbar end @topnav -->

@@ -3,30 +3,51 @@
 
 <head>
     {% block head %}
-    <title>{% block title %}{% endblock %} Blueprint Consolidation</title>
-    <link rel="icon" href="{{ url_for('static', path='/images/favicon.png') }}" sizes="32x32" />
+    <title>{% block title %}DEFAULT-TITLE{% endblock title %}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.9"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+
+    <!-- link rel="icon" href="{{ url_for('static', path='/images/android-chrome-192x192.png') }}" sizes="192x192" / -->
+    <link rel="icon" href="{{ url_for('static', path='/images/favicon-32x32.png') }}" sizes="32x32" />
 
     <!-- CSS -->
     <link href="{{ url_for('static', path='/css/style.css') }}" rel="stylesheet">
 
-    {% endblock %}
+    {% endblock head %}
 </head>
 
 <body>
-    <div class="wrapper">
-        {% include 'include/sidebar.html' %}
-        <!-- Page Content  -->
-        <div id="content">
-            {% include 'include/topnav.html' %}
-            {% block page_content %}
-            {% endblock %}
-        </div>
+    <!-- header begin @base -->
+    <div class="header">
+{% include 'include/header.html' %}
+{% include 'include/topnav.html' %}
     </div>
+    <!-- header end @base -->
+    <!-- container begin @base -->
+    <div class="container" stype="width: 100%; display: table;">
+        <div style="display: table-row;">
+            <!-- side begin @base -->
+            <div style="display: table-cell; background: green;">
+{% include 'include/sidebar.html' %}
+            </div>
+            <!-- side end @base -->
+            <!-- page content begin @base -->
+            <div style="display: table-cell; width: 100%; background: aquamarine;">
+{% block page_content %}
+{% endblock %}
+{% block scripts %}
+{% endblock %}
+            </div>
+        </div>
+        <!-- page content end @base -->
+    </div>
+    <!-- container end @base -->
+    <!-- footer begin @base -->
+    <div class="footer" style="background: darkslateblue;">
+{% include 'include/footer.html' %}
+    </div>
+    <!-- footer end @base -->
 
-    {% block scripts %}
-
-
-    {% endblock %}
 </body>
 
 </html>
