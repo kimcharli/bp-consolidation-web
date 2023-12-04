@@ -21,7 +21,7 @@ template.innerHTML = `
             border: 1px solid;
         }
         button {
-            background: url(static/images/login-blue.svg) no-repeat;
+            border-radius: 100%;
         }
     </style>
 
@@ -45,7 +45,9 @@ template.innerHTML = `
                     </tr>
                 </table>
             </td>
-            <td class="no-border"><button id="connect"><img src="/static/images/login-blue.svg" width="30" height="30" /></button></td>
+            <td class="no-border">
+                <button id="connect" style="background: green"><object data="/static/images/login-simple.svg" width="30" height="30" /></button>
+            </td>
         </tr>
     </table
 
