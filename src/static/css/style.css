@@ -8,5 +8,10 @@
 }
 
 .header {
-    background-color: fuchsia;
+    background-color: #f5f5f5;
+}
+
+.sidebar {
+    background-color: #424242;
+    width: 120px;
 }

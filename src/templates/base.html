@@ -4,22 +4,30 @@
 <head>
     {% block head %}
     <title>{% block title %}DEFAULT-TITLE{% endblock title %}</title>
-    <script src="https://unpkg.com/htmx.org@1.9.9"></script>
-    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
 
     <!-- link rel="icon" href="{{ url_for('static', path='/images/android-chrome-192x192.png') }}" sizes="192x192" / -->
     <link rel="icon" href="{{ url_for('static', path='/images/favicon-32x32.png') }}" sizes="32x32" />
 
     <!-- CSS -->
-    <link href="{{ url_for('static', path='/css/style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='/css/style.css') }}" rel="stylesheet" />
 
+    <!-- link rel="import" id="t001" href="{{ url_for('component', path='/apstra-server/apstra-server.html') }}" / -->
+    <!-- script src="{{ url_for('component', path='/apstra-server/apstra-server.js') }}"></script -->
+
+    <!-- script src="{{ url_for('component', path='/test-component/test-component.js') }}"></script -->
+
+    <script type="module" src="{{ url_for('component', path='/apstra-server.js') }}"></script>
     {% endblock head %}
 </head>
 
 <body>
+
+    <!-- apstra-server></apstra-server -->
+
+
     <!-- header begin @base -->
     <div class="header">
-{% include 'include/header.html' %}
+        <apstra-server style="display: flex; justify-content: flex-end"></apstra-server>
 {% include 'include/topnav.html' %}
     </div>
     <!-- header end @base -->
@@ -27,7 +35,7 @@
     <div class="container" stype="width: 100%; display: table;">
         <div style="display: table-row;">
             <!-- side begin @base -->
-            <div style="display: table-cell; background: green;">
+            <div class="sidebar" style="display: table-cell;">
 {% include 'include/sidebar.html' %}
             </div>
             <!-- side end @base -->
