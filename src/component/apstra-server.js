@@ -13,28 +13,42 @@ template.innerHTML = `
             background-color: coral;
             border: 1px solid;
         }
+        .no-border {
+            border: 0;
+        }
         td {
             text-align: left;
             border: 1px solid;
+        }
+        button {
+            background: url(static/images/login-blue.svg) no-repeat;
         }
     </style>
 
     <input type="color" name="color" id="color" />
     <input type="datetime-local" name="datetime" id="datetime" />
-    <table>
-        <tr>
-            <th>server</th>
-            <th>port</th>
-            <th>username</th>
-            <th>password</th>
+    <table class="no-border">
+        <tr class="no-border">
+            <td class="no-border">
+                <table>
+                    <tr>
+                        <th>server</th>
+                        <th>port</th>
+                        <th>username</th>
+                        <th>password</th>
+                    </tr>
+                    <tr>
+                        <td><input name="apstra-host" value="10.85.192.50" /></th>
+                        <td><input type="number" name="apstra-port" value="443" /></th>
+                        <td><input name="apstra-username" value="admin" /></th>
+                        <td><input type="password" name="apstra-password" value="password" /></th>
+                    </tr>
+                </table>
+            </td>
+            <td class="no-border"><button id="connect"><img src="/static/images/login-blue.svg" width="30" height="30" /></button></td>
         </tr>
-        <tr>
-            <td><input name="apstra-host" value="10.85.192.50" /></th>
-            <td><input type="number" name="apstra-port" value="443" /></th>
-            <td><input name="apstra-username" value="admin" /></th>
-            <td><input type="password" name="apstra-password" value="password" /></th>
-        </tr>
-    </table>
+    </table
+
 </div>
 
 `
