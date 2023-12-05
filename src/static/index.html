@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Consolidation</title>
+
+    <link rel="icon" href="/static/images/favicon-32x32.png" sizes="32x32" />
+
+    <link href="/static/css/style.css" rel="stylesheet" />
+
+    <script type="module" src="/component/apstra-server.js"></script>
+    <script type="module" src="/component/side-bar.js"></script>
+    <script type="module" src="/component/top-nav.js"></script>
+    <script type="module" src="/component/footer-component.js"></script>
+    <script type="module" src="/component/main-context.js"></script>
+</head>
+
+<body>
+
+    <div class="container" stype="width: 100%; display: table;">
+        <div style="display: table-row;">
+            <div class="sidebar" style="display: table-cell;">
+                <side-bar></side-bar>
+            </div>
+            <div style="display: table-cell; width: 100%; background: aquamarine;">
+                <apstra-server style="display: flex; justify-content: flex-end"></apstra-server>
+                <top-nav></top-nav>
+                <main-context></main-context>
+            </div>
+        </div>
+    </div>
+    <div class="footer" style="background: darkslateblue;">
+        <footer-component></footer-component>
+    </div>
+
+</body>
+
+</html>

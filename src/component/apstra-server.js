@@ -23,12 +23,34 @@ template.innerHTML = `
         button {
             border-radius: 100%;
         }
+        .btn {
+            fill: #fff;
+        }
+        .btn {
+            text-decoration: none; 
+            border: none; 
+            font-size: 16px; 
+            border-radius: 5px; 
+            box-shadow: 3px 2px 22px 1px rgba(0, 0, 0, 0.24); 
+            cursor: pointer; 
+            outline: none; 
+            transition: 0.2s all;             
+        }
+        .btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 0 0 3px #e78267;
+        }
     </style>
 
     <input type="color" name="color" id="color" />
     <input type="datetime-local" name="datetime" id="datetime" />
     <table class="no-border">
         <tr class="no-border">
+            <td class="no-border">
+                <image class="btn" src="/static/images/powered-on.svg" width="35" height="35" />
+                <image class="btn" src="/static/images/powered-off.svg" width="35" height="35" />
+                <image class="btn" src="/static/images/powered-error.svg" width="35" height="35" />
+            </td>
             <td class="no-border">
                 <table>
                     <tr>
@@ -44,9 +66,6 @@ template.innerHTML = `
                         <td><input type="password" name="apstra-password" value="password" /></th>
                     </tr>
                 </table>
-            </td>
-            <td class="no-border">
-                <button id="connect" style="background: green"><object data="/static/images/login-simple.svg" width="30" height="30" /></button>
             </td>
         </tr>
     </table

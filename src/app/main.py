@@ -1,31 +1,24 @@
 import logging
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-from .lib.utils import openfile
-
 logger = logging.getLogger(__name__)
 app = FastAPI()
 
-templates = Jinja2Templates(directory="src/templates")
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
 app.mount("/component", StaticFiles(directory="src/component"), name="component")
 
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    data = openfile("home.md")
-    # result = templates.TemplateResponse("index.html", {"request": request})
-    result = templates.TemplateResponse("page.html", {"request": request, "data": data})
-    return result
+async def get_index_html(request: Request):
+    return FileResponse("src/static/index.html")
 
 @app.post("/test", response_class=HTMLResponse)
 async def test(request: Request):
     data = await request.body()
     logger.warning(f"request.body: {data}")
-    # result = templates.TemplateResponse("test.html", {"request": request, "data": data})
     result = data
     return result
 
