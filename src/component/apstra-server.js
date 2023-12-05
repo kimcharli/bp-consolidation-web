@@ -47,9 +47,9 @@ template.innerHTML = `
     <table class="no-border">
         <tr class="no-border">
             <td class="no-border">
-                <image class="btn" src="/static/images/powered-on.svg" width="35" height="35" />
-                <image class="btn" src="/static/images/powered-off.svg" width="35" height="35" />
-                <image class="btn" src="/static/images/powered-error.svg" width="35" height="35" />
+                <image class="btn" src="/images/powered-on.svg" width="35" height="35" />
+                <image class="btn" src="/images/powered-off.svg" width="35" height="35" />
+                <image class="btn" src="/images/powered-error.svg" width="35" height="35" />
             </td>
             <td class="no-border">
                 <table>

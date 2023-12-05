@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
+app.mount("/css", StaticFiles(directory="src/static/css"), name="css")
+app.mount("/images", StaticFiles(directory="src/static/images"), name="images")
 app.mount("/component", StaticFiles(directory="src/component"), name="component")
 
 @app.get("/", response_class=HTMLResponse)
