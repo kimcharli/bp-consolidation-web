@@ -1,8 +1,9 @@
 :root {
-    --warning-color: orange;
-    --normal-color: #84b135;
-    --alarm-color: #e43d2f;
-    --top-header-color: #eee;
+    --global-warning-color: orange;
+    --global-ok-color: #84b135;
+    --global-error-color: #e43d2f;
+    --global-header-color: #eee;
+    --global-th-color: #0096a4;
 }
 
 

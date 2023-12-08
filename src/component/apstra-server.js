@@ -11,11 +11,11 @@ template.innerHTML = `
             border: 1px solid;
         }
         tr {
-            background-color: var(--top-header-color);
+            background-color: var(--global-header-color);
         }
         th {
             text-align: left;
-            background-color: #0096a4;
+            background-color: var(--global-th-color);
             border: 1px solid;
         }
         .no-border {
@@ -99,7 +99,7 @@ template.innerHTML = `
 
         #connect-button {
             // background-color: #ffb71b;
-            background-color: var(--warning-color);
+            background-color: var(--global-warning-color);
         }
     </style>
 
@@ -225,13 +225,13 @@ class ApstraServer extends HTMLElement {
                     switch(data.data.loginServer.__typename) {
                         case 'ApstraServerSuccess':
                             thisTarget.innerHTML = 'on';
-                            thisTarget.style.backgroundColor = 'var(--normal-color)';
+                            thisTarget.style.backgroundColor = 'var(--global-ok-color)';
                             thisTarget.style.animation = 'pulse 1s infinite';
                             tooltipText.innerHTML = 'Click to Disconnect';  
                             break;
                         case 'ApstraServerLoginFail':
                             thisTarget.innerHTML  = 'fail';
-                            thisTarget.style.backgroundColor = 'var(--alarm-color)';
+                            thisTarget.style.backgroundColor = 'var(--global-error-color)';
                             thisTarget.style.animation = 'pulse 1s infinite';
                             tooltipText.innerHTML = 'Click to Disconnect';            
                         break;
@@ -241,7 +241,7 @@ class ApstraServer extends HTMLElement {
             case 'on':
             case 'fail':
                 thisTarget.innerHTML  = 'off';
-                thisTarget.style.backgroundColor = 'var(--warning-color)';
+                thisTarget.style.backgroundColor = 'var(--global-warning-color)';
                 thisTarget.style.animation = '';
                 this.logout_server()
                 tooltipText.innerHTML = 'Click to Connect';
