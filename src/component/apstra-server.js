@@ -1,3 +1,5 @@
+import { queryFetch } from "./common.js";
+
 const template = document.createElement("template");
 template.innerHTML = `
     <style>
@@ -152,73 +154,92 @@ class ApstraServer extends HTMLElement {
     }
 
     connectedCallback() {
-        this.get_initial_server();
+        this.fetch_server();
     }
 
-    async get_initial_server() {
-        console.log('server fetch started');
-        const server_query = {
-            'query': "{\n  server {\n    host\n    port\n    username\n    password\n  }\n  \n}"
-        }
-        const response = await fetch('/graphql', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/graphql-response+json' 
-            },
-            body: JSON.stringify(server_query)
-        });
-        const data = await response.json();
-
-        console.log('get_initial_server response: ' + data);
-
-        this.shadowRoot.getElementById('apstra-host').value = data.data.server.host;
-        this.shadowRoot.getElementById('apstra-port').value = data.data.server.port;
-        this.shadowRoot.getElementById('apstra-username').value = data.data.server.username;
-        this.shadowRoot.getElementById('apstra-password').value = data.data.server.password;
-        console.log('server fetch ended');
-        return
-    }
-
-    async connect_server(apstra_host, apstra_port, apstra_username, apstra_password) {
-        console.log('login_server', apstra_host, apstra_port, apstra_username, apstra_password);
-        const server_query = {
-            'query': "mutation {\n  loginServer(host: \"" + apstra_host + "\", port: " + apstra_port + ", username: \"" + apstra_username + "\", password: \"" + apstra_password + "\") {\n    host\n  }\n}",
-            'variables': {
-                'host': apstra_host,
-                'port': apstra_port,
-                'username': apstra_username,
-                'password': apstra_password
+    async fetch_server() {
+        queryFetch(`
+          {
+            server {
+              host
+              port
+              username
+              password
             }
-        };
-        const response = await fetch('/graphql', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Accept': 'application/graphql-response+json' 
-            },
-            body: JSON.stringify(server_query)
+          }  
+        `)
+        .then(data => {
+            this.shadowRoot.getElementById('apstra-host').value = data.data.server.host;
+            this.shadowRoot.getElementById('apstra-port').value = data.data.server.port;
+            this.shadowRoot.getElementById('apstra-username').value = data.data.server.username;
+            this.shadowRoot.getElementById('apstra-password').value = data.data.server.password;
         })
-            .then(response => response.json())
-            .then(data => {console.log(data)})
-            .catch(error => console.log('Error:', error));
-        return response;
+
     }
+
+
+    async login_server(apstra_host, apstra_port, apstra_username, apstra_password) {
+        return queryFetch(`
+            mutation LoginServer($host: String!, $port: Int!, $username: String!, $password: String!){
+                loginServer(host: $host, port: $port, username: $username, password: $password) {
+                    __typename
+                    ... on ApstraServerSuccess {
+                        host
+                    }
+                    ... on ApstraServerLoginFail {
+                        server
+                        error
+                    }
+                }
+            }
+        `, { host: apstra_host, port: parseInt(apstra_port), username: apstra_username, password: apstra_password })
+        .then(data => { return data})
+    }
+
+    async logout_server() {
+        return queryFetch(`
+            mutation {
+                logoutServer {
+                    host
+                }
+            }
+        `)
+        .then(data => { return data})
+    }
+
 
     handleConnectClick(event) {
-        if (event.target.innerHTML === 'off') {
-            event.target.innerHTML = 'on';
-            const apstra_host = this.shadowRoot.getElementById('apstra-host').value;
-            const apstra_port = this.shadowRoot.getElementById('apstra-port').value;
-            const apstra_username = this.shadowRoot.getElementById('apstra-username').value;
-            const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
-            this.connect_server(apstra_host, apstra_port, apstra_username, apstra_password);
-            event.target.style.backgroundColor = 'var(--normal-color)';
-            event.target.style.animation = 'pulse 1s infinite';
-        } else if (event.target.innerHTML === 'on') {
-            event.target.innerHTML  = 'off';
-            event.target.style.backgroundColor = 'var(--warning-color)';
-            event.target.style.animation = '';
+        const thisTarget = event.target;
+        switch(event.target.innerHTML) {
+            case 'off':
+                const apstra_host = this.shadowRoot.getElementById('apstra-host').value;
+                const apstra_port = this.shadowRoot.getElementById('apstra-port').value;
+                const apstra_username = this.shadowRoot.getElementById('apstra-username').value;
+                const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
+                this.login_server(apstra_host, apstra_port, apstra_username, apstra_password)
+                .then(data => {
+                    console.log(data);
+                    switch(data.data.loginServer.__typename) {
+                        case 'ApstraServerSuccess':
+                            thisTarget.innerHTML = 'on';
+                            thisTarget.style.backgroundColor = 'var(--normal-color)';
+                            thisTarget.style.animation = 'pulse 1s infinite';    
+                            break;
+                        case 'ApstraServerLoginFail':
+                            thisTarget.innerHTML  = 'fail';
+                            thisTarget.style.backgroundColor = 'var(--alarm-color)';
+                            thisTarget.style.animation = 'pulse 1s infinite';                
+                        break;
+                    }
+                })
+                break;
+            case 'on':
+            case 'fail':
+                thisTarget.innerHTML  = 'off';
+                thisTarget.style.backgroundColor = 'var(--warning-color)';
+                thisTarget.style.animation = '';
+                this.logout_server()
+                break;
         }
     }
 

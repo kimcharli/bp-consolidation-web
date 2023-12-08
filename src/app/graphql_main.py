@@ -1,6 +1,6 @@
 import logging
 import strawberry
-from typing import List
+from typing import List, Annotated, Union
 from strawberry.asgi import GraphQL
 import uuid
 import dotenv
@@ -16,6 +16,21 @@ class AppData:
 
     def add_session(self, session):
         self.session = session
+
+
+class GlobalStore:
+    apstra_server = None  #  ApstaServer
+    apstra_session = None  # CkApstraSession
+    data = {
+    }
+
+    @classmethod
+    def set_data(cls, key, value):
+        cls.data[key] = value
+
+    @classmethod
+    def get_data(cls, key):
+        return cls.data.get(key)
 
 
 app_data = AppData()
@@ -38,7 +53,19 @@ class ApstaServer:
     username: str
     password: str
 
-apstra_servers = []
+@strawberry.type
+class ApstraServerSuccess:
+    host: str
+
+@strawberry.type
+class ApstraServerLoginFail:
+    server: str
+    error: str
+
+Response = Annotated[
+    Union[ApstraServerSuccess, ApstraServerLoginFail],
+    strawberry.union("AsptraServerLoginResponse")
+    ]
 
 @strawberry.type
 class Query1:
@@ -63,7 +90,7 @@ class Query2:
     @strawberry.field
     def server(self, info) -> ApstaServer:
         logger.warning(f"SERVER: server begin")
-        if len(apstra_servers) == 0:
+        if GlobalStore.apstra_server is None:
             logger.warning(f"SERVER: no-server begin")
             dotenv.load_dotenv()
             host = os.getenv("apstra_server_host")
@@ -71,9 +98,11 @@ class Query2:
             username = os.getenv("apstra_server_username")
             password = os.getenv("apstra_server_password")        
             logger.warning(f"SERVER: {host=}, {port=}, {username=}, {password=}")
-            apstra_servers.append(ApstaServer(host=host, port=port, username=username, password=password))
-        logger.warning(f"SERVER: server end {apstra_servers[0]=}")
-        return apstra_servers[0]
+            apstra_server = ApstaServer(host=host, port=port, username=username, password=password)
+            GlobalStore.apstra_server = apstra_server
+            # apstra_servers.append(ApstaServer(host=host, port=port, username=username, password=password))
+        logger.warning(f"SERVER: server end {apstra_server=}")
+        return apstra_server
 
 @strawberry.type
 class Mutation1:
@@ -84,13 +113,19 @@ class Mutation1:
 @strawberry.type
 class Mutation2:
     @strawberry.mutation
-    def login_server(self, info, host: str, port: int, username: str, password: str) -> ApstaServer:
-        session = CkApstraSession(host, port, username, password)
-        if session.token is not None:
-            session_id = str(uuid.uuid4())       
-            app_data.add_session(session)
-            return ApstaServer(host=host, port=port, username=username, password=password)
-        return None
+    def login_server(self, info, host: str, port: int, username: str, password: str) -> Response:
+        apstra_session = CkApstraSession(host, port, username, password)
+        GlobalStore.apstra_session = apstra_session
+        apstra_server = ApstaServer(host=host, port=port, username=username, password=password)
+        GlobalStore.apstra_server = apstra_server
+        if apstra_session.token is not None:
+            return ApstraServerSuccess(host=host)
+        return ApstraServerLoginFail(server=host, error="Login failed")
+
+    @strawberry.mutation
+    def logout_server() -> ApstaServer:
+        GlobalStore.apstra_session.logout()
+        return GlobalStore.apstra_servers[0]
 
 
 @strawberry.type

@@ -1,6 +1,7 @@
 :root {
     --warning-color: orange;
     --normal-color: #84b135;
+    --alarm-color: #e43d2f;
     --top-header-color: #eee;
 }
 
