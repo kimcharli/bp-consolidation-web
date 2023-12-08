@@ -1,3 +1,9 @@
+:root {
+    --warning-color: orange;
+    --normal-color: #84b135;
+    --top-header-color: #eee;
+}
+
 
 .yellow {
     background-color: yellow;

@@ -12,9 +12,6 @@ template.innerHTML = `
     </style>
     <nav class="navbar">
         <div class="teal">
-            <a href="/">home</a>
-            <a href="/graphql">graphql</a>
-            <a href="/css/style.css">css</a>
             <a href="/images/favicon-32x32.png">favicon</a>
             <a href="/component/apstra-server.js">apstra-server.js</a>
             <a href="/component/side-bar.js">side-bar.js</a>

@@ -8,14 +8,18 @@ template.innerHTML = `
             border-collapse: collapse;
             border: 1px solid;
         }
+        tr {
+            background-color: var(--top-header-color);
+        }
         th {
             text-align: left;
-            background-color: coral;
+            background-color: #0096a4;
             border: 1px solid;
         }
         .no-border {
             border: 0;
         }
+
         td {
             text-align: left;
             border: 1px solid;
@@ -53,7 +57,7 @@ template.innerHTML = `
 
         .tooltip-object {
             // background-color: yellow;
-            color: orange;
+            // color: orange;
             border: none;
             // padding: 10px 20px;
             cursor: pointer;
@@ -81,19 +85,27 @@ template.innerHTML = `
             opacity: 1;
         }
 
-        @keyframes flash {
+        @keyframes pulse {
             0%, 49% {
-              color: green;
+              color: white;
             }
             50%, 100% {
               color: transparent;
             }
         }
+
+        #connect-button {
+            // background-color: #ffb71b;
+            background-color: var(--warning-color);
+        }
     </style>
 
     <table class="no-border">
         <tr class="no-border">
-            <td class="no-border">
+            <td class="no-border" style="width: 100%;">
+                <a href="/"><img style="object-position: left top;" src="/images/home.svg" alt="Home" width="30" height="30"></a>
+                <a href="/graphql" target="_blank"><img src="/images/graphql.svg" alt="graphql" width="30" height="30"></a>
+                <a href="/css/style.css"><img src="/images/css-3.svg" alt="style.css" width="30" height="30"></a>
             </td>
             <td class="no-border">
                 <table>
@@ -112,10 +124,10 @@ template.innerHTML = `
                             <button id="edit-button" type="submit" class="tooltip-object">Edit</button>
                             <span class="tooltip-text">Click to Edit</span>
                         </td>
-                        <td><input id="apstra-host" name="apstra-host" value="10.85.192.50" /></th>
-                        <td><input id="apstra-port" type="number" name="apstra-port" value="443" /></th>
-                        <td><input id="apstra-username" name="apstra-username" value="admin" /></th>
-                        <td><input id="apstra-password" type="password" name="apstra-password" value="password" /></th>
+                        <td><input id="apstra-host" name="apstra-host" /></th>
+                        <td><input id="apstra-port" type="number" name="apstra-port" /></th>
+                        <td><input id="apstra-username" name="apstra-username" /></th>
+                        <td><input id="apstra-password" type="password" name="apstra-password"  /></th>
                     </tr>
                 </table>
             </td>
@@ -139,10 +151,39 @@ class ApstraServer extends HTMLElement {
         editButton.addEventListener('click', this.handleEditClick.bind(this));
     }
 
+    connectedCallback() {
+        this.get_initial_server();
+    }
+
+    async get_initial_server() {
+        console.log('server fetch started');
+        const server_query = {
+            'query': "{\n  server {\n    host\n    port\n    username\n    password\n  }\n  \n}"
+        }
+        const response = await fetch('/graphql', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/graphql-response+json' 
+            },
+            body: JSON.stringify(server_query)
+        });
+        const data = await response.json();
+
+        console.log('get_initial_server response: ' + data);
+
+        this.shadowRoot.getElementById('apstra-host').value = data.data.server.host;
+        this.shadowRoot.getElementById('apstra-port').value = data.data.server.port;
+        this.shadowRoot.getElementById('apstra-username').value = data.data.server.username;
+        this.shadowRoot.getElementById('apstra-password').value = data.data.server.password;
+        console.log('server fetch ended');
+        return
+    }
+
     async connect_server(apstra_host, apstra_port, apstra_username, apstra_password) {
         console.log('login_server', apstra_host, apstra_port, apstra_username, apstra_password);
         const server_query = {
-            'query': "mutation {\n  loginServer(host: \"1234\", port: 443, username: \"admin\", password: \"pass\") {\n    host\n  }\n}",
+            'query': "mutation {\n  loginServer(host: \"" + apstra_host + "\", port: " + apstra_port + ", username: \"" + apstra_username + "\", password: \"" + apstra_password + "\") {\n    host\n  }\n}",
             'variables': {
                 'host': apstra_host,
                 'port': apstra_port,
@@ -172,11 +213,11 @@ class ApstraServer extends HTMLElement {
             const apstra_username = this.shadowRoot.getElementById('apstra-username').value;
             const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
             this.connect_server(apstra_host, apstra_port, apstra_username, apstra_password);
-            event.target.style.backgroundColor = '#aaff00';
-            event.target.style.animation = 'flash 1s infinite';
-        } else {
+            event.target.style.backgroundColor = 'var(--normal-color)';
+            event.target.style.animation = 'pulse 1s infinite';
+        } else if (event.target.innerHTML === 'on') {
             event.target.innerHTML  = 'off';
-            event.target.style.backgroundColor = 'gray';
+            event.target.style.backgroundColor = 'var(--warning-color)';
             event.target.style.animation = '';
         }
     }
