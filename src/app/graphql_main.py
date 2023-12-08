@@ -9,18 +9,9 @@ from ck_apstra_api.apstra_session import CkApstraSession
 
 logger = logging.getLogger(__name__)
 
-class AppData:
-    # session = None
-    def __init__(self):
-        pass
-
-    def add_session(self, session):
-        self.session = session
-
 
 class GlobalStore:
     apstra_server = None  #  ApstaServer
-    apstra_session = None  # CkApstraSession
     data = {
     }
 
@@ -32,8 +23,6 @@ class GlobalStore:
     def get_data(cls, key):
         return cls.data.get(key)
 
-
-app_data = AppData()
 
 @strawberry.type
 class User:
@@ -48,10 +37,12 @@ users = [
 
 @strawberry.type
 class ApstaServer:
+    id: str = strawberry.field(default_factory=lambda: str(uuid.uuid4()))
     host: str
     port: int
     username: str
     password: str
+    session: strawberry.Private[CkApstraSession] = None
 
 @strawberry.type
 class ApstraServerSuccess:
@@ -89,19 +80,16 @@ class Query2:
     
     @strawberry.field
     def server(self, info) -> ApstaServer:
-        logger.warning(f"SERVER: server begin")
-        if GlobalStore.apstra_server is None:
-            logger.warning(f"SERVER: no-server begin")
+        apstra_server = GlobalStore.apstra_server
+        if apstra_server is None:
             dotenv.load_dotenv()
             host = os.getenv("apstra_server_host")
             port = int(os.getenv("apstra_server_port"))
             username = os.getenv("apstra_server_username")
             password = os.getenv("apstra_server_password")        
-            logger.warning(f"SERVER: {host=}, {port=}, {username=}, {password=}")
             apstra_server = ApstaServer(host=host, port=port, username=username, password=password)
             GlobalStore.apstra_server = apstra_server
             # apstra_servers.append(ApstaServer(host=host, port=port, username=username, password=password))
-        logger.warning(f"SERVER: server end {apstra_server=}")
         return apstra_server
 
 @strawberry.type
@@ -125,7 +113,7 @@ class Mutation2:
     @strawberry.mutation
     def logout_server() -> ApstaServer:
         GlobalStore.apstra_session.logout()
-        return GlobalStore.apstra_servers[0]
+        return GlobalStore.apstra_server
 
 
 @strawberry.type

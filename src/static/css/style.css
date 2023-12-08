@@ -46,7 +46,14 @@
     z-index: 1;
   }
 
-  /* Show the tooltip text when you mouse over the tooltip container */
+  /* Show the tooltip text when you mouse over the tooltip container
 .tooltip:hover .tooltiptext {
     visibility: visible;
-  }
+    z-index: 9999;
+  } */
+
+.tooltip-container:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+    z-index: 10;  /* bring it on top */
+}

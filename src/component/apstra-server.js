@@ -85,6 +85,7 @@ template.innerHTML = `
         .tooltip-container:hover .tooltip-text {
             visibility: visible;
             opacity: 1;
+            z-index: 10;  /* bring it on top */
         }
 
         @keyframes pulse {
@@ -114,7 +115,7 @@ template.innerHTML = `
                     <tr>
                         <td class="tooltip-container">
                             <button id="connect-button" type="submit" class="tooltip-object">off</button>
-                            <span class="tooltip-text">Click to Connect</span>
+                            <span id="connect-button-tooltip-text" class="tooltip-text">Click to Connect</span>
                         </td>
                         <th>server</th>
                         <th>port</th>
@@ -161,6 +162,7 @@ class ApstraServer extends HTMLElement {
         queryFetch(`
           {
             server {
+              id
               host
               port
               username
@@ -210,6 +212,7 @@ class ApstraServer extends HTMLElement {
 
     handleConnectClick(event) {
         const thisTarget = event.target;
+        const tooltipText = this.shadowRoot.getElementById('connect-button-tooltip-text');
         switch(event.target.innerHTML) {
             case 'off':
                 const apstra_host = this.shadowRoot.getElementById('apstra-host').value;
@@ -223,12 +226,14 @@ class ApstraServer extends HTMLElement {
                         case 'ApstraServerSuccess':
                             thisTarget.innerHTML = 'on';
                             thisTarget.style.backgroundColor = 'var(--normal-color)';
-                            thisTarget.style.animation = 'pulse 1s infinite';    
+                            thisTarget.style.animation = 'pulse 1s infinite';
+                            tooltipText.innerHTML = 'Click to Disconnect';  
                             break;
                         case 'ApstraServerLoginFail':
                             thisTarget.innerHTML  = 'fail';
                             thisTarget.style.backgroundColor = 'var(--alarm-color)';
-                            thisTarget.style.animation = 'pulse 1s infinite';                
+                            thisTarget.style.animation = 'pulse 1s infinite';
+                            tooltipText.innerHTML = 'Click to Disconnect';            
                         break;
                     }
                 })
@@ -239,6 +244,7 @@ class ApstraServer extends HTMLElement {
                 thisTarget.style.backgroundColor = 'var(--warning-color)';
                 thisTarget.style.animation = '';
                 this.logout_server()
+                tooltipText.innerHTML = 'Click to Connect';
                 break;
         }
     }
