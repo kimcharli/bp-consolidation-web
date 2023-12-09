@@ -52,9 +52,9 @@ class Mutation1:
 
 
 from .model.ck_server import ServerMutation, ServerQuery
-
+from .model.ck_blueprint import BlueprintQuery
 @strawberry.type
-class Query(Query1, Query2, ServerQuery):
+class Query(Query1, Query2, ServerQuery, BlueprintQuery):
     pass
 
 @strawberry.type

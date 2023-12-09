@@ -18,6 +18,9 @@ class ApstaServer:
     password: str
     session: strawberry.Private[CkApstraSession] = None
 
+    def is_onlie(self):
+        return self.session.is_online()
+
 @strawberry.type
 class ApstraServerSuccess:
     host: str

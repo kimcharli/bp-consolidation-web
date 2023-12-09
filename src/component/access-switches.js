@@ -23,8 +23,8 @@ template.innerHTML = `
         <th>ToR Blueprint</th>
     </tr>
     <tr>
-        <td>Masin</th>
-        <td>AZ</th>
+        <td id="main_bp">Masin</th>
+        <td id="tor_bp">AZ</th>
     </tr>
     <tr>
         <td>box</th>
@@ -43,6 +43,28 @@ class AccessSwitches extends HTMLElement {
         // this.shadowRoot.querySelector("button").addEventListener("click", () => {
         //     this.dispatchEvent(new CustomEvent("onEdit", { detail: this.accessSwitch }));
         // });
+    }
+
+    fetch_blueprint() {
+        queryFetch( `
+            query {
+                fetchBlueprints {                
+                    label
+                    role
+                    id
+                }
+            }
+        `)
+        .then(data => {
+            data.data.fetchBlueprints.forEach(element => {
+                this.shadowRoot.getElementById(element.role).innerHTML = element.label;
+                this.shadowRoot.getElementById(element.role).style.backgroundColor = 'var(--global-warning-color)';
+            })
+        });
+    }
+
+    connectedCallback() {
+        this.fetch_blueprint();
     }
 
     set accessSwitch(accessSwitch) {

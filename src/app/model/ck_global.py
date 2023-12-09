@@ -3,6 +3,9 @@
 
 class GlobalStore:
     apstra_server = None  #  ApstaServer
+    main_bp = None  # ApstaBlueprint
+    tor_bp = None  # ApstaBlueprint
+    
     data = {
     }
 
