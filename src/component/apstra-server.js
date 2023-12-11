@@ -152,6 +152,8 @@ class ApstraServer extends HTMLElement {
         connectButton.addEventListener('click', this.handleConnectClick.bind(this));
         const editButton = this.shadowRoot.getElementById('edit-button');
         editButton.addEventListener('click', this.handleEditClick.bind(this));
+
+        window.addEventListener('global-connect-request', this.connectServer.bind(this));
     }
 
     connectedCallback() {
@@ -209,37 +211,48 @@ class ApstraServer extends HTMLElement {
         .then(data => { return data})
     }
 
+    connectServer(event) {
+        const thisTarget = this.shadowRoot.getElementById('connect-button')
+        const tooltipText = this.shadowRoot.getElementById('connect-button-tooltip-text');
+        const apstra_host = this.shadowRoot.getElementById('apstra-host').value;
+        const apstra_port = this.shadowRoot.getElementById('apstra-port').value;
+        const apstra_username = this.shadowRoot.getElementById('apstra-username').value;
+        const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
+        this.login_server(apstra_host, apstra_port, apstra_username, apstra_password)
+            .then(data => {
+                console.log(data);
+                switch(data.data.loginServer.__typename) {
+                    case 'ApstraServerSuccess':
+                        window.dispatchEvent(
+                            new CustomEvent('global-connect-success')
+                        );                
+                        thisTarget.innerHTML = 'on';
+                        thisTarget.style.backgroundColor = 'var(--global-ok-color)';
+                        thisTarget.style.animation = 'pulse 1s infinite';
+                        tooltipText.innerHTML = 'Click to Disconnect';  
+                        break;
+                    case 'ApstraServerLoginFail':
+                        thisTarget.innerHTML  = 'fail';
+                        thisTarget.style.backgroundColor = 'var(--global-error-color)';
+                        thisTarget.style.animation = 'pulse 1s infinite';
+                        tooltipText.innerHTML = 'Click to Disconnect';            
+                    break;
+                }
+            })
+    }
 
     handleConnectClick(event) {
         const thisTarget = event.target;
         const tooltipText = this.shadowRoot.getElementById('connect-button-tooltip-text');
         switch(event.target.innerHTML) {
             case 'off':
-                const apstra_host = this.shadowRoot.getElementById('apstra-host').value;
-                const apstra_port = this.shadowRoot.getElementById('apstra-port').value;
-                const apstra_username = this.shadowRoot.getElementById('apstra-username').value;
-                const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
-                this.login_server(apstra_host, apstra_port, apstra_username, apstra_password)
-                .then(data => {
-                    console.log(data);
-                    switch(data.data.loginServer.__typename) {
-                        case 'ApstraServerSuccess':
-                            thisTarget.innerHTML = 'on';
-                            thisTarget.style.backgroundColor = 'var(--global-ok-color)';
-                            thisTarget.style.animation = 'pulse 1s infinite';
-                            tooltipText.innerHTML = 'Click to Disconnect';  
-                            break;
-                        case 'ApstraServerLoginFail':
-                            thisTarget.innerHTML  = 'fail';
-                            thisTarget.style.backgroundColor = 'var(--global-error-color)';
-                            thisTarget.style.animation = 'pulse 1s infinite';
-                            tooltipText.innerHTML = 'Click to Disconnect';            
-                        break;
-                    }
-                })
+                this.connectServer(event);
                 break;
             case 'on':
             case 'fail':
+                window.dispatchEvent(
+                    new CustomEvent('global-connect-logout')
+                );                
                 thisTarget.innerHTML  = 'off';
                 thisTarget.style.backgroundColor = 'var(--global-warning-color)';
                 thisTarget.style.animation = '';

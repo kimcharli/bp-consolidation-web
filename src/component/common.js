@@ -15,3 +15,6 @@ export function queryFetch(query, variables){
     .then(res => res.json())
 }
 
+// global event
+// global-connect
+// 

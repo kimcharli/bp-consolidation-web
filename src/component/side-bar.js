@@ -21,7 +21,7 @@ template.innerHTML = `
     </style>
     <h3>Steps</h3>
     <div>
-        <button type="button">Connect</button>
+        <button id="connect-button" type="button">Connect</button>
         <button type="button">Sync States</button>
         <button type="button">Migrate Access Switches</button>
         <button type="button">Migrate Access Switches</button>
@@ -38,7 +38,29 @@ class SideBar extends HTMLElement {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
+        const connectButton = this.shadowRoot.getElementById('connect-button');
+        connectButton.addEventListener('click', this.handleConnectClick.bind(this));
+
+        window.addEventListener('global-connect-success', this.connectServerSuccess.bind(this));
+        window.addEventListener('global-connect-logout', this.connectServerLogout.bind(this));
+
     }
+
+    handleConnectClick(event) {
+        window.dispatchEvent(
+            new CustomEvent('global-connect-request', { bubbles: true, composed: true } )
+        );
+
+    }
+
+    connectServerSuccess(event) {
+        this.shadowRoot.getElementById('connect-button').style.backgroundColor = 'var(--global-ok-color)';
+    }
+
+    connectServerLogout(event) {
+        this.shadowRoot.getElementById('connect-button').style.backgroundColor = 'var(--global-warning-color)';
+    }
+
 
 }   
 customElements.define('side-bar', SideBar);
