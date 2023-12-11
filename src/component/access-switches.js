@@ -11,9 +11,27 @@ template.innerHTML = `
         th, td {
             border: 1px solid black;
             text-align: left;
+            width: 50%;
         }
         th {
             background-color: var(--global-th-color);
+        }
+        svg, line, rect {
+            vector-effect: non-scaling-stroke;
+            fill: transparent;
+            stroke: black
+        }
+        svg text {
+            font-family: Monospace;
+            font-size: 7px;
+            font-weight: normal;
+            text-anchor: middle;
+            alignment-baseline: central;
+            text-rendering: optimizeLegibility;
+        }
+        .interface-name {
+            font-size: 5px;
+            alignment-baseline: middle;
         }
     </style>
 
@@ -27,28 +45,76 @@ template.innerHTML = `
         <td id="tor_bp">AZ</th>
     </tr>
     <tr>
-        <td>box</th>
         <td>
-            <svg viewBox="0 0 200 100" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 200 75" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <rect id="leaf" width="90" height="25" ry="5" />
+                <rect id="access-gs" width="200" height="25" ry="5" />
+                <rect id="access" width="90" height="25" ry="5" />
+                </defs>
+        
+        
+            <use x="0" y="0" href="#leaf" />
+            <text id="leaf1-label" x="50" y="12" text-anchor="middle" alignment-baseline="central">leaf1</text>
+        
+            <use x="110" y="0" href="#leaf" />
+            <text id="leaf2-label" x="160" y="12" text-anchor="middle" alignment-baseline="central">leaf2</text>
+
+            <use x="0" y="50" href="#access-gs" />
+            <text id="access-gs-label" x="100" y="62" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
+
+            <line x1="30" y1="25" x2="30" y2="50" />
+            <line x1="60" y1="25" x2="140" y2="50" />
+            <line x1="140" y1="25" x2="60" y2="50" />
+            <line x1="170" y1="25" x2="170" y2="50" />
+
+            <text id="leaf1-intf1" class="interface-name" x="30" y="22">et-0/0/20</text>
+            <text id="leaf1-intf2" class="interface-name" x="60" y="22">et-0/0/21</text>
+            <text id="leaf2-intf1" class="interface-name" x="140" y="22">et-0/0/20</text>
+            <text id="leaf2-intf2" class="interface-name" x="170" y="22">et-0/0/21</text>
+
+            <text id="access1-intf1" class="interface-name" x="30" y="53">et-0/0/48</text>
+            <text id="access1-intf2" class="interface-name" x="60" y="53">et-0/0/49</text>
+            <text id="access2-intf1" class="interface-name" x="140" y="53">et-0/0/48</text>
+            <text id="access2-intf2" class="interface-name" x="170" y="53">et-0/0/49</text>
+
+            </svg>
+
+        </th>
+        <td>
+            <svg viewBox="0 0 200 75" xmlns="http://www.w3.org/2000/svg">
                 <defs>
-                    <rect id="leaf" width="50" height="25" ry="5" style="fill:transparent;stroke-width:1;stroke:black" />
-                    <rect id="leaf-gs" width="110" height="25" ry="5" style="fill:transparent;stroke-width:1;stroke:black" />
+                    <rect id="access" width="90" height="25" ry="5" />
+                    <rect id="leaf-gs" width="200" height="25" ry="5" />
                 </defs>
             
                 <use x="0" y="0" href="#leaf-gs" />
-                <text x="55" y="12" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
+                <text id="leaf-gs-label" x="100" y="12" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
             
-                <use x="0" y="50" href="#leaf" />
-                <text x="25" y="62" text-anchor="middle" alignment-baseline="central">leaf1</text>
+                <use x="0" y="50" href="#access" />
+                <text id="access1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central">leaf1</text>
             
-                <use x="60" y="50" href="#leaf" />
-                <text x="85" y="62" text-anchor="middle" alignment-baseline="central">leaf2</text>
+                <use x="110" y="50" href="#access" />
+                <text id="access2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central">leaf2</text>
             
-                <line x1="20" y1="25" x2="15" y2="50" style="stroke:black;stroke-width:1" />
-                <line x1="40" y1="25" x2="75" y2="50" style="stroke:black;stroke-width:1" />
-                <line x1="60" y1="25" x2="35" y2="50" style="stroke:black;stroke-width:1" />
-                <line x1="80" y1="25" x2="95" y2="50" style="stroke:black;stroke-width:1" />
-                <line x1="50" y1="62" x2="60" y2="62" style="stroke:black;stroke-width:1" />
+                <line x1="30" y1="25" x2="30" y2="50" />
+                <line x1="60" y1="25" x2="140" y2="50" />
+                <line x1="140" y1="25" x2="60" y2="50" />
+                <line x1="170" y1="25" x2="170" y2="50" />
+                <line x1="90" y1="62" x2="110" y2="62" />
+
+                <text id="leaf1-intf1" class="interface-name" x="30" y="22">et-0/0/20</text>
+                <text id="leaf1-intf2" class="interface-name" x="60" y="22">et-0/0/21</text>
+                <text id="leaf2-intf1" class="interface-name" x="140" y="22">et-0/0/20</text>
+                <text id="leaf2-intf2" class="interface-name" x="170" y="22">et-0/0/21</text>
+    
+                <text class="interface-name" x="100" y="60">et-0/0/53</text>
+
+                <text id="access1-intf1" class="interface-name" x="30" y="53">et-0/0/48</text>
+                <text id="access1-intf2" class="interface-name" x="60" y="53">et-0/0/49</text>
+                <text id="access2-intf1" class="interface-name" x="140" y="53">et-0/0/48</text>
+                <text id="access2-intf2" class="interface-name" x="170" y="53">et-0/0/49</text>
+    
             </svg>
         </td>
     </tr>
@@ -87,6 +153,20 @@ class AccessSwitches extends HTMLElement {
 
     connectedCallback() {
         this.fetch_blueprint();
+        this.shadowRoot.getElementById("access-gs-label").innerHTML = "atl1tor-r4r16";
+        this.shadowRoot.getElementById("leaf1-label").innerHTML = "atl1lef15-r5r13";
+        this.shadowRoot.getElementById("leaf2-label").innerHTML = "atl1lef16-r5r14";
+        this.shadowRoot.getElementById("leaf-gs-label").innerHTML = "UPLINK-LEF-15-16-r4r16";
+        this.shadowRoot.getElementById("access1-label").innerHTML = "atl1tor-r4r16a";
+        this.shadowRoot.getElementById("access2-label").innerHTML = "atl1tor-r4r16b";
+        this.shadowRoot.getElementById("leaf1-intf1").innerHTML = "et-0/0/20";
+        this.shadowRoot.getElementById("leaf1-intf2").innerHTML = "et-0/0/21";
+        this.shadowRoot.getElementById("leaf2-intf1").innerHTML = "et-0/0/20";
+        this.shadowRoot.getElementById("leaf2-intf2").innerHTML = "et-0/0/21";
+        this.shadowRoot.getElementById("access1-intf1").innerHTML = "et-0/0/48";
+        this.shadowRoot.getElementById("access1-intf2").innerHTML = "et-0/0/49";
+        this.shadowRoot.getElementById("access2-intf1").innerHTML = "et-0/0/48";
+        this.shadowRoot.getElementById("access2-intf2").innerHTML = "et-0/0/49";
     }
 
     set accessSwitch(accessSwitch) {

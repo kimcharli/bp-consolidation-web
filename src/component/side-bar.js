@@ -7,7 +7,7 @@ template.innerHTML = `
         hight: max-content;
     }
     button {
-        background-color: #424242;
+        background-color: var(--global-warning-color);
         text-align: left;
         // border: none;
         // color: white;
@@ -22,7 +22,6 @@ template.innerHTML = `
     <h3>Steps</h3>
     <div>
         <button type="button">Connect</button>
-        <button type="button">Sync States</button>
         <button type="button">Sync States</button>
         <button type="button">Migrate Access Switches</button>
         <button type="button">Migrate Access Switches</button>
