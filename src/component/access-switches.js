@@ -1,4 +1,4 @@
-import { queryFetch } from "./common.js";
+import { queryFetch, GlobalEventEnum } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -41,8 +41,8 @@ template.innerHTML = `
         <th>ToR Blueprint</th>
     </tr>
     <tr>
-        <td id="main_bp">Masin</th>
-        <td id="tor_bp">AZ</th>
+        <td id="main_bp"><span id="main_bp_id"><span></th>
+        <td id="tor_bp"><span id="tor_bp_id"></span></th>
     </tr>
     <tr>
         <td>
@@ -128,9 +128,8 @@ class AccessSwitches extends HTMLElement {
         this.attachShadow({ mode: "open" });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        // this.shadowRoot.querySelector("button").addEventListener("click", () => {
-        //     this.dispatchEvent(new CustomEvent("onEdit", { detail: this.accessSwitch }));
-        // });
+        window.addEventListener(GlobalEventEnum.BP_CONNECT_REQUEST, this.blueprintConnectRequested.bind(this));
+        window.addEventListener(GlobalEventEnum.SYNC_STATE_REQUEST, this.syncStateRequested.bind(this));
     }
 
     fetch_blueprint() {
@@ -169,6 +168,33 @@ class AccessSwitches extends HTMLElement {
         this.shadowRoot.getElementById("access2-intf2").innerHTML = "et-0/0/49";
     }
 
+    connect_blueprint() {
+        queryFetch( `
+            mutation {
+                connectBlueprints {                
+                    label
+                    role
+                    id
+                    bpId
+                }
+            }
+        `)
+        .then(data => {
+            console.log(data);
+            data.data.connectBlueprints.forEach(element => {
+                this.shadowRoot.getElementById(element.role).innerHTML = element.label;
+                if (element.bpId) {
+                    this.shadowRoot.getElementById(element.role).style.backgroundColor = 'var(--global-ok-color)';
+                }
+            })
+        });
+    }
+
+    blueprintConnectRequested(event) {
+        this.connect_blueprint();
+
+    }
+
     set accessSwitch(accessSwitch) {
         this._accessSwitch = accessSwitch;
         this.render();
@@ -180,6 +206,36 @@ class AccessSwitches extends HTMLElement {
 
     render() {
         this.shadowRoot.querySelector("td").innerHTML = this.accessSwitch.name;
+    }
+
+    // TODO: WIP
+    get_gs_access(){
+        queryFetch( `
+            query getGenericSystems($bpRole: String!, $gsLabel: String!) {
+                getGenericSystems(bpRole: $bpRole, gsLabel: $gsLabel) {
+                    label
+                }
+            }
+        `, {
+            bpRole: "main_bp",
+            gsLabel: this.shadowRoot.getElementById("access-gs-label").innerHTML
+        })
+        .then(data => {
+            console.log(data);
+            // data.data.connectBlueprints.forEach(element => {
+            //     this.shadowRoot.getElementById(element.role).innerHTML = element.label;
+            //     if (element.bpId) {
+            //         this.shadowRoot.getElementById(element.role).style.backgroundColor = 'var(--global-ok-color)';
+            //     }
+            // })
+        });
+    }
+
+    syncStateRequested(event) {
+        // called by side-bar.js
+        // the blueprint is already connected
+        // TODO: WIP
+        this.get_gs_access();
     }
 }
 customElements.define("access-switches", AccessSwitches);

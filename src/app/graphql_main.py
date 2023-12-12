@@ -52,13 +52,14 @@ class Mutation1:
 
 
 from .model.ck_server import ServerMutation, ServerQuery
-from .model.ck_blueprint import BlueprintQuery
+from .model.ck_blueprint import BlueprintQuery, BlueprintMutation
+from .model.ck_generic_system import GenericSystemQuery
 @strawberry.type
-class Query(Query1, Query2, ServerQuery, BlueprintQuery):
+class Query(Query1, Query2, ServerQuery, BlueprintQuery, GenericSystemQuery):
     pass
 
 @strawberry.type
-class Mutation(Mutation1, ServerMutation):
+class Mutation(Mutation1, ServerMutation, BlueprintMutation):
     pass
 
 

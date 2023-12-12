@@ -1,5 +1,5 @@
 import strawberry
-from typing import List, Annotated, Union
+from typing import Any, List, Annotated, Union
 import uuid
 import dotenv
 import os
@@ -18,7 +18,11 @@ class ApstaBlueprint:
     bp_id: str = None
     blueprint: strawberry.Private[CkApstraBlueprint] = None
 
-
+    def connect(self):
+        logging.warning(f"Connecting blueprint {self.label}, {GlobalStore.apstra_server}")
+        session = GlobalStore.apstra_server.session
+        self.blueprint = CkApstraBlueprint(session=session, label=self.label)
+        self.bp_id = self.blueprint.id
 
 @strawberry.type
 class BlueprintQuery:    
@@ -28,24 +32,20 @@ class BlueprintQuery:
         main_bp_label = os.getenv("main_bp")
         tor_bp_label = os.getenv("tor_bp")
         main_bp = ApstaBlueprint(label=main_bp_label, role="main_bp")
+        GlobalStore.main_bp = main_bp
         tor_bp = ApstaBlueprint(label=tor_bp_label, role="tor_bp")
+        GlobalStore.tor_bp = tor_bp
         return [main_bp, tor_bp]
     
-    def fetch_blueprints_real(self, info) -> List[ApstaBlueprint]:
-        session = GlobalStore.apstra_server.session
-        logging.info(f"{session=}")
-        dotenv.load_dotenv()
-        main_bp_label = os.getenv("main_bp")
-        tor_bp_label = os.getenv("tor_bp")
-        ck_main_bp = CkApstraBlueprint(session=session, label=main_bp_label)
-        ck_tor_bp = CkApstraBlueprint(session=session, label=tor_bp_label)
-        main_bp = ApstaBlueprint(label=main_bp_label, role="main_bp")
-        tor_bp = ApstaBlueprint(label=tor_bp_label, role="tor_bp")
-        main_bp.blueprint = ck_main_bp
-        tor_bp.blueprint = ck_tor_bp
-        GlobalStore.main_bp = main_bp
-        GlobalStore.tor_bp = tor_bp
-        main_bp.bp_id = ck_main_bp.id
-        tor_bp.bp_id = ck_tor_bp.id
-        return [main_bp, tor_bp]
+@strawberry.type
+class BlueprintMutation:    
+    @strawberry.field
+    def connect_blueprints(self, info) -> List[ApstaBlueprint]:
+        bps = [ x for x in GlobalStore.get_blueprints() ]
+        logging.warning(f"Connecting blueprints {bps}")
+        for bp in bps:  # ApstaBlueprint
+            logging.warning(f"Connecting blueprint {bp.label}")
+            bp.connect()
+            logging.warning(f"Connected blueprint {bp.label}")
+        return bps
 

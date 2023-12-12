@@ -10,6 +10,10 @@ class GlobalStore:
     }
 
     @classmethod
+    def get_blueprints(cls):
+        return [cls.main_bp, cls.tor_bp]
+
+    @classmethod
     def set_data(cls, key, value):
         cls.data[key] = value
 

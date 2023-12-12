@@ -1,3 +1,5 @@
+import { GlobalEventEnum } from "./common.js";
+
 const template = document.createElement("template");
 template.innerHTML = `
     <style>
@@ -22,7 +24,7 @@ template.innerHTML = `
     <h3>Steps</h3>
     <div>
         <button id="connect-button" type="button">Connect</button>
-        <button type="button">Sync States</button>
+        <button id="sync-state" type="button">Sync States</button>
         <button type="button">Migrate Access Switches</button>
         <button type="button">Migrate Access Switches</button>
         <button type="button">Migrate Generic Systems</button>
@@ -41,14 +43,17 @@ class SideBar extends HTMLElement {
         const connectButton = this.shadowRoot.getElementById('connect-button');
         connectButton.addEventListener('click', this.handleConnectClick.bind(this));
 
-        window.addEventListener('global-connect-success', this.connectServerSuccess.bind(this));
-        window.addEventListener('global-connect-logout', this.connectServerLogout.bind(this));
+        const syncStateButton = this.shadowRoot.getElementById('sync-state');
+        syncStateButton.addEventListener('click', this.handleSyncStateClick.bind(this));
+
+        window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.connectServerSuccess.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.connectServerLogout.bind(this));
 
     }
 
     handleConnectClick(event) {
         window.dispatchEvent(
-            new CustomEvent('global-connect-request', { bubbles: true, composed: true } )
+            new CustomEvent(GlobalEventEnum.CONNECT_REQUEST, { bubbles: true, composed: true } )
         );
 
     }
@@ -61,6 +66,11 @@ class SideBar extends HTMLElement {
         this.shadowRoot.getElementById('connect-button').style.backgroundColor = 'var(--global-warning-color)';
     }
 
+    handleSyncStateClick(event) {
+        window.dispatchEvent(
+            new CustomEvent(GlobalEventEnum.SYNC_STATE_REQUEST, { bubbles: true, composed: true } )
+        );
+    }
 
 }   
 customElements.define('side-bar', SideBar);

@@ -1,4 +1,4 @@
-import { queryFetch } from "./common.js";
+import { queryFetch, GlobalEventEnum } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -153,7 +153,7 @@ class ApstraServer extends HTMLElement {
         const editButton = this.shadowRoot.getElementById('edit-button');
         editButton.addEventListener('click', this.handleEditClick.bind(this));
 
-        window.addEventListener('global-connect-request', this.connectServer.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_REQUEST, this.connectServer.bind(this));
     }
 
     connectedCallback() {
@@ -239,6 +239,10 @@ class ApstraServer extends HTMLElement {
                     break;
                 }
             })
+        window.dispatchEvent(
+            new CustomEvent(GlobalEventEnum.BP_CONNECT_REQUEST)
+        );
+
     }
 
     handleConnectClick(event) {

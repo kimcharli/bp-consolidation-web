@@ -15,6 +15,10 @@ export function queryFetch(query, variables){
     .then(res => res.json())
 }
 
-// global event
-// global-connect
-// 
+export class GlobalEventEnum {
+    static CONNECT_REQUEST = 'global-connect-request';
+    static CONNECT_SUCCESS = 'global-connect-success';
+    static CONNECT_LOGOUT = 'global-connect-logout';
+    static SYNC_STATE_REQUEST = 'global-sync-state-request';
+    static BP_CONNECT_REQUEST = 'blueprint-connect-request';
+}

@@ -3,6 +3,7 @@ from typing import List, Annotated, Union
 import uuid
 import dotenv
 import os
+import logging
 
 from .ck_global import GlobalStore
 
@@ -59,9 +60,8 @@ class ServerMutation:
     @strawberry.mutation
     def login_server(self, info, host: str, port: int, username: str, password: str) -> Response:
         apstra_session = CkApstraSession(host, port, username, password)
-        GlobalStore.apstra_session = apstra_session
-        apstra_server = ApstaServer(host=host, port=port, username=username, password=password)
-        GlobalStore.apstra_server = apstra_server
+        GlobalStore.apstra_server.session = apstra_session
+        logging.warning(f"login_server: {apstra_session=} {GlobalStore.apstra_server.session=}")
         if apstra_session.token is not None:
             return ApstraServerSuccess(host=host)
         return ApstraServerLoginFail(server=host, error="Login failed")
