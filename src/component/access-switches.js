@@ -33,6 +33,12 @@ template.innerHTML = `
             font-size: 5px;
             alignment-baseline: middle;
         }
+        #main_bp[data-bp-id=""], #tor_bp[data-bp-id=""] {
+            background-color: var(--global-warning-color);
+        }
+        #main_bp[data-bp-id*="-"], #tor_bp[data-bp-id*="-"] {
+            background-color: var(--global-ok-color);
+        }
     </style>
 
     <table>
@@ -41,8 +47,8 @@ template.innerHTML = `
         <th>ToR Blueprint</th>
     </tr>
     <tr>
-        <td id="main_bp"><span id="main_bp_id"><span></th>
-        <td id="tor_bp"><span id="tor_bp_id"></span></th>
+        <td id="main_bp" data-bp-label data-bp-id></th>
+        <td id="tor_bp" data-bp-label data-bp-id></th>
     </tr>
     <tr>
         <td>
@@ -145,7 +151,7 @@ class AccessSwitches extends HTMLElement {
         .then(data => {
             data.data.fetchBlueprints.forEach(element => {
                 this.shadowRoot.getElementById(element.role).innerHTML = element.label;
-                this.shadowRoot.getElementById(element.role).style.backgroundColor = 'var(--global-warning-color)';
+                this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
             })
         });
     }
@@ -183,9 +189,8 @@ class AccessSwitches extends HTMLElement {
             console.log(data);
             data.data.connectBlueprints.forEach(element => {
                 this.shadowRoot.getElementById(element.role).innerHTML = element.label;
-                if (element.bpId) {
-                    this.shadowRoot.getElementById(element.role).style.backgroundColor = 'var(--global-ok-color)';
-                }
+                this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
+                this.shadowRoot.getElementById(element.role).dataset.bpId = element.bpId;
             })
         });
     }
