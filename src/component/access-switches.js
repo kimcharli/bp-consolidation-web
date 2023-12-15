@@ -22,15 +22,15 @@ template.innerHTML = `
             // width: 400px;
         }
         svg text {
-            font-family: Monospace;
-            font-size: 7px;
+            font-family: system-ui, sans-serif;
+            font-size: 0.5em;
             font-weight: normal;
             text-anchor: middle;
             alignment-baseline: central;
             text-rendering: optimizeLegibility;
         }
         .interface-name {
-            font-size: 5px;
+            font-size: 0.4em;
             alignment-baseline: middle;
         }
         #main_bp, #tor_bp {
@@ -87,15 +87,15 @@ template.innerHTML = `
             <line x1="90" y1="62" x2="110" y2="62" visibility="hidden" />
             <text class="interface-name" x="100" y="60" visibility="hidden">et-0/0/53</text>
 
-            <text id="leaf1-intf1" class="interface-name" x="30" y="22">et-0/0/20</text>
-            <text id="leaf1-intf2" class="interface-name" x="60" y="22">et-0/0/21</text>
-            <text id="leaf2-intf1" class="interface-name" x="140" y="22">et-0/0/20</text>
-            <text id="leaf2-intf2" class="interface-name" x="170" y="22">et-0/0/21</text>
+            <text id="leaf1-intf1" class="interface-name" x="25" y="22">et-0/0/20</text>
+            <text id="leaf1-intf2" class="interface-name" x="65" y="22">et-0/0/21</text>
+            <text id="leaf2-intf1" class="interface-name" x="135" y="22">et-0/0/20</text>
+            <text id="leaf2-intf2" class="interface-name" x="175" y="22">et-0/0/21</text>
 
-            <text id="access1-intf1" class="interface-name" x="30" y="53">et-0/0/48</text>
-            <text id="access1-intf2" class="interface-name" x="60" y="53">et-0/0/49</text>
-            <text id="access2-intf1" class="interface-name" x="140" y="53">et-0/0/48</text>
-            <text id="access2-intf2" class="interface-name" x="170" y="53">et-0/0/49</text>
+            <text id="access1-intf1" class="interface-name" x="25" y="53">et-0/0/48</text>
+            <text id="access1-intf2" class="interface-name" x="65" y="53">et-0/0/49</text>
+            <text id="access2-intf1" class="interface-name" x="135" y="53">et-0/0/48</text>
+            <text id="access2-intf2" class="interface-name" x="175" y="53">et-0/0/49</text>
 
             </svg>
 
@@ -122,17 +122,17 @@ template.innerHTML = `
                 <line x1="170" y1="25" x2="170" y2="50" />
                 <line x1="90" y1="62" x2="110" y2="62" />
 
-                <text id="leaf1-intf1" class="interface-name" x="30" y="22">et-0/0/20</text>
-                <text id="leaf1-intf2" class="interface-name" x="60" y="22">et-0/0/21</text>
-                <text id="leaf2-intf1" class="interface-name" x="140" y="22">et-0/0/20</text>
-                <text id="leaf2-intf2" class="interface-name" x="170" y="22">et-0/0/21</text>
+                <text id="leaf1-intf1" class="interface-name" x="25" y="22">et-0/0/20</text>
+                <text id="leaf1-intf2" class="interface-name" x="65" y="22">et-0/0/21</text>
+                <text id="leaf2-intf1" class="interface-name" x="135" y="22">et-0/0/20</text>
+                <text id="leaf2-intf2" class="interface-name" x="165" y="22">et-0/0/21</text>
     
                 <text class="interface-name" x="100" y="60">et-0/0/53</text>
 
-                <text id="access1-intf1" class="interface-name" x="30" y="53">et-0/0/48</text>
-                <text id="access1-intf2" class="interface-name" x="60" y="53">et-0/0/49</text>
-                <text id="access2-intf1" class="interface-name" x="140" y="53">et-0/0/48</text>
-                <text id="access2-intf2" class="interface-name" x="170" y="53">et-0/0/49</text>
+                <text id="access1-intf1" class="interface-name" x="25" y="53">et-0/0/48</text>
+                <text id="access1-intf2" class="interface-name" x="65" y="53">et-0/0/49</text>
+                <text id="access2-intf1" class="interface-name" x="135" y="53">et-0/0/48</text>
+                <text id="access2-intf2" class="interface-name" x="175" y="53">et-0/0/49</text>
     
             </svg>
         </td>
