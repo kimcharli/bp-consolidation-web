@@ -20,18 +20,52 @@ template.innerHTML = `
         // font-size: 16px;
         width: 100%;
     }
+    img {
+        width: 20px;
+        height: 20px;
+        background-color: white;
+    }
+    #load-env-div[data-loaded=""] {
+        background-color: var(--global-warning-color);
+    }
+    #load-env-div[data-loaded="loaded"] {
+        background-color: var(--global-ok-color);
+    }
+
     </style>
     <h3>Steps</h3>
     <div>
-        <button id="connect-button" type="button">Connect</button>
-        <button id="sync-state" type="button">Sync States</button>
-        <button type="button">Migrate Access Switches</button>
-        <button type="button">Migrate Access Switches</button>
-        <button type="button">Migrate Generic Systems</button>
-        <button type="button">Migrate Virtual Networks</button>
-        <button type="button">Migrate CTs</button>
-        <button type="button">Pull Configurations</button>
-        <button type="button">Move Devices</button>
+        <div id="load-env-div" data-loaded>
+            Load environment <a href="/static/env-example.ini" download="env-example.ini"><img src="/images/download.svg" /></a>
+            <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" /><input type="file" id="upload-env-ini-input" style="display: none;">
+        </div>
+        <div>
+            <button id="connect-button" type="button">Connect</button>
+        </div>
+        <div>
+            <button id="sync-state" type="button">Sync States</button>
+        </div>
+        <div>
+            <button type="button">Migrate Access Switches</button>
+        </div>
+        <div>
+            <button type="button">Migrate Access Switches</button>
+        </div>
+        <div>
+            <button type="button">Migrate Generic Systems</button>
+        </div>
+        <div>
+            <button type="button">Migrate Virtual Networks</button>
+        </div>
+        <div>
+            <button type="button">Migrate CTs</button>
+        </div>
+        <div>
+            <button type="button">Pull Configurations</button>
+        </div>
+        <div>
+            <button type="button">Move Devices</button>
+        </div>
     </div>
 `
 
@@ -40,6 +74,11 @@ class SideBar extends HTMLElement {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
+        const uploadImage = this.shadowRoot.getElementById('upload-env-ini-img');
+        uploadImage.addEventListener('click', this.handleUploadIniImageClick.bind(this));
+        const uploadInput = this.shadowRoot.getElementById('upload-env-ini-input');
+        uploadInput.addEventListener('change', this.handleUploadIniInputChange.bind(this));
+
         const connectButton = this.shadowRoot.getElementById('connect-button');
         connectButton.addEventListener('click', this.handleConnectClick.bind(this));
 
@@ -49,6 +88,42 @@ class SideBar extends HTMLElement {
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.connectServerSuccess.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.connectServerLogout.bind(this));
 
+    }
+
+    handleUploadIniImageClick(event) {
+        console.log('upload ini image clicked');
+        this.shadowRoot.getElementById('upload-env-ini-input').click();
+    }
+
+    handleUploadIniInputChange(event) {
+        const input_element = this.shadowRoot.getElementById('upload-env-ini-input');
+        const formData = new FormData();
+        formData.append('file', input_element.files[0]);
+        fetch('/upload-env-ini', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);
+            this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
+            window.dispatchEvent(
+                new CustomEvent(GlobalEventEnum.SYNC_ENV_INI )
+            );
+
+        })
+        .catch(error => console.error('Error:', error));
+    //     console.log('upload ini input changed');
+    //     const file = event.target.files[0];
+        
+    //     const reader = new FileReader();
+    //     reader.onload = function(e) {
+    //         console.log(e.target.result);
+    //         window.dispatchEvent(
+    //             new CustomEvent(GlobalEventEnum.UPLOAD_INI_REQUEST, { bubbles: true, composed: true, detail: { ini: e.target.result } } )
+    //         );
+    //     }
+    //     reader.readAsText(file);
     }
 
     handleConnectClick(event) {

@@ -157,21 +157,21 @@ class AccessSwitches extends HTMLElement {
     }
 
     connectedCallback() {
-        this.fetch_blueprint();
-        this.shadowRoot.getElementById("access-gs-label").innerHTML = "atl1tor-r4r16";
-        this.shadowRoot.getElementById("leaf1-label").innerHTML = "atl1lef15-r5r13";
-        this.shadowRoot.getElementById("leaf2-label").innerHTML = "atl1lef16-r5r14";
-        this.shadowRoot.getElementById("leaf-gs-label").innerHTML = "UPLINK-LEF-15-16-r4r16";
-        this.shadowRoot.getElementById("access1-label").innerHTML = "atl1tor-r4r16a";
-        this.shadowRoot.getElementById("access2-label").innerHTML = "atl1tor-r4r16b";
-        this.shadowRoot.getElementById("leaf1-intf1").innerHTML = "et-0/0/20";
-        this.shadowRoot.getElementById("leaf1-intf2").innerHTML = "et-0/0/21";
-        this.shadowRoot.getElementById("leaf2-intf1").innerHTML = "et-0/0/20";
-        this.shadowRoot.getElementById("leaf2-intf2").innerHTML = "et-0/0/21";
-        this.shadowRoot.getElementById("access1-intf1").innerHTML = "et-0/0/48";
-        this.shadowRoot.getElementById("access1-intf2").innerHTML = "et-0/0/49";
-        this.shadowRoot.getElementById("access2-intf1").innerHTML = "et-0/0/48";
-        this.shadowRoot.getElementById("access2-intf2").innerHTML = "et-0/0/49";
+        // this.fetch_blueprint();
+        // this.shadowRoot.getElementById("access-gs-label").innerHTML = "atl1tor-r4r16";
+        // this.shadowRoot.getElementById("leaf1-label").innerHTML = "atl1lef15-r5r13";
+        // this.shadowRoot.getElementById("leaf2-label").innerHTML = "atl1lef16-r5r14";
+        // this.shadowRoot.getElementById("leaf-gs-label").innerHTML = "UPLINK-LEF-15-16-r4r16";
+        // this.shadowRoot.getElementById("access1-label").innerHTML = "atl1tor-r4r16a";
+        // this.shadowRoot.getElementById("access2-label").innerHTML = "atl1tor-r4r16b";
+        // this.shadowRoot.getElementById("leaf1-intf1").innerHTML = "et-0/0/20";
+        // this.shadowRoot.getElementById("leaf1-intf2").innerHTML = "et-0/0/21";
+        // this.shadowRoot.getElementById("leaf2-intf1").innerHTML = "et-0/0/20";
+        // this.shadowRoot.getElementById("leaf2-intf2").innerHTML = "et-0/0/21";
+        // this.shadowRoot.getElementById("access1-intf1").innerHTML = "et-0/0/48";
+        // this.shadowRoot.getElementById("access1-intf2").innerHTML = "et-0/0/49";
+        // this.shadowRoot.getElementById("access2-intf1").innerHTML = "et-0/0/48";
+        // this.shadowRoot.getElementById("access2-intf2").innerHTML = "et-0/0/49";
     }
 
     connect_blueprint() {

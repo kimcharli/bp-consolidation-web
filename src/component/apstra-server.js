@@ -98,7 +98,6 @@ template.innerHTML = `
         }
 
         #connect-button {
-            // background-color: #ffb71b;
             background-color: var(--global-warning-color);
         }
     </style>
@@ -148,22 +147,27 @@ class ApstraServer extends HTMLElement {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
-        const connectButton = this.shadowRoot.getElementById('connect-button');
-        connectButton.addEventListener('click', this.handleConnectClick.bind(this));
+        // const connectButton = this.shadowRoot.getElementById('connect-button');
+        // connectButton.addEventListener('click', this.handleConnectClick.bind(this));
         const editButton = this.shadowRoot.getElementById('edit-button');
         editButton.addEventListener('click', this.handleEditClick.bind(this));
 
         window.addEventListener(GlobalEventEnum.CONNECT_REQUEST, this.connectServer.bind(this));
+        window.addEventListener(GlobalEventEnum.SYNC_ENV_INI, this.syncEnvIni.bind(this));
     }
 
     connectedCallback() {
+        // this.fetch_server();
+    }
+
+    syncEnvIni(){
         this.fetch_server();
     }
 
     async fetch_server() {
         queryFetch(`
           {
-            server {
+            fetchServer {
               id
               host
               port
@@ -173,10 +177,10 @@ class ApstraServer extends HTMLElement {
           }  
         `)
         .then(data => {
-            this.shadowRoot.getElementById('apstra-host').value = data.data.server.host;
-            this.shadowRoot.getElementById('apstra-port').value = data.data.server.port;
-            this.shadowRoot.getElementById('apstra-username').value = data.data.server.username;
-            this.shadowRoot.getElementById('apstra-password').value = data.data.server.password;
+            this.shadowRoot.getElementById('apstra-host').value = data.data.fetchServer.host;
+            this.shadowRoot.getElementById('apstra-port').value = data.data.fetchServer.port;
+            this.shadowRoot.getElementById('apstra-username').value = data.data.fetchServer.username;
+            this.shadowRoot.getElementById('apstra-password').value = data.data.fetchServer.password;
         })
 
     }

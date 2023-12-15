@@ -1,11 +1,13 @@
 import logging
 import dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
+
+from .model.ck_global import GlobalStore
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -26,6 +28,16 @@ async def test(request: Request):
     result = data
     return result
 
+@app.post("/upload-env-ini")
+async def upload_env_ini(file: UploadFile):
+    file_content = await file.read()
+    logging.warning(f"/upload_env_ini: {file.filename=} {file_content=}")
+    # dotenv.load_dotenv(file_content)
+    # logging.warning(f"/upload_env_ini: {os.getenv('apstra_server_host')=}")
+    GlobalStore.env_ini.update(file_content)
+    # logging.warning(f"upload_env_ini: {os.getenv('apstra_server_host')=}")
+    logging.warning(f"/upload_env_ini: {GlobalStore.env_ini.__dict__}")
+    return {"filename": file.filename, "file_size": len(file_content)}
 
 from .graphql_main import graphql_app
 app.add_route("/graphql", graphql_app)

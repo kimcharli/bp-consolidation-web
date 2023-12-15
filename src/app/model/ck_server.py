@@ -41,15 +41,17 @@ Response = Annotated[
 @strawberry.type
 class ServerQuery:    
     @strawberry.field
-    def server(self, info) -> ApstaServer:
+    def fetch_server(self, info) -> ApstaServer:
         apstra_server = GlobalStore.apstra_server
         if apstra_server is None:
-            dotenv.load_dotenv()
-            host = os.getenv("apstra_server_host")
-            port = int(os.getenv("apstra_server_port"))
-            username = os.getenv("apstra_server_username")
-            password = os.getenv("apstra_server_password")        
-            apstra_server = ApstaServer(host=host, port=port, username=username, password=password)
+            env_ini = GlobalStore.env_ini
+            logging.warning(f"ServerQuery:fetch_server: {env_ini.__dict__}")
+            # dotenv.load_dotenv()
+            # host = os.getenv("apstra_server_host")
+            # port = int(os.getenv("apstra_server_port"))
+            # username = os.getenv("apstra_server_username")
+            # password = os.getenv("apstra_server_password")        
+            apstra_server = ApstaServer(host=env_ini.host, port=env_ini.port, username=env_ini.username, password=env_ini.password)
             GlobalStore.apstra_server = apstra_server
             # apstra_servers.append(ApstaServer(host=host, port=port, username=username, password=password))
         return apstra_server
