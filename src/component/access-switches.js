@@ -11,7 +11,6 @@ template.innerHTML = `
         th, td {
             border: 1px solid black;
             text-align: left;
-            width: 50%;
         }
         th {
             background-color: var(--global-th-color);
@@ -19,7 +18,8 @@ template.innerHTML = `
         svg, line, rect {
             vector-effect: non-scaling-stroke;
             fill: transparent;
-            stroke: black
+            stroke: black;
+            // width: 400px;
         }
         svg text {
             font-family: Monospace;
@@ -33,11 +33,17 @@ template.innerHTML = `
             font-size: 5px;
             alignment-baseline: middle;
         }
+        #main_bp, #tor_bp {
+            width: 50%;
+        }
         #main_bp[data-bp-id=""], #tor_bp[data-bp-id=""] {
             background-color: var(--global-warning-color);
         }
         #main_bp[data-bp-id*="-"], #tor_bp[data-bp-id*="-"] {
             background-color: var(--global-ok-color);
+        }
+        .center {
+            text-align: center;
         }
     </style>
 
@@ -47,18 +53,17 @@ template.innerHTML = `
         <th>ToR Blueprint</th>
     </tr>
     <tr>
-        <td id="main_bp" data-bp-label data-bp-id></th>
-        <td id="tor_bp" data-bp-label data-bp-id></th>
+        <td id="main_bp" data-bp-label data-bp-id>M</td>
+        <td id="tor_bp" data-bp-label data-bp-id>T</td>
     </tr>
     <tr>
         <td>
-            <svg viewBox="0 0 200 75" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 200 75" width="400px" xmlns="http://www.w3.org/2000/svg">
             <defs>
                 <rect id="leaf" width="90" height="25" ry="5" />
                 <rect id="access-gs" width="200" height="25" ry="5" />
                 <rect id="access" width="90" height="25" ry="5" />
                 </defs>
-        
         
             <use x="0" y="0" href="#leaf" />
             <text id="leaf1-label" x="50" y="12" text-anchor="middle" alignment-baseline="central">leaf1</text>
@@ -67,12 +72,20 @@ template.innerHTML = `
             <text id="leaf2-label" x="160" y="12" text-anchor="middle" alignment-baseline="central">leaf2</text>
 
             <use x="0" y="50" href="#access-gs" />
-            <text id="access-gs-label" x="100" y="62" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
+            <text id="access-gs-label" x="100" y="62" text-anchor="middle" alignment-baseline="central">access-gs</text>
+
+            <use x="0" y="50" href="#access" visibility="hidden" />
+            <text id="access1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central" visibility="hidden">access1</text>
+        
+            <use x="110" y="50" href="#access" visibility="hidden" />
+            <text id="access2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central" visibility="hidden">access2</text>
 
             <line x1="30" y1="25" x2="30" y2="50" />
             <line x1="60" y1="25" x2="140" y2="50" />
             <line x1="140" y1="25" x2="60" y2="50" />
             <line x1="170" y1="25" x2="170" y2="50" />
+            <line x1="90" y1="62" x2="110" y2="62" visibility="hidden" />
+            <text class="interface-name" x="100" y="60" visibility="hidden">et-0/0/53</text>
 
             <text id="leaf1-intf1" class="interface-name" x="30" y="22">et-0/0/20</text>
             <text id="leaf1-intf2" class="interface-name" x="60" y="22">et-0/0/21</text>
@@ -88,7 +101,7 @@ template.innerHTML = `
 
         </th>
         <td>
-            <svg viewBox="0 0 200 75" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="0 0 200 75" width="400px" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                     <rect id="access" width="90" height="25" ry="5" />
                     <rect id="leaf-gs" width="200" height="25" ry="5" />
@@ -134,11 +147,13 @@ class AccessSwitches extends HTMLElement {
         this.attachShadow({ mode: "open" });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
+        window.addEventListener(GlobalEventEnum.FETCH_BP_REQUEST, this.fetch_blueprint.bind(this));
         window.addEventListener(GlobalEventEnum.BP_CONNECT_REQUEST, this.blueprintConnectRequested.bind(this));
         window.addEventListener(GlobalEventEnum.SYNC_STATE_REQUEST, this.syncStateRequested.bind(this));
     }
 
-    fetch_blueprint() {
+    fetch_blueprint(event) {
+        console.log("access-switches.js:fetch_blueprint: begin");
         queryFetch( `
             query {
                 fetchBlueprints {                
@@ -150,6 +165,7 @@ class AccessSwitches extends HTMLElement {
         `)
         .then(data => {
             data.data.fetchBlueprints.forEach(element => {
+                console.log(element);
                 this.shadowRoot.getElementById(element.role).innerHTML = element.label;
                 this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
             })

@@ -25,6 +25,9 @@ template.innerHTML = `
         height: 20px;
         background-color: white;
     }
+    #load-env-div {
+        font-family: Arial, Helvetica, sans-serif;
+    }
     #load-env-div[data-loaded=""] {
         background-color: var(--global-warning-color);
     }
@@ -108,22 +111,11 @@ class SideBar extends HTMLElement {
             console.log(data);
             this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
             window.dispatchEvent(
-                new CustomEvent(GlobalEventEnum.SYNC_ENV_INI )
+                new CustomEvent(GlobalEventEnum.FETCH_ENV_INI )
             );
 
         })
         .catch(error => console.error('Error:', error));
-    //     console.log('upload ini input changed');
-    //     const file = event.target.files[0];
-        
-    //     const reader = new FileReader();
-    //     reader.onload = function(e) {
-    //         console.log(e.target.result);
-    //         window.dispatchEvent(
-    //             new CustomEvent(GlobalEventEnum.UPLOAD_INI_REQUEST, { bubbles: true, composed: true, detail: { ini: e.target.result } } )
-    //         );
-    //     }
-    //     reader.readAsText(file);
     }
 
     handleConnectClick(event) {

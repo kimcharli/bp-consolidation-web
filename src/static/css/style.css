@@ -6,6 +6,9 @@
     --global-th-color: #0096a4;
 }
 
+body {
+    font-family: Arial, Helvetica, sans-serif;
+}
 
 .yellow {
     background-color: yellow;

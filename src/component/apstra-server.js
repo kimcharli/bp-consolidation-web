@@ -126,10 +126,10 @@ template.innerHTML = `
                             <button id="edit-button" type="submit" class="tooltip-object">Edit</button>
                             <span class="tooltip-text">Click to Edit</span>
                         </td>
-                        <td><input id="apstra-host" name="apstra-host" /></th>
-                        <td><input id="apstra-port" type="number" name="apstra-port" /></th>
-                        <td><input id="apstra-username" name="apstra-username" /></th>
-                        <td><input id="apstra-password" type="password" name="apstra-password"  /></th>
+                        <td><input id="apstra-host" readonly></th>
+                        <td><input id="apstra-port" readonly></th>
+                        <td><input id="apstra-username" readonly></th>
+                        <td><input id="apstra-password" type="password" readonly /></th>
                     </tr>
                 </table>
             </td>
@@ -153,15 +153,20 @@ class ApstraServer extends HTMLElement {
         editButton.addEventListener('click', this.handleEditClick.bind(this));
 
         window.addEventListener(GlobalEventEnum.CONNECT_REQUEST, this.connectServer.bind(this));
-        window.addEventListener(GlobalEventEnum.SYNC_ENV_INI, this.syncEnvIni.bind(this));
+        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.fetchEnvIni.bind(this));
     }
 
     connectedCallback() {
         // this.fetch_server();
     }
 
-    syncEnvIni(){
+    fetchEnvIni(event){
         this.fetch_server();
+        console.log('apstar-server.js:fetchEnvIni(): fetch server done');
+        window.dispatchEvent(
+            new CustomEvent(GlobalEventEnum.FETCH_BP_REQUEST )
+        );
+
     }
 
     async fetch_server() {
@@ -187,6 +192,11 @@ class ApstraServer extends HTMLElement {
 
 
     async login_server(apstra_host, apstra_port, apstra_username, apstra_password) {
+        if (apstra_host === '' || apstra_port === '' || apstra_username === '' || apstra_password === '') {
+            const error_message = 'the server, port, username, and password must be filled in to proceed. Load environment.'
+            alert(error_message);
+            return {'errors': error_message};
+        }
         return queryFetch(`
             mutation LoginServer($host: String!, $port: Int!, $username: String!, $password: String!){
                 loginServer(host: $host, port: $port, username: $username, password: $password) {
@@ -224,6 +234,10 @@ class ApstraServer extends HTMLElement {
         const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
         this.login_server(apstra_host, apstra_port, apstra_username, apstra_password)
             .then(data => {
+                if (data.errors) {
+                    console.log(data.errors);
+                    return;
+                }
                 console.log(data);
                 switch(data.data.loginServer.__typename) {
                     case 'ApstraServerSuccess':
@@ -242,10 +256,10 @@ class ApstraServer extends HTMLElement {
                         tooltipText.innerHTML = 'Click to Disconnect';            
                     break;
                 }
+                window.dispatchEvent(
+                    new CustomEvent(GlobalEventEnum.BP_CONNECT_REQUEST)
+                );
             })
-        window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.BP_CONNECT_REQUEST)
-        );
 
     }
 

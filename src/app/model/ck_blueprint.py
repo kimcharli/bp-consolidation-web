@@ -1,8 +1,6 @@
 import strawberry
 from typing import Any, List, Annotated, Union
 import uuid
-import dotenv
-import os
 import logging
 
 from .ck_global import GlobalStore
@@ -28,9 +26,9 @@ class ApstaBlueprint:
 class BlueprintQuery:    
     @strawberry.field
     def fetch_blueprints(self, info) -> List[ApstaBlueprint]:
-        dotenv.load_dotenv()
-        main_bp_label = os.getenv("main_bp")
-        tor_bp_label = os.getenv("tor_bp")
+        env_ini = GlobalStore.env_ini
+        main_bp_label = env_ini.main_bp_label
+        tor_bp_label = env_ini.tor_bp_label
         main_bp = ApstaBlueprint(label=main_bp_label, role="main_bp")
         GlobalStore.main_bp = main_bp
         tor_bp = ApstaBlueprint(label=tor_bp_label, role="tor_bp")
@@ -42,10 +40,10 @@ class BlueprintMutation:
     @strawberry.field
     def connect_blueprints(self, info) -> List[ApstaBlueprint]:
         bps = [ x for x in GlobalStore.get_blueprints() ]
-        logging.warning(f"Connecting blueprints {bps}")
+        logging.warning(f"connect_blueprints(): {bps}")
         for bp in bps:  # ApstaBlueprint
-            logging.warning(f"Connecting blueprint {bp.label}")
+            logging.warning(f"connect_blueprints() {bp.label}")
             bp.connect()
-            logging.warning(f"Connected blueprint {bp.label}")
+            logging.warning(f"connect_blueprints() {bp.label}")
         return bps
 
