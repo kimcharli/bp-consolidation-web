@@ -147,10 +147,8 @@ class ApstraServer extends HTMLElement {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
-        // const connectButton = this.shadowRoot.getElementById('connect-button');
-        // connectButton.addEventListener('click', this.handleConnectClick.bind(this));
-        const editButton = this.shadowRoot.getElementById('edit-button');
-        editButton.addEventListener('click', this.handleEditClick.bind(this));
+
+        this.shadowRoot.getElementById('edit-button').addEventListener('click', this.handleEditClick.bind(this));
 
         window.addEventListener(GlobalEventEnum.CONNECT_REQUEST, this.connectServer.bind(this));
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.fetchEnvIni.bind(this));
@@ -191,27 +189,35 @@ class ApstraServer extends HTMLElement {
     }
 
 
-    async login_server(apstra_host, apstra_port, apstra_username, apstra_password) {
-        if (apstra_host === '' || apstra_port === '' || apstra_username === '' || apstra_password === '') {
-            const error_message = 'the server, port, username, and password must be filled in to proceed. Load environment.'
-            alert(error_message);
-            return {'errors': error_message};
-        }
-        return queryFetch(`
-            mutation LoginServer($host: String!, $port: Int!, $username: String!, $password: String!){
-                loginServer(host: $host, port: $port, username: $username, password: $password) {
-                    __typename
-                    ... on ApstraServerSuccess {
-                        host
-                    }
-                    ... on ApstraServerLoginFail {
-                        server
-                        error
+    login_server(apstra_host, apstra_port, apstra_username, apstra_password) {
+        const login_promise = new Promise((resolve, reject) => {
+            if (apstra_host === '' || apstra_port === '' || apstra_username === '' || apstra_password === '') {
+                const error_message = 'the server, port, username, and password must be filled in to proceed. Load environment.'
+                alert(error_message);
+                reject(error_message);
+            };
+            queryFetch(`
+                mutation LoginServer($host: String!, $port: Int!, $username: String!, $password: String!){
+                    loginServer(host: $host, port: $port, username: $username, password: $password) {
+                        __typename
+                        ... on ApstraServerSuccess {
+                            host
+                        }
+                        ... on ApstraServerLoginFail {
+                            server
+                            error
+                        }
                     }
                 }
-            }
-        `, { host: apstra_host, port: parseInt(apstra_port), username: apstra_username, password: apstra_password })
-        .then(data => { return data})
+            `, { host: apstra_host, port: parseInt(apstra_port), username: apstra_username, password: apstra_password })
+            .then(data => {
+                if (data.errors) {
+                    reject(data.errors);
+                } else {
+                    resolve(data);
+                }})
+            .catch(error => reject(error));
+        })
     }
 
     async logout_server() {
@@ -234,10 +240,6 @@ class ApstraServer extends HTMLElement {
         const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
         this.login_server(apstra_host, apstra_port, apstra_username, apstra_password)
             .then(data => {
-                if (data.errors) {
-                    console.log(data.errors);
-                    return;
-                }
                 console.log(data);
                 switch(data.data.loginServer.__typename) {
                     case 'ApstraServerSuccess':
@@ -259,6 +261,9 @@ class ApstraServer extends HTMLElement {
                 window.dispatchEvent(
                     new CustomEvent(GlobalEventEnum.BP_CONNECT_REQUEST)
                 );
+            })
+            .catch(error => {
+                console.log(error);
             })
 
     }
@@ -287,11 +292,5 @@ class ApstraServer extends HTMLElement {
     handleEditClick(event) {
         alert('handleEditClicked');
     }   
-    // render() {
-    //     return html`
-    //         <p>Welcome to the Lit tutorial!</p>
-    //         <p>This is the ${this.version} code.</p>
-    //     `;
-    // }
 }   
 customElements.define('apstra-server', ApstraServer);

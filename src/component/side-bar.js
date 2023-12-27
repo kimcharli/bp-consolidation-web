@@ -77,16 +77,11 @@ class SideBar extends HTMLElement {
         super();
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
-        const uploadImage = this.shadowRoot.getElementById('upload-env-ini-img');
-        uploadImage.addEventListener('click', this.handleUploadIniImageClick.bind(this));
-        const uploadInput = this.shadowRoot.getElementById('upload-env-ini-input');
-        uploadInput.addEventListener('change', this.handleUploadIniInputChange.bind(this));
 
-        const connectButton = this.shadowRoot.getElementById('connect-button');
-        connectButton.addEventListener('click', this.handleConnectClick.bind(this));
-
-        const syncStateButton = this.shadowRoot.getElementById('sync-state');
-        syncStateButton.addEventListener('click', this.handleSyncStateClick.bind(this));
+        this.shadowRoot.getElementById('load-env-ini-img').addEventListener('click', this.handleUploadIniImageClick.bind(this));
+        this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this));
+        this.shadowRoot.getElementById('connect-button').addEventListener('click', this.handleConnectClick.bind(this));
+        this.shadowRoot.getElementById('sync-state').addEventListener('click', this.handleSyncStateClick.bind(this));
 
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.connectServerSuccess.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.connectServerLogout.bind(this));
