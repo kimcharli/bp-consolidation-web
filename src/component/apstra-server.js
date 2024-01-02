@@ -150,32 +150,29 @@ class ApstraServer extends HTMLElement {
 
         this.shadowRoot.getElementById('edit-button').addEventListener('click', this.handleEditClick.bind(this));
 
-        window.addEventListener(GlobalEventEnum.CONNECT_REQUEST, this.connectServer.bind(this));
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.fetchEnvIni.bind(this));
-        window.addEventListener(GlobalEventEnum.LOADED_SERVER_DATA, this.serverDataLoaded.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_SERVER, this.connectServer.bind(this));
+        // window.addEventListener(GlobalEventEnum.LOADED_SERVER_DATA, this.serverDataLoaded.bind(this));
     }
 
     connectedCallback() {
         // this.fetch_server();
     }
 
-    serverDataLoaded(event) {
-        console.log('apstra-server.js:serverDataLoaded(): ', event.detail.data);
-        const serverData = event.detail.data[0];
-        this.shadowRoot.getElementById('apstra-host').value = serverData.host;
-        this.shadowRoot.getElementById('apstra-port').value = serverData.port;
-        this.shadowRoot.getElementById('apstra-username').value = serverData.username;
-        this.shadowRoot.getElementById('apstra-password').value = serverData.password;
-        this.shadowRoot.getElementById('apstra-host').dataset.serverId = serverData.id;
-    }
+    // serverDataLoaded(event) {
+    //     console.log('apstra-server.js:serverDataLoaded(): ', event.detail.data);
+    //     const serverData = event.detail.data[0];
+    //     this.shadowRoot.getElementById('apstra-host').value = serverData.host;
+    //     this.shadowRoot.getElementById('apstra-port').value = serverData.port;
+    //     this.shadowRoot.getElementById('apstra-username').value = serverData.username;
+    //     this.shadowRoot.getElementById('apstra-password').value = serverData.password;
+    //     this.shadowRoot.getElementById('apstra-host').dataset.serverId = serverData.id;
+    // }
 
 
     fetchEnvIni(event){
-        this.fetch_server();
-        console.log('apstar-server.js:fetchEnvIni(): fetch server done');
-    }
-
-    async fetch_server() {
+        // this.fetch_server();
+        // console.log('apstar-server.js:fetchEnvIni(): fetch server done');
         CkIDB.getServerStore()
             .then(data => {
                 console.log('apstra-server.js:fetch_server() then: ', data);
@@ -185,39 +182,52 @@ class ApstraServer extends HTMLElement {
                 this.shadowRoot.getElementById('apstra-password').value = data.password;    
                 this.shadowRoot.getElementById('apstra-host').dataset.id = data.id;
             });
+
     }
 
+    // async fetch_server() {
+    //     CkIDB.getServerStore()
+    //         .then(data => {
+    //             console.log('apstra-server.js:fetch_server() then: ', data);
+    //             this.shadowRoot.getElementById('apstra-host').value = data.host;
+    //             this.shadowRoot.getElementById('apstra-port').value = data.port;
+    //             this.shadowRoot.getElementById('apstra-username').value = data.username;
+    //             this.shadowRoot.getElementById('apstra-password').value = data.password;    
+    //             this.shadowRoot.getElementById('apstra-host').dataset.id = data.id;
+    //         });
+    // }
 
-    login_server(apstra_host, apstra_port, apstra_username, apstra_password) {        
-        return new Promise((resolve, reject) => {
-            if (apstra_host === '' || apstra_port === '' || apstra_username === '' || apstra_password === '') {
-                const error_message = 'the server, port, username, and password must be filled in to proceed. Load environment.'
-                alert(error_message);
-                reject(error_message);
-            };
-            queryFetch(`
-                mutation LoginServer($host: String!, $port: Int!, $username: String!, $password: String!){
-                    loginServer(host: $host, port: $port, username: $username, password: $password) {
-                        __typename
-                        ... on ApstraServerSuccess {
-                            host
-                        }
-                        ... on ApstraServerLoginFail {
-                            server
-                            error
-                        }
-                    }
-                }
-            `, { host: apstra_host, port: parseInt(apstra_port), username: apstra_username, password: apstra_password })
-            .then(data => {
-                if (data.errors) {
-                    reject(data.errors);
-                } else {
-                    resolve(data);
-                }})
-            .catch(error => reject(error));
-        })
-    }
+
+    // login_server(apstra_host, apstra_port, apstra_username, apstra_password) {        
+    //     return new Promise((resolve, reject) => {
+    //         if (apstra_host === '' || apstra_port === '' || apstra_username === '' || apstra_password === '') {
+    //             const error_message = 'the server, port, username, and password must be filled in to proceed. Load environment.'
+    //             alert(error_message);
+    //             reject(error_message);
+    //         };
+    //         queryFetch(`
+    //             mutation LoginServer($host: String!, $port: Int!, $username: String!, $password: String!){
+    //                 loginServer(host: $host, port: $port, username: $username, password: $password) {
+    //                     __typename
+    //                     ... on ApstraServerSuccess {
+    //                         host
+    //                     }
+    //                     ... on ApstraServerLoginFail {
+    //                         server
+    //                         error
+    //                     }
+    //                 }
+    //             }
+    //         `, { host: apstra_host, port: parseInt(apstra_port), username: apstra_username, password: apstra_password })
+    //         .then(data => {
+    //             if (data.errors) {
+    //                 reject(data.errors);
+    //             } else {
+    //                 resolve(data);
+    //             }})
+    //         .catch(error => reject(error));
+    //     })
+    // }
 
     async logout_server() {
         return queryFetch(`
@@ -237,28 +247,30 @@ class ApstraServer extends HTMLElement {
         const apstra_port = this.shadowRoot.getElementById('apstra-port').value;
         const apstra_username = this.shadowRoot.getElementById('apstra-username').value;
         const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
-        this.login_server(apstra_host, apstra_port, apstra_username, apstra_password)
+        fetch('/login-server', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                host: apstra_host,
+                port: apstra_port,
+                username: apstra_username,
+                password: apstra_password
+            })
+        })
+            .then(response => response.json())
             .then(data => {
-                console.log(data);
-                switch(data.data.loginServer.__typename) {
-                    case 'ApstraServerSuccess':
-                        window.dispatchEvent(
-                            new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS)
-                        );                
-                        thisTarget.innerHTML = 'on';
-                        thisTarget.style.backgroundColor = 'var(--global-ok-color)';
-                        thisTarget.style.animation = 'pulse 1s infinite';
-                        tooltipText.innerHTML = 'Click to Disconnect';  
-                        break;
-                    case 'ApstraServerLoginFail':
-                        thisTarget.innerHTML  = 'fail';
-                        thisTarget.style.backgroundColor = 'var(--global-error-color)';
-                        thisTarget.style.animation = 'pulse 1s infinite';
-                        tooltipText.innerHTML = 'Click to Disconnect';            
-                    break;
-                }
+                console.log('connectServer() then', data);
                 window.dispatchEvent(
-                    new CustomEvent(GlobalEventEnum.BP_CONNECT_REQUEST)
+                    new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS)
+                );                
+                thisTarget.innerHTML = 'on';
+                thisTarget.style.backgroundColor = 'var(--global-ok-color)';
+                thisTarget.style.animation = 'pulse 1s infinite';
+                tooltipText.innerHTML = 'Click to Disconnect';  
+                window.dispatchEvent(
+                    new CustomEvent(GlobalEventEnum.CONNECT_BLUEPRINT)
                 );
             })
             .catch(error => {

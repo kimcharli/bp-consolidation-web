@@ -86,6 +86,7 @@ class SideBar extends HTMLElement {
         this.shadowRoot.getElementById('sync-state').addEventListener('click', this.handleSyncStateClick.bind(this));
 
         // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
+        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.connectServerSuccess.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.connectServerLogout.bind(this));
     }
@@ -98,6 +99,11 @@ class SideBar extends HTMLElement {
         console.log('upload ini image clicked. id =', event.currentTarget.id );
         this.shadowRoot.getElementById('upload-env-ini-input').click();
     }
+
+    handleFetchEnvIni(event) {
+        this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
+    }
+        
 
     // upload submitted
     handleUploadIniInputChange(event) {
@@ -112,11 +118,11 @@ class SideBar extends HTMLElement {
         .then(response => response.json())
         .then(data => {
             console.log('handleUploadIniInputChange - fetched', data);
-            this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
+            // this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
             CkIDB.addServerStore(data);
-            window.dispatchEvent(
-                new CustomEvent(GlobalEventEnum.FETCH_ENV_INI )
-            );
+            // window.dispatchEvent(
+            //     new CustomEvent(GlobalEventEnum.FETCH_ENV_INI )
+            // );
 
         })
         .catch(error => console.error('handleUploadIniInputChange - fetch Error:', error));
@@ -124,7 +130,7 @@ class SideBar extends HTMLElement {
 
     handleConnectClick(event) {
         window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.CONNECT_REQUEST, { bubbles: true, composed: true } )
+            new CustomEvent(GlobalEventEnum.CONNECT_SERVER, { bubbles: true, composed: true } )
         );
 
     }

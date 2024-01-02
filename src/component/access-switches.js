@@ -148,7 +148,7 @@ class AccessSwitches extends HTMLElement {
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.fetch_blueprint.bind(this));
-        window.addEventListener(GlobalEventEnum.BP_CONNECT_REQUEST, this.blueprintConnectRequested.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_BLUEPRINT, this.blueprintConnectRequested.bind(this));
         window.addEventListener(GlobalEventEnum.SYNC_STATE_REQUEST, this.syncStateRequested.bind(this));
     }
 
@@ -199,24 +199,41 @@ class AccessSwitches extends HTMLElement {
     }
 
     connect_blueprint() {
-        queryFetch( `
-            mutation {
-                connectBlueprints {                
-                    label
-                    role
-                    id
-                    bpId
-                }
-            }
-        `)
-        .then(data => {
-            console.log(data);
-            data.data.connectBlueprints.forEach(element => {
-                this.shadowRoot.getElementById(element.role).innerHTML = element.label;
-                this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
-                this.shadowRoot.getElementById(element.role).dataset.bpId = element.bpId;
+        ['main_bp', 'tor_bp'].forEach(element => 
+            fetch('/login-blueprint', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    label: this.shadowRoot.getElementById(element).innerHTML,
+                })
             })
-        });
+                .then(response => response.json())
+                .then(data => {
+                    // this.shadowRoot.getElementById(element).innerHTML = element.label;
+                    // this.shadowRoot.getElementById(element).dataset.bpLabel = element.label;
+                    this.shadowRoot.getElementById(element).dataset.bpId = data.id;
+                })
+        )
+        // queryFetch( `
+        //     mutation {
+        //         connectBlueprints {                
+        //             label
+        //             role
+        //             id
+        //             bpId
+        //         }
+        //     }
+        // `)
+        // .then(data => {
+        //     console.log(data);
+        //     data.data.connectBlueprints.forEach(element => {
+        //         this.shadowRoot.getElementById(element.role).innerHTML = element.label;
+        //         this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
+        //         this.shadowRoot.getElementById(element.role).dataset.bpId = element.bpId;
+        //     })
+        // });
     }
 
     blueprintConnectRequested(event) {

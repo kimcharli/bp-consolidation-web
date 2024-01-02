@@ -6,8 +6,9 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
+from pydantic import BaseModel
 
-from .model.ck_global import GlobalStore
+from .model.ck_global import GlobalStore, ServerItem, BlueprintItem
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -39,6 +40,21 @@ async def upload_env_ini(file: UploadFile):
     # logging.warning(f"upload_env_ini: {os.getenv('apstra_server_host')=}")
     logging.warning(f"/upload_env_ini: {GlobalStore.env_ini.__dict__}")
     return content
+
+
+@app.post("/login-server")
+async def login_server(server: ServerItem):
+    logging.warning(f"/login_server: {server=}")
+    version = GlobalStore.login_server(server)
+    return version
+
+
+@app.post("/login-blueprint")
+async def login_blueprint(blueprint: BlueprintItem):
+    logging.warning(f"/login_blueprint: {blueprint=}")
+    id = GlobalStore.login_blueprint(blueprint)
+    return id
+
 
 from .graphql_main import graphql_app
 app.add_route("/graphql", graphql_app)

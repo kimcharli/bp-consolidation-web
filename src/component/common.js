@@ -25,7 +25,16 @@ export class CkIDB {
                 password`,
         });
         console.log('openDB: ', this.db);
-
+        this.getServerStore()
+            .then((serverContents) => {
+                if (typeof serverContents !== 'undefined') {
+                    console.log('openDB: serverContents', serverContents);
+                    // window.dispatchEvent(
+                    //     new CustomEvent(GlobalEventEnum.LOADED_SERVER_DATA, { detail: serverContents })
+                    // );
+                    this.TriggerFetchEnvIni();
+                }
+            });
     }
 
     static getServerStore() {
@@ -35,8 +44,14 @@ export class CkIDB {
     // triggered by side-bar
     static addServerStore(data) {
         this.db.apstra_server.put(data)
+        this.TriggerFetchEnvIni();
     }
 
+    static TriggerFetchEnvIni() {
+        window.dispatchEvent(
+            new CustomEvent(GlobalEventEnum.FETCH_ENV_INI )
+        );
+    }
 }
 
 
@@ -66,12 +81,12 @@ export function queryFetch(query, variables){
 }
 
 export class GlobalEventEnum {
-    static LOADED_SERVER_DATA = 'global-loaded-server-data';  // 1. triggered by common.js, action by side-bar.js
+    // static LOADED_SERVER_DATA = 'global-loaded-server-data';  // 1. triggered by common.js, action by side-bar.js
     static FETCH_ENV_INI = 'global-fetch-env-ini-request';  // 1. trigger by side-bar.js, action by apstra-server.js
     // static FETCH_BP_REQUEST = 'global-fetch-bp-ini-request';  // 2. trigger by apstra-server.js, action by blueprint.js
-    static CONNECT_REQUEST = 'global-connect-request';  // 3. trigger by side-bar.js, action by apstra-server.js
+    static CONNECT_SERVER = 'global-connect-request';  // 3. trigger by side-bar.js, action by apstra-server.js
     static CONNECT_SUCCESS = 'global-connect-success';
     static CONNECT_LOGOUT = 'global-connect-logout';
     static SYNC_STATE_REQUEST = 'global-sync-state-request';
-    static BP_CONNECT_REQUEST = 'blueprint-connect-request';
+    static CONNECT_BLUEPRINT = 'blueprint-connect-request';
 }

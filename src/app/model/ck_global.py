@@ -3,7 +3,19 @@ import os
 import logging
 import uuid
 import strawberry
+from pydantic import BaseModel
 
+from ck_apstra_api.apstra_session import CkApstraSession
+from ck_apstra_api.apstra_blueprint import CkApstraBlueprint
+
+class ServerItem(BaseModel):
+    host: str
+    port: str
+    username: str
+    password: str
+
+class BlueprintItem(BaseModel):
+    label: str
 
 class EnvIni:
     def __init__(self):
@@ -84,6 +96,18 @@ class GlobalStore:
     def update_env_ini(cls):
         cls.logger.warning(f"update_env_ini(): {cls.env_ini.__dict__}")
         cls.env_ini.update()
+
+    @classmethod
+    def login_server(cls, server: ServerItem):
+        cls.apstra_server = CkApstraSession(server.host, int(server.port), server.username, server.password)
+        cls.logger.warning(f"login_server(): {cls.apstra_server.__dict__}")
+        return { "version": cls.apstra_server.version }
+
+    @classmethod
+    def login_blueprint(cls, blueprint: BlueprintItem):
+        cls.apstra_blueprint = CkApstraBlueprint(cls.apstra_server, blueprint.label)
+        cls.logger.warning(f"login_blueprint(): {cls.apstra_blueprint.__dict__}")
+        return { "id": cls.apstra_blueprint.id }
 
 # @strawberry.interface
 # class Node:
