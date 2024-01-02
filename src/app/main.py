@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="src/static"), name="static")
+app.mount("/js", StaticFiles(directory="src/static/js"), name="js")
 app.mount("/css", StaticFiles(directory="src/static/css"), name="css")
 app.mount("/images", StaticFiles(directory="src/static/images"), name="images")
 app.mount("/component", StaticFiles(directory="src/component"), name="component")
@@ -34,10 +35,10 @@ async def upload_env_ini(file: UploadFile):
     logging.warning(f"/upload_env_ini: {file.filename=} {file_content=}")
     # dotenv.load_dotenv(file_content)
     # logging.warning(f"/upload_env_ini: {os.getenv('apstra_server_host')=}")
-    GlobalStore.env_ini.update(file_content)
+    content = GlobalStore.env_ini.update(file_content)
     # logging.warning(f"upload_env_ini: {os.getenv('apstra_server_host')=}")
     logging.warning(f"/upload_env_ini: {GlobalStore.env_ini.__dict__}")
-    return {"filename": file.filename, "file_size": len(file_content)}
+    return content
 
 from .graphql_main import graphql_app
 app.add_route("/graphql", graphql_app)

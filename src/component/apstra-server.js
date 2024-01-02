@@ -1,4 +1,4 @@
-import { queryFetch, GlobalEventEnum } from "./common.js";
+import { queryFetch, GlobalEventEnum, CkIDB } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -126,7 +126,7 @@ template.innerHTML = `
                             <button id="edit-button" type="submit" class="tooltip-object">Edit</button>
                             <span class="tooltip-text">Click to Edit</span>
                         </td>
-                        <td><input id="apstra-host" readonly></th>
+                        <td><input id="apstra-host" data-id readonly></th>
                         <td><input id="apstra-port" readonly></th>
                         <td><input id="apstra-username" readonly></th>
                         <td><input id="apstra-password" type="password" readonly /></th>
@@ -152,45 +152,44 @@ class ApstraServer extends HTMLElement {
 
         window.addEventListener(GlobalEventEnum.CONNECT_REQUEST, this.connectServer.bind(this));
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.fetchEnvIni.bind(this));
+        window.addEventListener(GlobalEventEnum.LOADED_SERVER_DATA, this.serverDataLoaded.bind(this));
     }
 
     connectedCallback() {
         // this.fetch_server();
     }
 
+    serverDataLoaded(event) {
+        console.log('apstra-server.js:serverDataLoaded(): ', event.detail.data);
+        const serverData = event.detail.data[0];
+        this.shadowRoot.getElementById('apstra-host').value = serverData.host;
+        this.shadowRoot.getElementById('apstra-port').value = serverData.port;
+        this.shadowRoot.getElementById('apstra-username').value = serverData.username;
+        this.shadowRoot.getElementById('apstra-password').value = serverData.password;
+        this.shadowRoot.getElementById('apstra-host').dataset.serverId = serverData.id;
+    }
+
+
     fetchEnvIni(event){
         this.fetch_server();
         console.log('apstar-server.js:fetchEnvIni(): fetch server done');
-        window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.FETCH_BP_REQUEST )
-        );
-
     }
 
     async fetch_server() {
-        queryFetch(`
-          {
-            fetchServer {
-              id
-              host
-              port
-              username
-              password
-            }
-          }  
-        `)
-        .then(data => {
-            this.shadowRoot.getElementById('apstra-host').value = data.data.fetchServer.host;
-            this.shadowRoot.getElementById('apstra-port').value = data.data.fetchServer.port;
-            this.shadowRoot.getElementById('apstra-username').value = data.data.fetchServer.username;
-            this.shadowRoot.getElementById('apstra-password').value = data.data.fetchServer.password;
-        })
-
+        CkIDB.getServerStore()
+            .then(data => {
+                console.log('apstra-server.js:fetch_server() then: ', data);
+                this.shadowRoot.getElementById('apstra-host').value = data.host;
+                this.shadowRoot.getElementById('apstra-port').value = data.port;
+                this.shadowRoot.getElementById('apstra-username').value = data.username;
+                this.shadowRoot.getElementById('apstra-password').value = data.password;    
+                this.shadowRoot.getElementById('apstra-host').dataset.id = data.id;
+            });
     }
 
 
-    login_server(apstra_host, apstra_port, apstra_username, apstra_password) {
-        const login_promise = new Promise((resolve, reject) => {
+    login_server(apstra_host, apstra_port, apstra_username, apstra_password) {        
+        return new Promise((resolve, reject) => {
             if (apstra_host === '' || apstra_port === '' || apstra_username === '' || apstra_password === '') {
                 const error_message = 'the server, port, username, and password must be filled in to proceed. Load environment.'
                 alert(error_message);
@@ -244,7 +243,7 @@ class ApstraServer extends HTMLElement {
                 switch(data.data.loginServer.__typename) {
                     case 'ApstraServerSuccess':
                         window.dispatchEvent(
-                            new CustomEvent('global-connect-success')
+                            new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS)
                         );                
                         thisTarget.innerHTML = 'on';
                         thisTarget.style.backgroundColor = 'var(--global-ok-color)';
@@ -278,7 +277,7 @@ class ApstraServer extends HTMLElement {
             case 'on':
             case 'fail':
                 window.dispatchEvent(
-                    new CustomEvent('global-connect-logout')
+                    new CustomEvent(GlobalEventEnum.CONNECT_LOGOUT)
                 );                
                 thisTarget.innerHTML  = 'off';
                 thisTarget.style.backgroundColor = 'var(--global-warning-color)';

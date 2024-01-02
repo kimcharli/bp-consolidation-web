@@ -1,16 +1,27 @@
 import dotenv
 import os
 import logging
+import uuid
+import strawberry
 
 
 class EnvIni:
     def __init__(self):
         self.logger = logging.getLogger("EnvIni")
         self.logger.warning(f"__init__(): before update: {self.__dict__}")
+        self.host = None
+        self.port = None
+        self.username = None
+        self.password = None
+        self.main_bp_label = None
+        self.tor_bp_label = None
         self.update()
         self.logger.warning(f"__init__(): after update: {self.__dict__}")
     
-    def update(self, file_content=None):
+    def update(self, file_content=None) -> dict:
+        """
+        Update the environment variables from the file_content, and return the updated dict.
+        """
         self.logger.warning(f"update(): before update: {self.__dict__}, {file_content=}")
         lines = file_content.decode('utf-8').splitlines() if file_content else []
         for line in lines:
@@ -33,6 +44,15 @@ class EnvIni:
             else:
                 self.logger.warning(f"update(): invalid name: {name_value}")        
         self.logger.warning(f"update(): after update: {self.__dict__}")
+        return_content = {
+            "host": self.host,
+            "port": self.port,
+            "username": self.username,
+            "password": self.password,
+            "main_bp_label": self.main_bp_label,
+            "tor_bp_label": self.tor_bp_label,
+        }
+        return return_content
 
 class GlobalStore:
     apstra_server = None  #  ApstaServer
@@ -64,3 +84,18 @@ class GlobalStore:
     def update_env_ini(cls):
         cls.logger.warning(f"update_env_ini(): {cls.env_ini.__dict__}")
         cls.env_ini.update()
+
+# @strawberry.interface
+# class Node:
+#     nodes = {}  # 
+#     # id: strawberry.ID
+#     id: str = strawberry.field(default_factory=lambda: str(uuid.uuid4()))
+
+#     def __init__(self):
+#         self.logger = logging.getLogger("Node")
+#         # self.id = strawberry.field(default_factory=lambda: str(uuid.uuid4()))
+#         Node.nodes[id] = self
+#         self.logger.warning(f"__init__(): {self.__dict__}")
+
+
+

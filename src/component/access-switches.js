@@ -1,4 +1,4 @@
-import { queryFetch, GlobalEventEnum } from "./common.js";
+import { queryFetch, GlobalEventEnum, CkIDB } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -147,29 +147,37 @@ class AccessSwitches extends HTMLElement {
         this.attachShadow({ mode: "open" });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        window.addEventListener(GlobalEventEnum.FETCH_BP_REQUEST, this.fetch_blueprint.bind(this));
+        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.fetch_blueprint.bind(this));
         window.addEventListener(GlobalEventEnum.BP_CONNECT_REQUEST, this.blueprintConnectRequested.bind(this));
         window.addEventListener(GlobalEventEnum.SYNC_STATE_REQUEST, this.syncStateRequested.bind(this));
     }
 
     fetch_blueprint(event) {
         console.log("access-switches.js:fetch_blueprint: begin");
-        queryFetch( `
-            query {
-                fetchBlueprints {                
-                    label
-                    role
-                    id
-                }
-            }
-        `)
-        .then(data => {
-            data.data.fetchBlueprints.forEach(element => {
-                console.log(element);
-                this.shadowRoot.getElementById(element.role).innerHTML = element.label;
-                this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
+        CkIDB.getServerStore()
+            .then(data => {
+                console.log('fetch_blueprint() then: ', data);
+                this.shadowRoot.getElementById("main_bp").innerHTML = data.main_bp_label;
+                this.shadowRoot.getElementById("main_bp").dataset.bpLabel = data.main_bp_label;
+                this.shadowRoot.getElementById("tor_bp").innerHTML = data.tor_bp_label;
+                this.shadowRoot.getElementById("tor_bp").dataset.bpLabel = data.tor_bp_label;
+
             })
-        });
+        // queryFetch( `
+        //     query {
+        //         fetchBlueprints {                
+        //             label
+        //             role
+        //         }
+        //     }
+        // `)
+        // .then(data => {
+        //     data.data.fetchBlueprints.forEach(element => {
+        //         console.log(element);
+        //         this.shadowRoot.getElementById(element.role).innerHTML = element.label;
+        //         this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
+        //     })
+        // });
     }
 
     connectedCallback() {

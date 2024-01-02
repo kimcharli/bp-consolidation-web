@@ -1,4 +1,4 @@
-import { GlobalEventEnum } from "./common.js";
+import { GlobalEventEnum, CkIDB } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -78,22 +78,30 @@ class SideBar extends HTMLElement {
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        this.shadowRoot.getElementById('load-env-ini-img').addEventListener('click', this.handleUploadIniImageClick.bind(this));
+        // load env initiated
+        this.shadowRoot.getElementById('upload-env-ini-img').addEventListener('click', this.handleUploadIniImageClick.bind(this));
+        // upload submitted
         this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this));
         this.shadowRoot.getElementById('connect-button').addEventListener('click', this.handleConnectClick.bind(this));
         this.shadowRoot.getElementById('sync-state').addEventListener('click', this.handleSyncStateClick.bind(this));
 
+        // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.connectServerSuccess.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.connectServerLogout.bind(this));
-
     }
 
+    // handleLoadLocalData(event) {
+    // }
+
+    // load env clicked
     handleUploadIniImageClick(event) {
-        console.log('upload ini image clicked');
+        console.log('upload ini image clicked. id =', event.currentTarget.id );
         this.shadowRoot.getElementById('upload-env-ini-input').click();
     }
 
+    // upload submitted
     handleUploadIniInputChange(event) {
+        console.log('upload ini input clicked. id =', event.currentTarget.id );
         const input_element = this.shadowRoot.getElementById('upload-env-ini-input');
         const formData = new FormData();
         formData.append('file', input_element.files[0]);
@@ -103,14 +111,15 @@ class SideBar extends HTMLElement {
         })
         .then(response => response.json())
         .then(data => {
-            console.log(data);
+            console.log('handleUploadIniInputChange - fetched', data);
             this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
+            CkIDB.addServerStore(data);
             window.dispatchEvent(
                 new CustomEvent(GlobalEventEnum.FETCH_ENV_INI )
             );
 
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => console.error('handleUploadIniInputChange - fetch Error:', error));
     }
 
     handleConnectClick(event) {
