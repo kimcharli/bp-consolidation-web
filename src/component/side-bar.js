@@ -38,7 +38,7 @@ template.innerHTML = `
     </style>
     <h3>Steps</h3>
     <div>
-        <div id="load-env-div" data-loaded>
+        <div id="load-env-div" style="padding-left: 6px;font-family: Arial;font-size: 14px;" data-loaded>
             Load
             <img id="trash-env" src="/images/trash.svg" alt="trash env" align="right" />
             <a href="/static/env-example.ini" download="env-example.ini"><img src="/images/download.svg" align="right" /></a>
