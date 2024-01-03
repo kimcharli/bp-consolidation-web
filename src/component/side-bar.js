@@ -39,8 +39,10 @@ template.innerHTML = `
     <h3>Steps</h3>
     <div>
         <div id="load-env-div" data-loaded>
-            Load environment <a href="/static/env-example.ini" download="env-example.ini"><img src="/images/download.svg" /></a>
-            <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" /><input type="file" id="upload-env-ini-input" style="display: none;">
+            Load
+            <img id="trash-env" src="/images/trash.svg" alt="trash env" align="right" />
+            <a href="/static/env-example.ini" download="env-example.ini"><img src="/images/download.svg" align="right" /></a>
+            <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" /><input type="file" id="upload-env-ini-input" style="display: none;">
         </div>
         <div>
             <button id="connect-button" type="button">Connect</button>
@@ -81,12 +83,14 @@ class SideBar extends HTMLElement {
         // load env initiated
         this.shadowRoot.getElementById('upload-env-ini-img').addEventListener('click', this.handleUploadIniImageClick.bind(this));
         // upload submitted
-        this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this));
+        this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
         this.shadowRoot.getElementById('connect-button').addEventListener('click', this.handleConnectClick.bind(this));
         this.shadowRoot.getElementById('sync-state').addEventListener('click', this.handleSyncStateClick.bind(this));
+        this.shadowRoot.getElementById('trash-env').addEventListener('click', this.handleTrashEnv.bind(this));
 
         // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
+        window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.connectServerSuccess.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.connectServerLogout.bind(this));
     }
@@ -96,18 +100,26 @@ class SideBar extends HTMLElement {
 
     // load env clicked
     handleUploadIniImageClick(event) {
-        console.log('upload ini image clicked. id =', event.currentTarget.id );
+        console.log('handleUploadIniImageClick() id =', event.currentTarget.id );
         this.shadowRoot.getElementById('upload-env-ini-input').click();
     }
 
     handleFetchEnvIni(event) {
         this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
     }
+
+    handleClearEnvIni(event) {
+        this.shadowRoot.getElementById('load-env-div').dataset.loaded = '';
+    }
         
+
+    handleTrashEnv(event) {
+        CkIDB.trashEnv()
+    }
 
     // upload submitted
     handleUploadIniInputChange(event) {
-        console.log('upload ini input clicked. id =', event.currentTarget.id );
+        console.log('handleUploadIniInputChange() id =', event.currentTarget.id );
         const input_element = this.shadowRoot.getElementById('upload-env-ini-input');
         const formData = new FormData();
         formData.append('file', input_element.files[0]);
@@ -126,6 +138,7 @@ class SideBar extends HTMLElement {
 
         })
         .catch(error => console.error('handleUploadIniInputChange - fetch Error:', error));
+        // this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
     }
 
     handleConnectClick(event) {

@@ -150,7 +150,8 @@ class ApstraServer extends HTMLElement {
 
         this.shadowRoot.getElementById('edit-button').addEventListener('click', this.handleEditClick.bind(this));
 
-        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.fetchEnvIni.bind(this));
+        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
+        window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_SERVER, this.connectServer.bind(this));
         // window.addEventListener(GlobalEventEnum.LOADED_SERVER_DATA, this.serverDataLoaded.bind(this));
     }
@@ -159,18 +160,7 @@ class ApstraServer extends HTMLElement {
         // this.fetch_server();
     }
 
-    // serverDataLoaded(event) {
-    //     console.log('apstra-server.js:serverDataLoaded(): ', event.detail.data);
-    //     const serverData = event.detail.data[0];
-    //     this.shadowRoot.getElementById('apstra-host').value = serverData.host;
-    //     this.shadowRoot.getElementById('apstra-port').value = serverData.port;
-    //     this.shadowRoot.getElementById('apstra-username').value = serverData.username;
-    //     this.shadowRoot.getElementById('apstra-password').value = serverData.password;
-    //     this.shadowRoot.getElementById('apstra-host').dataset.serverId = serverData.id;
-    // }
-
-
-    fetchEnvIni(event){
+    handleFetchEnvIni(event){
         // this.fetch_server();
         // console.log('apstar-server.js:fetchEnvIni(): fetch server done');
         CkIDB.getServerStore()
@@ -183,6 +173,14 @@ class ApstraServer extends HTMLElement {
                 this.shadowRoot.getElementById('apstra-host').dataset.id = data.id;
             });
 
+    }
+
+    handleClearEnvIni(event){
+        this.shadowRoot.getElementById('apstra-host').value = '';
+        this.shadowRoot.getElementById('apstra-port').value = '';
+        this.shadowRoot.getElementById('apstra-username').value = '';
+        this.shadowRoot.getElementById('apstra-password').value = '';    
+        this.shadowRoot.getElementById('apstra-host').dataset.id = '';
     }
 
     // async fetch_server() {

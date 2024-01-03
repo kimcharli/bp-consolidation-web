@@ -163,21 +163,6 @@ class AccessSwitches extends HTMLElement {
                 this.shadowRoot.getElementById("tor_bp").dataset.bpLabel = data.tor_bp_label;
 
             })
-        // queryFetch( `
-        //     query {
-        //         fetchBlueprints {                
-        //             label
-        //             role
-        //         }
-        //     }
-        // `)
-        // .then(data => {
-        //     data.data.fetchBlueprints.forEach(element => {
-        //         console.log(element);
-        //         this.shadowRoot.getElementById(element.role).innerHTML = element.label;
-        //         this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
-        //     })
-        // });
     }
 
     connectedCallback() {
@@ -216,24 +201,7 @@ class AccessSwitches extends HTMLElement {
                     this.shadowRoot.getElementById(element).dataset.bpId = data.id;
                 })
         )
-        // queryFetch( `
-        //     mutation {
-        //         connectBlueprints {                
-        //             label
-        //             role
-        //             id
-        //             bpId
-        //         }
-        //     }
-        // `)
-        // .then(data => {
-        //     console.log(data);
-        //     data.data.connectBlueprints.forEach(element => {
-        //         this.shadowRoot.getElementById(element.role).innerHTML = element.label;
-        //         this.shadowRoot.getElementById(element.role).dataset.bpLabel = element.label;
-        //         this.shadowRoot.getElementById(element.role).dataset.bpId = element.bpId;
-        //     })
-        // });
+
     }
 
     blueprintConnectRequested(event) {
