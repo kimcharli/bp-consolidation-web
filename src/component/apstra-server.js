@@ -161,18 +161,13 @@ class ApstraServer extends HTMLElement {
     }
 
     handleFetchEnvIni(event){
-        // this.fetch_server();
-        // console.log('apstar-server.js:fetchEnvIni(): fetch server done');
-        CkIDB.getServerStore()
-            .then(data => {
-                console.log('apstra-server.js:fetch_server() then: ', data);
-                this.shadowRoot.getElementById('apstra-host').value = data.host;
-                this.shadowRoot.getElementById('apstra-port').value = data.port;
-                this.shadowRoot.getElementById('apstra-username').value = data.username;
-                this.shadowRoot.getElementById('apstra-password').value = data.password;    
-                this.shadowRoot.getElementById('apstra-host').dataset.id = data.id;
-            });
-
+        const data = event.detail
+        console.log('ApstraServer: handleFetchEnvIni', event.detail)
+        this.shadowRoot.getElementById('apstra-host').value = data.host;
+        this.shadowRoot.getElementById('apstra-port').value = data.port;
+        this.shadowRoot.getElementById('apstra-username').value = data.username;
+        this.shadowRoot.getElementById('apstra-password').value = data.password;    
+        this.shadowRoot.getElementById('apstra-host').dataset.id = data.id;
     }
 
     handleClearEnvIni(event){
@@ -182,50 +177,6 @@ class ApstraServer extends HTMLElement {
         this.shadowRoot.getElementById('apstra-password').value = '';    
         this.shadowRoot.getElementById('apstra-host').dataset.id = '';
     }
-
-    // async fetch_server() {
-    //     CkIDB.getServerStore()
-    //         .then(data => {
-    //             console.log('apstra-server.js:fetch_server() then: ', data);
-    //             this.shadowRoot.getElementById('apstra-host').value = data.host;
-    //             this.shadowRoot.getElementById('apstra-port').value = data.port;
-    //             this.shadowRoot.getElementById('apstra-username').value = data.username;
-    //             this.shadowRoot.getElementById('apstra-password').value = data.password;    
-    //             this.shadowRoot.getElementById('apstra-host').dataset.id = data.id;
-    //         });
-    // }
-
-
-    // login_server(apstra_host, apstra_port, apstra_username, apstra_password) {        
-    //     return new Promise((resolve, reject) => {
-    //         if (apstra_host === '' || apstra_port === '' || apstra_username === '' || apstra_password === '') {
-    //             const error_message = 'the server, port, username, and password must be filled in to proceed. Load environment.'
-    //             alert(error_message);
-    //             reject(error_message);
-    //         };
-    //         queryFetch(`
-    //             mutation LoginServer($host: String!, $port: Int!, $username: String!, $password: String!){
-    //                 loginServer(host: $host, port: $port, username: $username, password: $password) {
-    //                     __typename
-    //                     ... on ApstraServerSuccess {
-    //                         host
-    //                     }
-    //                     ... on ApstraServerLoginFail {
-    //                         server
-    //                         error
-    //                     }
-    //                 }
-    //             }
-    //         `, { host: apstra_host, port: parseInt(apstra_port), username: apstra_username, password: apstra_password })
-    //         .then(data => {
-    //             if (data.errors) {
-    //                 reject(data.errors);
-    //             } else {
-    //                 resolve(data);
-    //             }})
-    //         .catch(error => reject(error));
-    //     })
-    // }
 
     async logout_server() {
         return queryFetch(`

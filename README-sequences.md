@@ -1,16 +1,21 @@
 ```mermaid
 sequenceDiagram
+    participant common
+    participant sidebar
+    participant server
+    participant blueprint
+    participant main.py
 
-    opt IndexedDB present   
-        common ->> sidebar: FETCH_ENV_INI
-        common ->> server: FETCH_ENV_INI
+    opt Server present on Startup
+        common ->> sidebar: FETCH_ENV_INI(data)
+        common ->> server: FETCH_ENV_INI(data)
     end
     opt Load Env ini
         sidebar ->> +main.py: /upload-env-ini
         main.py -->> -sidebar: server content
         sidebar ->> +common: add server
-        common ->> sidebar: FETCH_ENV_INI
-        common ->> -server: FETCH_ENV_INI
+        common ->> sidebar: FETCH_ENV_INI(data)
+        common ->> -server: FETCH_ENV_INI(data)
     end
     opt Clear Env ini
         sidebar ->> +common: trashEnv

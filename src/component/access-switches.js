@@ -53,8 +53,8 @@ template.innerHTML = `
         <th>ToR Blueprint</th>
     </tr>
     <tr>
-        <td id="main_bp" data-bp-label data-bp-id>M</td>
-        <td id="tor_bp" data-bp-label data-bp-id>T</td>
+        <td id="main_bp" data-bp-id>M</td>
+        <td id="tor_bp" data-bp-id>T</td>
     </tr>
     <tr>
         <td>
@@ -147,22 +147,23 @@ class AccessSwitches extends HTMLElement {
         this.attachShadow({ mode: "open" });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
-        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.fetch_blueprint.bind(this));
+        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
+        window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_BLUEPRINT, this.blueprintConnectRequested.bind(this));
         window.addEventListener(GlobalEventEnum.SYNC_STATE_REQUEST, this.syncStateRequested.bind(this));
     }
 
-    fetch_blueprint(event) {
-        console.log("access-switches.js:fetch_blueprint: begin");
-        CkIDB.getServerStore()
-            .then(data => {
-                console.log('fetch_blueprint() then: ', data);
-                this.shadowRoot.getElementById("main_bp").innerHTML = data.main_bp_label;
-                this.shadowRoot.getElementById("main_bp").dataset.bpLabel = data.main_bp_label;
-                this.shadowRoot.getElementById("tor_bp").innerHTML = data.tor_bp_label;
-                this.shadowRoot.getElementById("tor_bp").dataset.bpLabel = data.tor_bp_label;
+    handleFetchEnvIni(event) {
+        const data = event.detail
+        console.log('AccessSwitches: handleFetchEnvIni', data);
+        this.shadowRoot.getElementById("main_bp").innerHTML = data.main_bp_label;
+        this.shadowRoot.getElementById("tor_bp").innerHTML = data.tor_bp_label;
+    }
 
-            })
+    handleClearEnvIni(event) {
+        console.log('AccessSwitches: handleClearEnvIni');
+        this.shadowRoot.getElementById("main_bp").innerHTML = 'M';
+        this.shadowRoot.getElementById("tor_bp").innerHTML = 'T';
     }
 
     connectedCallback() {
@@ -196,8 +197,6 @@ class AccessSwitches extends HTMLElement {
             })
                 .then(response => response.json())
                 .then(data => {
-                    // this.shadowRoot.getElementById(element).innerHTML = element.label;
-                    // this.shadowRoot.getElementById(element).dataset.bpLabel = element.label;
                     this.shadowRoot.getElementById(element).dataset.bpId = data.id;
                 })
         )

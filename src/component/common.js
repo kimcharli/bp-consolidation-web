@@ -29,22 +29,13 @@ export class CkIDB {
                 [host+port+username], 
                 password`,
         });
-        // console.log('openDB: ', this.db);
-        this.getServerStore()
-            .then((serverContents) => {
-                if (typeof serverContents !== 'undefined') {
-                    console.log('openDB: serverContents', serverContents);
-                    // window.dispatchEvent(
-                    //     new CustomEvent(GlobalEventEnum.LOADED_SERVER_DATA, { detail: serverContents })
-                    // );
-                    this.TriggerFetchEnvIni();
-                }
-            });
+        this.db.apstra_server.toCollection().first(data => {
+            if (typeof data !== 'undefined') {
+                this.TriggerFetchEnvIni(data);
+            }
+        })
     }
 
-    static getServerStore() {
-        return this.db.apstra_server.toCollection().first();
-    }
 
     static isServerValid(data) {
         console.log('isServerValid() data.host =', data.host)
@@ -55,17 +46,17 @@ export class CkIDB {
     static addServerStore(data) {
         console.log('addServerStore() data', data)
         if (this.isServerValid(data)) {
-            console.log('addServerStore() isServerValid')
+            console.log('addServerStore() - isServerValid')
             this.db.apstra_server.put(data)
-            this.TriggerFetchEnvIni();    
+            this.TriggerFetchEnvIni(data);    
         } else {
             console.log('addServerStore() - invalid input')
         }
     }
 
-    static TriggerFetchEnvIni() {
+    static TriggerFetchEnvIni(data) {
         window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.FETCH_ENV_INI )
+            new CustomEvent(GlobalEventEnum.FETCH_ENV_INI, { detail: data } )
         );
     }
 
