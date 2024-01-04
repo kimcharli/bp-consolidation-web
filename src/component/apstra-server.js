@@ -97,8 +97,12 @@ template.innerHTML = `
             }
         }
 
-        #connect-button {
+        #connect-button[data-status="off"] {
             background-color: var(--global-warning-color);
+        }
+        #connect-button[data-status="on"] {
+            background-color: var(--global-ok-color);
+            animation: pulse 1s infinite
         }
     </style>
 
@@ -106,14 +110,13 @@ template.innerHTML = `
         <tr class="no-border">
             <td class="no-border" style="width: 100%;">
                 <a href="/"><img style="object-position: left top;" src="/images/home.svg" alt="Home" width="30" height="30"></a>
-                <a href="/graphql" target="_blank"><img src="/images/graphql.svg" alt="graphql" width="30" height="30"></a>
                 <a href="/css/style.css"><img src="/images/css-3.svg" alt="style.css" width="30" height="30"></a>
             </td>
             <td class="no-border">
                 <table>
                     <tr>
                         <td class="tooltip-container">
-                            <button id="connect-button" type="submit" class="tooltip-object">off</button>
+                            <button id="connect-button" type="submit" class="tooltip-object" data-status="off">off</button>
                             <span id="connect-button-tooltip-text" class="tooltip-text">Click to Connect</span>
                         </td>
                         <th>server</th>
@@ -211,10 +214,9 @@ class ApstraServer extends HTMLElement {
                 console.log('Apstra version: ', data.version);
                 window.dispatchEvent(
                     new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS)
-                );                
+                );                                
                 thisTarget.innerHTML = 'on';
-                thisTarget.style.backgroundColor = 'var(--global-ok-color)';
-                thisTarget.style.animation = 'pulse 1s infinite';
+                thisTarget.dataset.status = 'on';
                 tooltipText.innerHTML = 'Click to Disconnect';  
                 window.dispatchEvent(
                     new CustomEvent(GlobalEventEnum.CONNECT_BLUEPRINT)
@@ -234,8 +236,7 @@ class ApstraServer extends HTMLElement {
         const apstra_username = this.shadowRoot.getElementById('apstra-username').value;
         const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
         thisTarget.innerHTML = 'off';
-        thisTarget.style.backgroundColor = 'var(--global-warning-color)';
-        thisTarget.style.removeProperty('animation')
+        thisTarget.dataset.status = 'off';
         tooltipText.innerHTML = 'Click to Connect';  
     } 
 
@@ -252,9 +253,7 @@ class ApstraServer extends HTMLElement {
                     new CustomEvent(GlobalEventEnum.CONNECT_LOGOUT)
                 );                
                 thisTarget.innerHTML  = 'off';
-                thisTarget.style.backgroundColor = 'var(--global-warning-color)';
-                thisTarget.style.animation = '';
-                // this.logout_server()
+                thisTarget.dataset.status = 'off';
                 tooltipText.innerHTML = 'Click to Connect';
                 break;
         }
