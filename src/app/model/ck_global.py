@@ -20,10 +20,10 @@ class BlueprintItem(BaseModel):
 class EnvIni:
     def __init__(self):
         self.logger = logging.getLogger("EnvIni")
-        self.logger.warning(f"__init__(): before update: {self.__dict__}")
+        # self.logger.warning(f"__init__(): before update: {self.__dict__}")
         self.clear()
         self.update()
-        self.logger.warning(f"__init__(): after update: {self.__dict__}")
+        # self.logger.warning(f"__init__(): after update: {self.__dict__}")
     
     def clear(self):
         self.host = None
@@ -37,9 +37,9 @@ class EnvIni:
         """
         Update the environment variables from the file_content, and return the updated dict.
         """
-        self.logger.warning(f"update(): before update: {self.__dict__}, {file_content=}")
+        # self.logger.warning(f"update(): before update: {self.__dict__}, {file_content=}")
         self.clear()
-        self.logger.warning(f"update(): cleared: {self.__dict__}, {file_content=}")
+        # self.logger.warning(f"update(): cleared: {self.__dict__}, {file_content=}")
         lines = file_content.decode('utf-8').splitlines() if file_content else []
         for line in lines:
             name_value = line.split("=")
@@ -103,10 +103,17 @@ class GlobalStore:
         cls.env_ini.update()
 
     @classmethod
-    def login_server(cls, server: ServerItem):
+    def login_server(cls, server: ServerItem) -> dict:
         cls.apstra_server = CkApstraSession(server.host, int(server.port), server.username, server.password)
         cls.logger.warning(f"login_server(): {cls.apstra_server.__dict__}")
         return { "version": cls.apstra_server.version }
+
+    @classmethod
+    def logout_server(cls):
+        cls.apstra_server.logout() 
+        cls.logger.warning(f"logout_server()")
+        cls.apstra_server = None
+        return
 
     @classmethod
     def login_blueprint(cls, blueprint: BlueprintItem):

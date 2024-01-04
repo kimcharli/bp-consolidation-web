@@ -1,4 +1,4 @@
-import { queryFetch, GlobalEventEnum, CkIDB } from "./common.js";
+import { GlobalEventEnum, CkIDB } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -163,7 +163,9 @@ class AccessSwitches extends HTMLElement {
     handleClearEnvIni(event) {
         console.log('AccessSwitches: handleClearEnvIni');
         this.shadowRoot.getElementById("main_bp").innerHTML = 'M';
+        this.shadowRoot.getElementById("main_bp").dataset.bpId = '';
         this.shadowRoot.getElementById("tor_bp").innerHTML = 'T';
+        this.shadowRoot.getElementById("tor_bp").dataset.bpId = '';
     }
 
     connectedCallback() {

@@ -1,4 +1,4 @@
-import { queryFetch, GlobalEventEnum, CkIDB } from "./common.js";
+import { GlobalEventEnum, CkIDB } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -153,6 +153,7 @@ class ApstraServer extends HTMLElement {
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_SERVER, this.connectServer.bind(this));
+        window.addEventListener(GlobalEventEnum.DISCONNECT_SERVER, this.resetServer.bind(this));
         // window.addEventListener(GlobalEventEnum.LOADED_SERVER_DATA, this.serverDataLoaded.bind(this));
     }
 
@@ -227,6 +228,19 @@ class ApstraServer extends HTMLElement {
             })
 
     }
+
+    resetServer() {
+        const thisTarget = this.shadowRoot.getElementById('connect-button')
+        const tooltipText = this.shadowRoot.getElementById('connect-button-tooltip-text');
+        const apstra_host = this.shadowRoot.getElementById('apstra-host').value;
+        const apstra_port = this.shadowRoot.getElementById('apstra-port').value;
+        const apstra_username = this.shadowRoot.getElementById('apstra-username').value;
+        const apstra_password = this.shadowRoot.getElementById('apstra-password').value;
+        thisTarget.innerHTML = 'off';
+        thisTarget.style.backgroundColor = 'var(--global-warning-color)';
+        thisTarget.style.removeProperty('animation')
+        tooltipText.innerHTML = 'Click to Connect';  
+    } 
 
     handleConnectClick(event) {
         const thisTarget = event.target;

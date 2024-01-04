@@ -30,6 +30,11 @@ run
 run-web
 ```
 
+Duing develop
+```
+uvicorn src.app.main:app --reload
+```
+
 ## closing
 
 ```

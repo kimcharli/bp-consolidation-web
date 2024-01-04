@@ -48,6 +48,12 @@ async def login_server(server: ServerItem):
     version = GlobalStore.login_server(server)
     return version
 
+@app.post("/logout-server")
+async def logout_server():
+    logging.warning(f"/logout_server")
+    version = GlobalStore.logout_server()
+    return
+
 
 @app.post("/login-blueprint")
 async def login_blueprint(blueprint: BlueprintItem):

@@ -35,6 +35,13 @@ template.innerHTML = `
         background-color: var(--global-ok-color);
     }
 
+    #connect-button[data-connected="yes"] {
+        background-color: var(--global-ok-color);
+    }
+    #connect-button[data-connected="no"] {
+        background-color: var(--global-warning-color);
+    }
+
     </style>
     <h3>Steps</h3>
     <div>
@@ -45,7 +52,7 @@ template.innerHTML = `
             <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" /><input type="file" id="upload-env-ini-input" style="display: none;">
         </div>
         <div>
-            <button id="connect-button" type="button">Connect</button>
+            <button id="connect-button" type="button" data-connected="no">Connect</button>
         </div>
         <div>
             <button id="sync-state" type="button">Sync States</button>
@@ -84,15 +91,16 @@ class SideBar extends HTMLElement {
         this.shadowRoot.getElementById('upload-env-ini-img').addEventListener('click', this.handleUploadIniImageClick.bind(this));
         // upload submitted
         this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
+        this.shadowRoot.getElementById('trash-env').addEventListener('click', this.handleTrashEnv.bind(this));
+
         this.shadowRoot.getElementById('connect-button').addEventListener('click', this.handleConnectClick.bind(this));
         this.shadowRoot.getElementById('sync-state').addEventListener('click', this.handleSyncStateClick.bind(this));
-        this.shadowRoot.getElementById('trash-env').addEventListener('click', this.handleTrashEnv.bind(this));
 
         // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
-        window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.handelConnectSuccess.bind(this));
-        window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.connectServerLogout.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.handleConnectSuccess.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.handleServerLogout.bind(this));
     }
 
     // handleLoadLocalData(event) {
@@ -115,6 +123,7 @@ class SideBar extends HTMLElement {
 
     handleTrashEnv(event) {
         CkIDB.trashEnv()
+        this.handleServerLogout(event)
     }
 
     // upload submitted
@@ -143,17 +152,17 @@ class SideBar extends HTMLElement {
 
     handleConnectClick(event) {
         window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.CONNECT_SERVER, { bubbles: true, composed: true } )
+            new CustomEvent(GlobalEventEnum.CONNECT_SERVER)
         );
 
     }
 
-    handelConnectSuccess(event) {
-        this.shadowRoot.getElementById('connect-button').style.backgroundColor = 'var(--global-ok-color)';
+    handleConnectSuccess(event) {
+        this.shadowRoot.getElementById('connect-button').dataset.connected = 'yes';
     }
 
-    connectServerLogout(event) {
-        this.shadowRoot.getElementById('connect-button').style.backgroundColor = 'var(--global-warning-color)';
+    handleServerLogout(event) {
+        this.shadowRoot.getElementById('connect-button').dataset.connected = 'no';
     }
 
     handleSyncStateClick(event) {
