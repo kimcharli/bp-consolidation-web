@@ -177,17 +177,14 @@ class ApstraServer extends HTMLElement {
         this.shadowRoot.getElementById('apstra-username').value = '';
         this.shadowRoot.getElementById('apstra-password').value = '';    
         this.shadowRoot.getElementById('apstra-host').dataset.id = '';
-    }
-
-    async logout_server() {
-        return queryFetch(`
-            mutation {
-                logoutServer {
-                    host
-                }
-            }
-        `)
-        .then(data => { return data})
+        fetch('/logout-server', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+            })
+        })
     }
 
     connectServer(event) {
@@ -257,7 +254,7 @@ class ApstraServer extends HTMLElement {
                 thisTarget.innerHTML  = 'off';
                 thisTarget.style.backgroundColor = 'var(--global-warning-color)';
                 thisTarget.style.animation = '';
-                this.logout_server()
+                // this.logout_server()
                 tooltipText.innerHTML = 'Click to Connect';
                 break;
         }

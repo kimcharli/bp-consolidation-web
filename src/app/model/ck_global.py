@@ -14,8 +14,9 @@ class ServerItem(BaseModel):
     username: str
     password: str
 
-class BlueprintItem(BaseModel):
+class BlueprintItem(BaseModel):    
     label: str
+    role: str
 
 class EnvIni:
     def __init__(self):
@@ -73,8 +74,9 @@ class EnvIni:
 
 class GlobalStore:
     apstra_server = None  #  ApstaServer
-    main_bp = None  # ApstaBlueprint
-    tor_bp = None  # ApstaBlueprint
+    bp = {}  # main_bp, tor_bp
+    # main_bp = None  # ApstaBlueprint
+    # tor_bp = None  # ApstaBlueprint
 
     env_ini = EnvIni()
     
@@ -110,6 +112,7 @@ class GlobalStore:
 
     @classmethod
     def logout_server(cls):
+        cls.logout_blueprint()
         cls.apstra_server.logout() 
         cls.logger.warning(f"logout_server()")
         cls.apstra_server = None
@@ -117,9 +120,15 @@ class GlobalStore:
 
     @classmethod
     def login_blueprint(cls, blueprint: BlueprintItem):
-        cls.apstra_blueprint = CkApstraBlueprint(cls.apstra_server, blueprint.label)
-        cls.logger.warning(f"login_blueprint(): {cls.apstra_blueprint.__dict__}")
-        return { "id": cls.apstra_blueprint.id }
+        cls.bp[blueprint.role] = CkApstraBlueprint(cls.apstra_server, blueprint.label)
+        id = cls.bp[blueprint.role].id
+        cls.logger.warning(f"login_blueprint(): {cls.bp[blueprint.role]}, {id}")
+        return { "id": id }
+
+    @classmethod
+    def logout_blueprint(cls):
+        cls.bp = {}
+        return
 
 
 # @strawberry.interface

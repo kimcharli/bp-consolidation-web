@@ -195,6 +195,7 @@ class AccessSwitches extends HTMLElement {
                 },
                 body: JSON.stringify({
                     label: this.shadowRoot.getElementById(element).innerHTML,
+                    role: element,
                 })
             })
                 .then(response => response.json())
