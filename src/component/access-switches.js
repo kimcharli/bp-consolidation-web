@@ -33,13 +33,13 @@ template.innerHTML = `
             font-size: 0.4em;
             alignment-baseline: middle;
         }
-        #main_bp, #tor_bp {
+        .blueprint {
             width: 50%;
         }
-        #main_bp[data-bp-id=""], #tor_bp[data-bp-id=""] {
+        .blueprint[data-id=""] {
             background-color: var(--global-warning-color);
         }
-        #main_bp[data-bp-id*="-"], #tor_bp[data-bp-id*="-"] {
+        .blueprint[data-id*="-"] {
             background-color: var(--global-ok-color);
         }
         .center {
@@ -53,8 +53,8 @@ template.innerHTML = `
         <th>ToR Blueprint</th>
     </tr>
     <tr>
-        <td id="main_bp" data-bp-id>M</td>
-        <td id="tor_bp" data-bp-id>T</td>
+        <td id="main_bp" class="blueprint" data-id>M</td>
+        <td id="tor_bp" class="blueprint" data-id>T</td>
     </tr>
     <tr>
         <td>
@@ -163,9 +163,9 @@ class AccessSwitches extends HTMLElement {
     handleClearEnvIni(event) {
         console.log('AccessSwitches: handleClearEnvIni');
         this.shadowRoot.getElementById("main_bp").innerHTML = 'M';
-        this.shadowRoot.getElementById("main_bp").dataset.bpId = '';
+        this.shadowRoot.getElementById("main_bp").dataset.id = '';
         this.shadowRoot.getElementById("tor_bp").innerHTML = 'T';
-        this.shadowRoot.getElementById("tor_bp").dataset.bpId = '';
+        this.shadowRoot.getElementById("tor_bp").dataset.id = '';
     }
 
     connectedCallback() {
@@ -200,7 +200,7 @@ class AccessSwitches extends HTMLElement {
             })
                 .then(response => response.json())
                 .then(data => {
-                    this.shadowRoot.getElementById(element).dataset.bpId = data.id;
+                    this.shadowRoot.getElementById(element).dataset.id = data.id;
                 })
         )
 
