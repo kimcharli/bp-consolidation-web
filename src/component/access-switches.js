@@ -200,7 +200,9 @@ class AccessSwitches extends HTMLElement {
             })
                 .then(response => response.json())
                 .then(data => {
+                    console.log(`connect_blueprint then`, data)
                     this.shadowRoot.getElementById(element).dataset.id = data.id;
+                    this.shadowRoot.getElementById(element).innerHTML = `<a href="${data.url}" target="_blank">${data.label}</a>`;
                 })
         )
 

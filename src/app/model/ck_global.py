@@ -34,6 +34,9 @@ class EnvIni:
         self.main_bp_label = None
         self.tor_bp_label = None
 
+    def get_url(self):
+        return f"https://{self.host}:{self.port}"
+
     def update(self, file_content=None) -> dict:
         """
         Update the environment variables from the file_content, and return the updated dict.
@@ -61,7 +64,7 @@ class EnvIni:
                 self.tor_bp_label = name_value[1]
             else:
                 self.logger.warning(f"update(): invalid name: {name_value}")        
-        self.logger.warning(f"update(): after update: {self.__dict__}")
+        # self.logger.warning(f"update(): after update: {self.__dict__}")
         return_content = {
             "host": self.host,
             "port": self.port,
@@ -101,7 +104,7 @@ class GlobalStore:
 
     @classmethod
     def update_env_ini(cls):
-        cls.logger.warning(f"update_env_ini(): {cls.env_ini.__dict__}")
+        # cls.logger.warning(f"update_env_ini(): {cls.env_ini.__dict__}")
         cls.env_ini.update()
 
     @classmethod
@@ -122,8 +125,9 @@ class GlobalStore:
     def login_blueprint(cls, blueprint: BlueprintItem):
         cls.bp[blueprint.role] = CkApstraBlueprint(cls.apstra_server, blueprint.label)
         id = cls.bp[blueprint.role].id
+        url = f"{cls.env_ini.get_url()}/#/blueprints/{id}"
         cls.logger.warning(f"login_blueprint(): {cls.bp[blueprint.role]}, {id}")
-        return { "id": id }
+        return { "id": id, "url": url, "label": blueprint.label }
 
     @classmethod
     def logout_blueprint(cls):
@@ -131,17 +135,6 @@ class GlobalStore:
         return
 
 
-# @strawberry.interface
-# class Node:
-#     nodes = {}  # 
-#     # id: strawberry.ID
-#     id: str = strawberry.field(default_factory=lambda: str(uuid.uuid4()))
-
-#     def __init__(self):
-#         self.logger = logging.getLogger("Node")
-#         # self.id = strawberry.field(default_factory=lambda: str(uuid.uuid4()))
-#         Node.nodes[id] = self
-#         self.logger.warning(f"__init__(): {self.__dict__}")
-
-
-
+    @classmethod
+    def pull_tor_bp_data(cls):
+        pass

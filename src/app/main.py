@@ -34,10 +34,7 @@ async def test(request: Request):
 async def upload_env_ini(file: UploadFile):
     file_content = await file.read()
     logging.warning(f"/upload_env_ini: {file.filename=} {file_content=}")
-    # dotenv.load_dotenv(file_content)
-    # logging.warning(f"/upload_env_ini: {os.getenv('apstra_server_host')=}")
     content = GlobalStore.env_ini.update(file_content)
-    # logging.warning(f"upload_env_ini: {os.getenv('apstra_server_host')=}")
     logging.warning(f"/upload_env_ini: {GlobalStore.env_ini.__dict__}")
     return content
 

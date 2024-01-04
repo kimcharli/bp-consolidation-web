@@ -1,19 +1,4 @@
 
-// import Dexie from '../static/js/dexie.js';
-
-// const LSPrefix = 'ckconweb:'
-
-// // wildcard click event listener for debugging purpose
-// document.addEventListener('click', function (e) {
-//     console.log(`Global click event: ${this}, ${e}, id: ${e.currentTarget.id}`);
-// });
-
-// wildcard click event listener for debugging purpose
-document.addEventListener('change', function (e) {
-    console.log(`Global change event: ${this}, ${e}, id: ${e.currentTarget.id}`);
-});
-
-
 // IndexedDB
 // https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB
 export class CkIDB {
