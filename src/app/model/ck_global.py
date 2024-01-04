@@ -21,20 +21,25 @@ class EnvIni:
     def __init__(self):
         self.logger = logging.getLogger("EnvIni")
         self.logger.warning(f"__init__(): before update: {self.__dict__}")
+        self.clear()
+        self.update()
+        self.logger.warning(f"__init__(): after update: {self.__dict__}")
+    
+    def clear(self):
         self.host = None
         self.port = None
         self.username = None
         self.password = None
         self.main_bp_label = None
         self.tor_bp_label = None
-        self.update()
-        self.logger.warning(f"__init__(): after update: {self.__dict__}")
-    
+
     def update(self, file_content=None) -> dict:
         """
         Update the environment variables from the file_content, and return the updated dict.
         """
         self.logger.warning(f"update(): before update: {self.__dict__}, {file_content=}")
+        self.clear()
+        self.logger.warning(f"update(): cleared: {self.__dict__}, {file_content=}")
         lines = file_content.decode('utf-8').splitlines() if file_content else []
         for line in lines:
             name_value = line.split("=")
@@ -108,6 +113,7 @@ class GlobalStore:
         cls.apstra_blueprint = CkApstraBlueprint(cls.apstra_server, blueprint.label)
         cls.logger.warning(f"login_blueprint(): {cls.apstra_blueprint.__dict__}")
         return { "id": cls.apstra_blueprint.id }
+
 
 # @strawberry.interface
 # class Node:

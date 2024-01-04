@@ -91,7 +91,7 @@ class SideBar extends HTMLElement {
         // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
-        window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.connectServerSuccess.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.handelConnectSuccess.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.connectServerLogout.bind(this));
     }
 
@@ -148,7 +148,7 @@ class SideBar extends HTMLElement {
 
     }
 
-    connectServerSuccess(event) {
+    handelConnectSuccess(event) {
         this.shadowRoot.getElementById('connect-button').style.backgroundColor = 'var(--global-ok-color)';
     }
 

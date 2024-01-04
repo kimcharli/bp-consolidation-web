@@ -210,7 +210,7 @@ class ApstraServer extends HTMLElement {
         })
             .then(response => response.json())
             .then(data => {
-                console.log('connectServer() then', data);
+                console.log('Apstra version: ', data.version);
                 window.dispatchEvent(
                     new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS)
                 );                

@@ -56,8 +56,8 @@ async def login_blueprint(blueprint: BlueprintItem):
     return id
 
 
-from .graphql_main import graphql_app
-app.add_route("/graphql", graphql_app)
+# from .graphql_main import graphql_app
+# app.add_route("/graphql", graphql_app)
 
 def main():
     dotenv.load_dotenv()
