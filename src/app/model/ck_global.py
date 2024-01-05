@@ -161,11 +161,13 @@ class GlobalStore:
     def pull_tor_bp_data(cls):
         data = {
             'switches': [],
-            'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }  
+            'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }
+            'servers': {},  # <server>: { links: {} }
         }
         cls.logger.warning(f"{cls.bp=}")
         tor_bp = cls.bp['tor_bp']
-        peer_link_nodes = tor_bp.query("node('link',role='leaf_leaf',  name='link').in_('link').node('interface', name='intf').in_('hosted_interfaces').node('system', name='switch')")
+        peer_link_query = "node('link',role='leaf_leaf',  name='link').in_('link').node('interface', name='intf').in_('hosted_interfaces').node('system', name='switch')"
+        peer_link_nodes = tor_bp.query(peer_link_query)
         # cls.logger.warning(f"{peer_link_nodes=}")
         for link in peer_link_nodes:
             link_id = link['link']['id']
@@ -185,4 +187,34 @@ class GlobalStore:
             switch_intf = link['intf']['if_name']
             switch_data.append(switch_intf)
         cls.logger.warning(f"{data=}")
+
+        data['servers'] = cls.pull_server_links(tor_bp)
+
+        return data
+
+    @classmethod
+    def pull_server_links(cls, tor_bp):
+        data = {}  # <server>: { links: {} }
+        server_links_query = """
+            match(
+            node('system', system_type='server',  name='server').out().node('interface', if_type='ethernet', name='server-intf').out('link').node('link', name='link').in_('link').node('interface', name='switch-intf').in_('hosted_interfaces').node('system', system_type='switch', name='switch'),
+            optional(
+                node(name='switch-intf').in_().node('interface', name='ae')
+                ),
+            optional(
+                node(name='ae').in_().node('interface', name='evpn')
+                )
+            )
+            """
+        servers_link_nodes = tor_bp.query(server_links_query, multiline=True)
+        for server_link in servers_link_nodes:
+            server_label = server_link['server']['label']
+            if server_label not in data:
+                data[server_label] = { 'links': {} }  # <link_id>: {}
+            server_data = data[server_label] 
+            link_id = server_link['link']['id']
+            if link_id not in server_data['links']:
+                server_data['links'][link_id] = {}
+            link_data = server_data['links'][link_id]
+            link_data['speed'] = server_link['link']['speed']
         return data
