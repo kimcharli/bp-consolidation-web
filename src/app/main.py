@@ -2,7 +2,6 @@ import logging
 import dotenv
 from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, FileResponse
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import os
@@ -38,6 +37,13 @@ async def upload_env_ini(file: UploadFile):
     logging.warning(f"/upload_env_ini: {GlobalStore.env_ini.__dict__}")
     return content
 
+@app.post("/update-env-ini")
+async def update_env_ini(server: ServerItem):
+    logging.warning(f"/update-env-ini: {server=}")
+    GlobalStore.update_env_ini(server)
+    logging.warning(f"/update-env-ini: {GlobalStore.env_ini.__dict__}")
+    return server
+
 
 @app.post("/login-server")
 async def login_server(server: ServerItem):
@@ -57,6 +63,14 @@ async def login_blueprint(blueprint: BlueprintItem):
     logging.warning(f"/login_blueprint: {blueprint=}")
     id = GlobalStore.login_blueprint(blueprint)
     return id
+
+
+@app.get("/pull-data")
+async def pull_data():
+    logging.warning(f"/pull_data")
+    data = GlobalStore.pull_tor_bp_data()
+    return data
+
 
 
 # from .graphql_main import graphql_app

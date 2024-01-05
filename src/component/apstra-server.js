@@ -155,7 +155,7 @@ class ApstraServer extends HTMLElement {
 
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
-        window.addEventListener(GlobalEventEnum.CONNECT_SERVER, this.connectServer.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_SERVER, this.handleConnectServer.bind(this));
         window.addEventListener(GlobalEventEnum.DISCONNECT_SERVER, this.resetServer.bind(this));
         // window.addEventListener(GlobalEventEnum.LOADED_SERVER_DATA, this.serverDataLoaded.bind(this));
     }
@@ -190,7 +190,8 @@ class ApstraServer extends HTMLElement {
         })
     }
 
-    connectServer(event) {
+    handleConnectServer(event) {
+        console.log('handleConnectServer() begin')
         const thisTarget = this.shadowRoot.getElementById('connect-button')
         const tooltipText = this.shadowRoot.getElementById('connect-button-tooltip-text');
         const apstra_host = this.shadowRoot.getElementById('apstra-host').value;
@@ -206,26 +207,32 @@ class ApstraServer extends HTMLElement {
                 host: apstra_host,
                 port: apstra_port,
                 username: apstra_username,
-                password: apstra_password
+                password: apstra_password                
             })
         })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Apstra version: ', data.version);
-                window.dispatchEvent(
-                    new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS)
-                );                                
-                thisTarget.innerHTML = 'on';
-                thisTarget.dataset.status = 'on';
-                tooltipText.innerHTML = 'Click to Disconnect';  
-                window.dispatchEvent(
-                    new CustomEvent(GlobalEventEnum.CONNECT_BLUEPRINT)
-                );
-            })
-            .catch(error => {
-                console.log(error);
-            })
-
+        .then(res => {
+            if(!res.ok) {
+                return res.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return res.json();
+            }
+        })
+        .then(data => {
+            console.log('/login-server: Apstra version: ', data.version);
+            window.dispatchEvent(
+                new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS)
+            );                                
+            thisTarget.innerHTML = 'on';
+            thisTarget.dataset.status = 'on';
+            tooltipText.innerHTML = 'Click to Disconnect';  
+            window.dispatchEvent(
+                new CustomEvent(GlobalEventEnum.CONNECT_BLUEPRINT)
+            );
+        })
+        .catch(error => {
+            console.log(error);
+        })
     }
 
     resetServer() {

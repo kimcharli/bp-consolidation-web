@@ -15,10 +15,33 @@ export class CkIDB {
                 password`,
         });
         this.db.apstra_server.toCollection().first(data => {
+            console.log(`openDB: data=`, data)
             if (typeof data !== 'undefined') {
+                fetch('/update-env-ini', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(res => {
+                    if(!res.ok) {
+                        return res.text().then(text => { throw new Error(text) });
+                    }
+                    else {
+                        return res.json();
+                    }
+                })
+                .catch(error => {
+                    console.log(`error`, error)
+                })
                 this.TriggerFetchEnvIni(data);
             }
         })
+        .then(data => {
+            console.log('ok');
+         })
+        .catch(err => console.log('err', err))
     }
 
 

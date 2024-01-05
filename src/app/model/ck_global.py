@@ -1,30 +1,40 @@
-import dotenv
-import os
 import logging
-import uuid
-import strawberry
-from pydantic import BaseModel
+from typing import Optional
+from pydantic import BaseModel, field_validator
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint
 
 class ServerItem(BaseModel):
+    id: Optional[int] = None
     host: str
-    port: str
+    port: int
     username: str
     password: str
+    main_bp_label: Optional[str] = None
+    tor_bp_label: Optional[str] = None
+
+    @field_validator('id', 'port', mode='before')
+    def convert_str_to_int(cls, value) -> int:
+        return int(value)
 
 class BlueprintItem(BaseModel):    
     label: str
     role: str
 
 class EnvIni:
-    def __init__(self):
-        self.logger = logging.getLogger("EnvIni")
-        # self.logger.warning(f"__init__(): before update: {self.__dict__}")
-        self.clear()
-        self.update()
-        # self.logger.warning(f"__init__(): after update: {self.__dict__}")
+    def __init__(self, data = None):
+        self.logger = logging.getLogger(f"EnvIni __init__() {data}")
+        if data:
+            self.host = data.host
+            self.port = data.port
+            self.username = data.username
+            self.password = data.password
+            self.main_bp_label = data.main_bp_label
+            self.tor_bp_label = data.tor_bp_label
+        else:
+            self.clear()
+            self.update()
     
     def clear(self):
         self.host = None
@@ -34,7 +44,10 @@ class EnvIni:
         self.main_bp_label = None
         self.tor_bp_label = None
 
-    def get_url(self):
+    def get_url(self) -> str:
+        if not self.host or not self.port:
+            self.logger.warning(f"get_url() {self.host=} {self.port=}")
+            return
         return f"https://{self.host}:{self.port}"
 
     def update(self, file_content=None) -> dict:
@@ -103,12 +116,14 @@ class GlobalStore:
         return cls.data.get(key)
 
     @classmethod
-    def update_env_ini(cls):
-        # cls.logger.warning(f"update_env_ini(): {cls.env_ini.__dict__}")
-        cls.env_ini.update()
+    def update_env_ini(cls, data):        
+        cls.logger.warning(f"update_env_ini(): {data=}")
+        cls.env_ini = EnvIni(data)
+        return
 
     @classmethod
     def login_server(cls, server: ServerItem) -> dict:
+        cls.logger.warning(f"login_server() {server=}")
         cls.apstra_server = CkApstraSession(server.host, int(server.port), server.username, server.password)
         cls.logger.warning(f"login_server(): {cls.apstra_server.__dict__}")
         return { "version": cls.apstra_server.version }
@@ -116,18 +131,25 @@ class GlobalStore:
     @classmethod
     def logout_server(cls):
         cls.logout_blueprint()
-        cls.apstra_server.logout() 
+        if cls.apstra_server:
+            cls.apstra_server.logout() 
         cls.logger.warning(f"logout_server()")
         cls.apstra_server = None
         return
 
     @classmethod
     def login_blueprint(cls, blueprint: BlueprintItem):
-        cls.bp[blueprint.role] = CkApstraBlueprint(cls.apstra_server, blueprint.label)
-        id = cls.bp[blueprint.role].id
-        url = f"{cls.env_ini.get_url()}/#/blueprints/{id}"
-        cls.logger.warning(f"login_blueprint(): {cls.bp[blueprint.role]}, {id}")
-        return { "id": id, "url": url, "label": blueprint.label }
+        cls.logger.warning(f"login_blueprint {blueprint=} {cls.apstra_server=}")
+        role = blueprint.role
+        label = blueprint.label
+        bp = CkApstraBlueprint(cls.apstra_server, label)
+        cls.bp[role] = bp
+        cls.logger.warning(f"login_blueprint {bp=}")
+        id = bp.id
+        url = f"{cls.env_ini.get_url()}/#/blueprints/{id}/staged"
+        data = { "id": id, "url": url, "label": label }
+        cls.logger.warning(f"login_blueprint() return: {data}")
+        return data
 
     @classmethod
     def logout_blueprint(cls):
@@ -137,4 +159,11 @@ class GlobalStore:
 
     @classmethod
     def pull_tor_bp_data(cls):
+        data = {
+            'switches': [],
+            'peer_link': {},
+        }
+        tor_bp = cls.bp['tor_bp']
+        peer_nodes = tor_bp.query("node('link',role='leaf_leaf',  name='link').in_().node('interface', name='intf').in_('hosted_interfaces').node('system', name='system')")
+        logging.warning(f"{peer_nodes=}")
         pass

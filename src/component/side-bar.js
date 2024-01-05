@@ -166,10 +166,19 @@ class SideBar extends HTMLElement {
     }
 
     handleSyncStateClick(event) {
-        window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.SYNC_STATE_REQUEST, { bubbles: true, composed: true } )
-        );
-    }
+        // window.dispatchEvent(
+        //     new CustomEvent(GlobalEventEnum.SYNC_STATE_REQUEST, { bubbles: true, composed: true } )
+        // );
+        fetch('/pull-data', {
+            method: 'GET',
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('handleSyncStateClick - data', data);
+
+        })
+        .catch(error => console.error('handleSyncStateClick - Error:', error));
+      }
 
 }   
 customElements.define('side-bar', SideBar);
