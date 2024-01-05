@@ -61,9 +61,6 @@ template.innerHTML = `
             <button type="button">Migrate Access Switches</button>
         </div>
         <div>
-            <button type="button">Migrate Access Switches</button>
-        </div>
-        <div>
             <button type="button">Migrate Generic Systems</button>
         </div>
         <div>

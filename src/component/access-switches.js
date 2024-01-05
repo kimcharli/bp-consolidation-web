@@ -111,10 +111,10 @@ template.innerHTML = `
                 <text id="leaf-gs-label" x="100" y="12" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
             
                 <use x="0" y="50" href="#access" />
-                <text id="access1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central">leaf1</text>
+                <text id="tor1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central">leaf1</text>
             
                 <use x="110" y="50" href="#access" />
-                <text id="access2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central">leaf2</text>
+                <text id="tor2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central">leaf2</text>
             
                 <line x1="30" y1="25" x2="30" y2="50" />
                 <line x1="60" y1="25" x2="140" y2="50" />
@@ -234,8 +234,11 @@ class AccessSwitches extends HTMLElement {
     }
 
     handleSyncState(event) {
-        console.log('handleSyncState - globalData:', globalData, globalData.switches[0])
+        // console.log('handleSyncState - globalData:', globalData, globalData.switches[0])
+        this.shadowRoot.getElementById("tor1-label").innerHTML = globalData.switches[0]
         this.shadowRoot.getElementById("access1-label").innerHTML = globalData.switches[0]
+        this.shadowRoot.getElementById("tor2-label").innerHTML = globalData.switches[1]
+        this.shadowRoot.getElementById("access2-label").innerHTML = globalData.switches[1]
 
     }
 }

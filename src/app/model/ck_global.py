@@ -217,4 +217,9 @@ class GlobalStore:
                 server_data['links'][link_id] = {}
             link_data = server_data['links'][link_id]
             link_data['speed'] = server_link['link']['speed']
+            link_data['ae'] = server_link['ae']['if_name'] if server_link['ae'] else None
+            link_data['switch'] = server_link['switch']['label']
+            link_data['switch_intf'] = server_link['switch-intf']['if_name']
+            link_data['server'] = server_link['server']['label']
+            link_data['server_intf'] = server_link['server-intf']['if_name']
         return data
