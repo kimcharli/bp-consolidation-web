@@ -161,9 +161,28 @@ class GlobalStore:
     def pull_tor_bp_data(cls):
         data = {
             'switches': [],
-            'peer_link': {},
+            'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }  
         }
+        cls.logger.warning(f"{cls.bp=}")
         tor_bp = cls.bp['tor_bp']
-        peer_nodes = tor_bp.query("node('link',role='leaf_leaf',  name='link').in_().node('interface', name='intf').in_('hosted_interfaces').node('system', name='system')")
-        logging.warning(f"{peer_nodes=}")
-        pass
+        peer_link_nodes = tor_bp.query("node('link',role='leaf_leaf',  name='link').in_('link').node('interface', name='intf').in_('hosted_interfaces').node('system', name='switch')")
+        # cls.logger.warning(f"{peer_link_nodes=}")
+        for link in peer_link_nodes:
+            link_id = link['link']['id']
+            # cls.logger.warning(f"{data=} {link_id=}")
+            if link_id not in data['peer_link']:
+                data['peer_link'][link_id] = { 'system': {} }
+            link_data = data['peer_link'][link_id]
+            # cls.logger.warning(f"{data=} {link_data=}")
+            link_data['speed'] = link['link']['speed']
+            switch_label = link['switch']['label']
+            if switch_label not in data['switches']:
+                data['switches'].append(switch_label)
+            # cls.logger.warning(f"{data=} {switch_label=}")
+            if switch_label not in link_data['system']:
+                link_data['system'][switch_label] = []
+            switch_data = link_data['system'][switch_label]
+            switch_intf = link['intf']['if_name']
+            switch_data.append(switch_intf)
+        cls.logger.warning(f"{data=}")
+        return data
