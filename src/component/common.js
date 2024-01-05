@@ -24,13 +24,11 @@ export class CkIDB {
                     },
                     body: JSON.stringify(data)
                 })
-                .then(res => {
-                    if(!res.ok) {
-                        return res.text().then(text => { throw new Error(text) });
+                .then(result => {
+                    if(!result.ok) {
+                        return result.text().then(text => { throw new Error(text) });
                     }
-                    else {
-                        return res.json();
-                    }
+                    else { return result.json(); }
                 })
                 .catch(error => {
                     console.log(`error`, error)
@@ -86,6 +84,22 @@ export class CkIDB {
 }
 
 
+class GlobalData {
+    // #switches = null;
+    // #peer_link = null;
+    // #servers = null;
+    update(data) {
+        this.peer_link = JSON.parse(JSON.stringify(data.peer_link));
+        this.switches = JSON.parse(JSON.stringify(data.switches));
+        this.servers = JSON.parse(JSON.stringify(data.servers));
+        console.log('GlobalData:update', this);
+        window.dispatchEvent( new CustomEvent(GlobalEventEnum.SYNC_STATE) );
+    }
+    
+}
+
+export const globalData = new GlobalData();
+
 window.onload = function () {
     CkIDB.openDB();
 
@@ -100,6 +114,6 @@ export class GlobalEventEnum {
     static DISCONNECT_SERVER = 'global-disconnect-request';  // 3. trigger by side-bar.js, action by apstra-server.js
     static CONNECT_SUCCESS = 'global-connect-success';
     static CONNECT_LOGOUT = 'global-connect-logout';
-    static SYNC_STATE_REQUEST = 'global-sync-state-request';
+    static SYNC_STATE = 'global-sync-state-request';
     static CONNECT_BLUEPRINT = 'blueprint-connect-request';
 }

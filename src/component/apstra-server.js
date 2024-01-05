@@ -210,12 +210,12 @@ class ApstraServer extends HTMLElement {
                 password: apstra_password                
             })
         })
-        .then(res => {
-            if(!res.ok) {
-                return res.text().then(text => { throw new Error(text) });
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
             }
             else {
-                return res.json();
+                return result.json();
             }
         })
         .then(data => {

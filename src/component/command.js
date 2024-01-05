@@ -1,4 +1,4 @@
-import { GlobalEventEnum, CkIDB } from "./common.js";
+import { GlobalEventEnum, globalData, CkIDB } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -43,7 +43,7 @@ template.innerHTML = `
     }
 
     </style>
-    <h3>Steps</h3>
+    <h3>Commands</h3>
     <div>
         <div id="load-env-div" style="padding-left: 6px;padding-right: 6px;font-family: Arial;font-size: 14px;" data-loaded>
             Load
@@ -136,7 +136,14 @@ class SideBar extends HTMLElement {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return result.json();
+            }
+        })
         .then(data => {
             console.log('handleUploadIniInputChange - fetched', data);
             // this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
@@ -166,19 +173,20 @@ class SideBar extends HTMLElement {
     }
 
     handleSyncStateClick(event) {
-        // window.dispatchEvent(
-        //     new CustomEvent(GlobalEventEnum.SYNC_STATE_REQUEST, { bubbles: true, composed: true } )
-        // );
         fetch('/pull-data', {
             method: 'GET',
         })
-        .then(response => response.json())
-        .then(data => {
-            console.log('handleSyncStateClick - data', data);
-
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return result.json();
+            }
         })
+        .then(data => globalData.update(data))
         .catch(error => console.error('handleSyncStateClick - Error:', error));
-      }
+    }
 
 }   
 customElements.define('side-bar', SideBar);

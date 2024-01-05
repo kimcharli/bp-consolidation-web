@@ -1,34 +1,41 @@
 ```mermaid
 sequenceDiagram
+    participant main.py
     participant common
-    participant sidebar
+    participant command
     participant server
     participant blueprint
-    participant main.py
 
     opt Server present on Startup
-        common ->> sidebar: FETCH_ENV_INI(data)
+        common ->> command: FETCH_ENV_INI(data)
         common ->> server: FETCH_ENV_INI(data)
     end
     opt Load Env ini
-        sidebar ->> +main.py: /upload-env-ini
-        main.py -->> -sidebar: server content
-        sidebar ->> +common: add server
-        common ->> sidebar: FETCH_ENV_INI(data)
+        command ->> +main.py: /upload-env-ini
+        main.py -->> -command: server content
+        command ->> +common: add server
+        common ->> command: FETCH_ENV_INI(data)
         common ->> -server: FETCH_ENV_INI(data)
     end
     opt Clear Env ini
-        sidebar ->> +common: trashEnv
-        common ->> sidebar: CLEAR_ENV_INI
+        command ->> +common: trashEnv
+        common ->> command: CLEAR_ENV_INI
         common ->> -server: CLEAR_ENV_INI
     end
     opt Click Connect
-        sidebar ->> server: CONNECT_SERVER
+        command ->> server: CONNECT_SERVER
         server ->> +main.py: /login_server
         main.py -->> -server: version
         server ->> blueprint: CONNECT_BLUEPRINT
         blueprint ->> +main.py: /login_blueprint
         main.py -->> -blueprint: bleprint id
+    end
+    opt Click Sync States
+        command ->> +main.py: /pull-data
+        main.py -->> -command: data
+        command ->> common: update GlobalData
+        common ->> accessswitch: SYNC_STATES
+
     end
 
 ```
