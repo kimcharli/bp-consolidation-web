@@ -23,9 +23,9 @@ template.innerHTML = `
         <th id="num_links">#</th>
         <th>LABEL</th>
         <th>New LABEL</th>
-        <th>speed</th>
         <th>AE</th>
         <th>CTs</th>
+        <th>speed</th>
         <th>server-intf</th>
         <th>switch</th>
         <th>switch-intf</th>
@@ -50,46 +50,71 @@ class GenericSystems extends HTMLElement {
 
         const gs_count = Object.entries(globalData.servers).length;
         for (const server in globalData.servers) {
-            const server_data = globalData.servers[server]
-            let the_first = true;
-            for (const link in server_data['links']) {
-                const link_data = server_data['links'][link]
-                const row = table.insertRow(-1);
-                const link_count = Object.entries(server_data['links']).length;
-                const line_counter = table.rows.length -1;
-
-                row.insertCell(-1).innerHTML = line_counter;
-                if (link_count > 1) {
-                    if (the_first) {
-                        const cell = row.insertCell(-1);
-                        cell.innerHTML = server;
-                        cell.setAttribute('rowspan', link_count);
-                        // the_first = false;
-                    }
-                } else {
-                    row.insertCell(-1).innerHTML = server;
-                }
-                if (link_count > 1) {
-                    if (the_first) {
-                        const cell = row.insertCell(-1);
-                        cell.innerHTML = '';
-                        cell.setAttribute('rowspan', link_count);
-                        the_first = false;
-                    }
-                } else {
-                    row.insertCell(-1).innerHTML = '';
-                }
-                row.insertCell(-1).innerHTML = link_data.speed;
-                row.insertCell(-1).innerHTML = link_data.ae;
-                const cts_cell = row.insertCell(-1);
-                cts_cell.innerHTML = '';
-                cts_cell.setAttribute('id', `cts-${line_counter}`)
-                row.insertCell(-1).innerHTML = link_data.server_intf;
-                row.insertCell(-1).innerHTML = link_data.switch;
-                row.insertCell(-1).innerHTML = link_data.switch_intf;
+            const server_data = globalData.servers[server];
+            // console.log(`handleSyncState: server=${server}, server_data`, server_data);
+            let first_in_server = true;
+            let server_rowspan = 0;
+            for (const ae in server_data) {
+                // console.log(`handleSyncState: ae=${ae}`, server_data[ae]['links']);
+                server_rowspan += server_data[ae]['links'].length;
             }
+            // console.log(`server: ${server} server_rowspan: ${server_rowspan}`);
+            for (const ae in server_data) {
+                const ae_data = server_data[ae];
+                const ae_rowspan = server_data[ae]['links'].length;
+                let first_in_ae = true;
+                for (const link in ae_data['links']) {
+                    // console.log(`ae: ${ae} ae_data: ${ae_data} link: ${link}`);
+                    const row = table.insertRow(-1);
+                    const link_data = ae_data['links'][link]
+                    const line_counter = table.rows.length -1;
+
+                    row.insertCell(-1).innerHTML = line_counter;
+
+                    if (server_rowspan > 1) {
+                        if (first_in_server) {
+                            const label_cell = row.insertCell(-1);
+                            label_cell.innerHTML = server;
+                            label_cell.setAttribute('rowspan', server_rowspan);
+                            const new_label_cell = row.insertCell(-1);
+                            new_label_cell.innerHTML = '';
+                            new_label_cell.setAttribute('rowspan', server_rowspan);
+                            first_in_server = false;
+                        }
+                    } else {
+                        row.insertCell(-1).innerHTML = server;
+                        row.insertCell(-1).innerHTML = '';
+                    }
+
+                    if (ae_rowspan > 1) {
+                        if (first_in_ae) {
+                            const ae_cell = row.insertCell(-1);
+                            ae_cell.innerHTML = ae;
+                            ae_cell.setAttribute('rowspan', ae_rowspan);
+                            const cts_cell = row.insertCell(-1);
+                            cts_cell.innerHTML = '';
+                            cts_cell.setAttribute('rowspan', ae_rowspan);
+                            first_in_ae = false;
+                            const speed_cell = row.insertCell(-1);
+                            speed_cell.innerHTML = ae_data['speed'];
+                            speed_cell.setAttribute('rowspan', ae_rowspan);
+                            first_in_ae = false;
+                        }
+                    } else {
+                        row.insertCell(-1).innerHTML = ae;
+                        row.insertCell(-1).innerHTML = '';
+                        row.insertCell(-1).innerHTML = ae_data['speed'];
+                    }
+
+                    row.insertCell(-1).innerHTML = link_data.server_intf;
+                    row.insertCell(-1).innerHTML = link_data.switch;
+                    row.insertCell(-1).innerHTML = link_data.switch_intf;
+
+                }
+
+            }
+        }
             
-        };
         this.shadowRoot.getElementById("num_links").innerHTML = table.rows.length -1;
         this.shadowRoot.getElementById("gs-header").innerHTML = `${gs_count} Generic Systems, ${table.rows.length -1} Links`;
     }

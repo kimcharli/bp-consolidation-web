@@ -210,19 +210,35 @@ class GlobalStore:
             )
             """
         servers_link_nodes = tor_bp.query(server_links_query, multiline=True)
+        # for server_link in servers_link_nodes:
+        #     server_label = server_link['server']['label']
+        #     if server_label not in data:
+        #         data[server_label] = { 'links': {} }  # <link_id>: {}
+        #     server_data = data[server_label] 
+        #     link_id = server_link['link']['id']
+        #     if link_id not in server_data['links']:
+        #         server_data['links'][link_id] = {}
+        #     link_data = server_data['links'][link_id]
+        #     link_data['speed'] = server_link['link']['speed']
+        #     link_data['ae'] = server_link['ae']['if_name'] if server_link['ae'] else None
+        #     link_data['switch'] = server_link['switch']['label']
+        #     link_data['switch_intf'] = server_link['switch-intf']['if_name']
+        #     link_data['server'] = server_link['server']['label']
+        #     link_data['server_intf'] = server_link['server-intf']['if_name']            
+
         for server_link in servers_link_nodes:
             server_label = server_link['server']['label']
             if server_label not in data:
-                data[server_label] = { 'links': {} }  # <link_id>: {}
-            server_data = data[server_label] 
-            link_id = server_link['link']['id']
-            if link_id not in server_data['links']:
-                server_data['links'][link_id] = {}
-            link_data = server_data['links'][link_id]
-            link_data['speed'] = server_link['link']['speed']
-            link_data['ae'] = server_link['ae']['if_name'] if server_link['ae'] else None
+                data[server_label] = {}  # <link_id>: {}
+            server_data = data[server_label]
+            ae_name = server_link['ae']['if_name'] if server_link['ae'] else 'no-ae'
+            if ae_name not in server_data:
+                server_data[ae_name] = {'speed': server_link['link']['speed'], 'cst': [], 'links': []}  # speed, CTs, member_links
+            ae_data = server_data[ae_name]
+            link_data = {}
             link_data['switch'] = server_link['switch']['label']
             link_data['switch_intf'] = server_link['switch-intf']['if_name']
-            link_data['server'] = server_link['server']['label']
             link_data['server_intf'] = server_link['server-intf']['if_name']            
+            ae_data['links'].append(link_data)
+
         return data
