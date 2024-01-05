@@ -64,6 +64,9 @@ export class CkIDB {
         window.dispatchEvent(
             new CustomEvent(GlobalEventEnum.FETCH_ENV_INI, { detail: data } )
         );
+        window.dispatchEvent(
+            new CustomEvent(GlobalEventEnum.CONNECT_SERVER)
+        );
     }
 
     static trashEnv() {
@@ -92,6 +95,7 @@ class GlobalData {
         this.peer_link = JSON.parse(JSON.stringify(data.peer_link));
         this.switches = JSON.parse(JSON.stringify(data.switches));
         this.servers = JSON.parse(JSON.stringify(data.servers));
+        this.vnis = JSON.parse(JSON.stringify(data.vnis));
         console.log('GlobalData:update', this);
         window.dispatchEvent( new CustomEvent(GlobalEventEnum.SYNC_STATE) );
     }

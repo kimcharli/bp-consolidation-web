@@ -169,21 +169,6 @@ class AccessSwitches extends HTMLElement {
     }
 
     connectedCallback() {
-        // this.fetch_blueprint();
-        // this.shadowRoot.getElementById("access-gs-label").innerHTML = "atl1tor-r4r16";
-        // this.shadowRoot.getElementById("leaf1-label").innerHTML = "atl1lef15-r5r13";
-        // this.shadowRoot.getElementById("leaf2-label").innerHTML = "atl1lef16-r5r14";
-        // this.shadowRoot.getElementById("leaf-gs-label").innerHTML = "UPLINK-LEF-15-16-r4r16";
-        // this.shadowRoot.getElementById("access1-label").innerHTML = "atl1tor-r4r16a";
-        // this.shadowRoot.getElementById("access2-label").innerHTML = "atl1tor-r4r16b";
-        // this.shadowRoot.getElementById("leaf1-intf1").innerHTML = "et-0/0/20";
-        // this.shadowRoot.getElementById("leaf1-intf2").innerHTML = "et-0/0/21";
-        // this.shadowRoot.getElementById("leaf2-intf1").innerHTML = "et-0/0/20";
-        // this.shadowRoot.getElementById("leaf2-intf2").innerHTML = "et-0/0/21";
-        // this.shadowRoot.getElementById("access1-intf1").innerHTML = "et-0/0/48";
-        // this.shadowRoot.getElementById("access1-intf2").innerHTML = "et-0/0/49";
-        // this.shadowRoot.getElementById("access2-intf1").innerHTML = "et-0/0/48";
-        // this.shadowRoot.getElementById("access2-intf2").innerHTML = "et-0/0/49";
     }
 
     connect_blueprint() {
@@ -233,13 +218,16 @@ class AccessSwitches extends HTMLElement {
         this.shadowRoot.querySelector("td").innerHTML = this.accessSwitch.name;
     }
 
-    handleSyncState(event) {
-        // console.log('handleSyncState - globalData:', globalData, globalData.switches[0])
-        this.shadowRoot.getElementById("tor1-label").innerHTML = globalData.switches[0]
-        this.shadowRoot.getElementById("access1-label").innerHTML = globalData.switches[0]
-        this.shadowRoot.getElementById("tor2-label").innerHTML = globalData.switches[1]
-        this.shadowRoot.getElementById("access2-label").innerHTML = globalData.switches[1]
+    load_id_element(id, value) {
+        this.shadowRoot.getElementById(id).innerHTML = value;
+        this.shadowRoot.getElementById(id).dataset.state = "loaded";
+    }
 
+    handleSyncState(event) {
+        this.load_id_element("tor1-label", globalData.switches[0]);
+        this.load_id_element("tor2-label", globalData.switches[1]);
+        this.load_id_element("access1-label", globalData.switches[0]);
+        this.load_id_element("access2-label", globalData.switches[1]);
     }
 }
 customElements.define("access-switches", AccessSwitches);

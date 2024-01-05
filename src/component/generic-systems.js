@@ -80,9 +80,9 @@ class GenericSystems extends HTMLElement {
         for (const server in globalData.servers) {
         // Object.entries(globalData.servers).forEach(element => {
             const server_data = globalData.servers[server]
-            console.log('server', server, server_data)
+            // console.log('server', server, server_data)
             for (const link in server_data['links']) {
-                console.log('link', link, server_data['links'][link])
+                // console.log('link', link, server_data['links'][link])
                 const link_data = server_data['links'][link]
                 const row = table.insertRow(-1);
                 row.insertCell(0).innerHTML = table.rows.length -1;

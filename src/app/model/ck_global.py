@@ -163,6 +163,7 @@ class GlobalStore:
             'switches': [],
             'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }
             'servers': {},  # <server>: { links: {} }
+            'vnis': [],
         }
         cls.logger.warning(f"{cls.bp=}")
         tor_bp = cls.bp['tor_bp']
@@ -189,6 +190,8 @@ class GlobalStore:
         cls.logger.warning(f"{data=}")
 
         data['servers'] = cls.pull_server_links(tor_bp)
+
+        data['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]
 
         return data
 
@@ -221,5 +224,5 @@ class GlobalStore:
             link_data['switch'] = server_link['switch']['label']
             link_data['switch_intf'] = server_link['switch-intf']['if_name']
             link_data['server'] = server_link['server']['label']
-            link_data['server_intf'] = server_link['server-intf']['if_name']
+            link_data['server_intf'] = server_link['server-intf']['if_name']            
         return data
