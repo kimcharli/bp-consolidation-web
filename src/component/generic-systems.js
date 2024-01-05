@@ -47,7 +47,7 @@ template.innerHTML = `
         }
     </style>
 
-    <div class="th">Links</div>
+    <div id="gs-header" class="th">Links</div>
     <table id="main-table">
     <tr>
         <th id="num_links">#</th>
@@ -77,26 +77,38 @@ class GenericSystems extends HTMLElement {
     handleSyncState(event) {
         const table = this.shadowRoot.getElementById("main-table");
 
+        const gs_count = Object.entries(globalData.servers).length;
         for (const server in globalData.servers) {
-        // Object.entries(globalData.servers).forEach(element => {
             const server_data = globalData.servers[server]
-            // console.log('server', server, server_data)
+            let the_first = true;
             for (const link in server_data['links']) {
-                // console.log('link', link, server_data['links'][link])
                 const link_data = server_data['links'][link]
                 const row = table.insertRow(-1);
-                row.insertCell(0).innerHTML = table.rows.length -1;
-                row.insertCell(1).innerHTML = server
-                row.insertCell(2).innerHTML = ''
-                row.insertCell(3).innerHTML = link_data.speed
-                row.insertCell(4).innerHTML = link_data.server_intf
-                row.insertCell(5).innerHTML = link_data.ae
-                row.insertCell(6).innerHTML = link_data.switch
-                row.insertCell(7).innerHTML = link_data.switch_intf
+                const link_count = Object.entries(server_data['links']).length;
+                console.log(link_count)
+
+                row.insertCell(-1).innerHTML = table.rows.length -1;
+                if (link_count > 1) {
+                    if (the_first) {
+                        const cell = row.insertCell(-1);
+                        cell.innerHTML = server;
+                        cell.setAttribute('rowspan', link_count);
+                        the_first = false;
+                    }
+                } else {
+                    row.insertCell(-1).innerHTML = server
+                }
+                row.insertCell(-1).innerHTML = ''
+                row.insertCell(-1).innerHTML = link_data.speed
+                row.insertCell(-1).innerHTML = link_data.server_intf
+                row.insertCell(-1).innerHTML = link_data.ae
+                row.insertCell(-1).innerHTML = link_data.switch
+                row.insertCell(-1).innerHTML = link_data.switch_intf
             }
             
         };
         this.shadowRoot.getElementById("num_links").innerHTML = table.rows.length -1;
+        this.shadowRoot.getElementById("gs-header").innerHTML = `${gs_count} Generic Systems, ${table.rows.length -1} Links`;
     }
 }
 customElements.define("generic-systems", GenericSystems);
