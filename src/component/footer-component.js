@@ -5,7 +5,7 @@ template.innerHTML = `
             color: orange;
         }
     </style>
-    <h3>footer</h3>
+    ©️ Charlie Kim
 `
 
 class FooterComponent extends HTMLElement {

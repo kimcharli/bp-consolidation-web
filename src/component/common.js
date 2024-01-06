@@ -96,6 +96,7 @@ class GlobalData {
         this.switches = JSON.parse(JSON.stringify(data.switches));
         this.servers = JSON.parse(JSON.stringify(data.servers));
         this.vnis = JSON.parse(JSON.stringify(data.vnis));
+        this.ct_table = JSON.parse(JSON.stringify(data.ct_table));
         console.log('GlobalData:update', this);
         window.dispatchEvent( new CustomEvent(GlobalEventEnum.SYNC_STATE) );
     }
