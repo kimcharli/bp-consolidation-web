@@ -1,4 +1,10 @@
 
+// copying from pip ck-apstra-api
+export const CkEnum = Object.freeze({
+    TAGGED_VLANs: 'tagged_vlans',
+    UNTAGGED_VLAN: 'untagged_vlan',
+})
+
 // IndexedDB
 // https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API/Using_IndexedDB
 export class CkIDB {

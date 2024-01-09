@@ -1,4 +1,4 @@
-import { GlobalEventEnum, globalData, CkIDB } from "./common.js";
+import { GlobalEventEnum, globalData, CkIDB, CkEnum } from "./common.js";
 
 const template = document.createElement("template");
 template.innerHTML = `
@@ -14,6 +14,30 @@ template.innerHTML = `
         }
         th, .th {
             background-color: var(--global-th-color);
+        }
+        .old-label[data-state="loaded"] {
+            background: var(--global-warning-color);
+        }
+        .cts {
+            text-align: right;
+        }
+        .speed {
+            text-align: right;
+        }
+        .speed[data-speed="100G"] {
+            background-color: #a153ba;
+        }
+        .speed[data-speed="40G"] {
+            background-color: #896dce;
+        }
+        .speed[data-speed="25G"] {
+            background-color: #ffb71b;
+        }
+        .speed[data-speed="10G"] {
+            background: #037dba;
+        }
+        .speed[data-speed="1G"] {
+            background-color: #e36b00;
         }
     </style>
 
@@ -44,6 +68,37 @@ class GenericSystems extends HTMLElement {
 
     }
 
+    _ct_count(data) {
+        let ct_count = data.tagged_vlans.length;
+        if (data.untagged_vlan) {
+            ct_count += 1;
+        }
+        return ct_count;
+    }
+
+    _insert_label_cell(row, server, server_rowspan) {
+        const label_cell = row.insertCell(-1);
+        label_cell.innerHTML = server;
+        label_cell.setAttribute('rowspan', server_rowspan);
+        label_cell.setAttribute('class', 'old-label');
+        label_cell.dataset.id = 'gs' + server;
+        label_cell.dataset.state = 'loaded';
+    }
+
+    _insert_cts_cell(row, ae_data, ae_rowspan) {
+        const cts_cell = row.insertCell(-1);
+        cts_cell.innerHTML = this._ct_count(ae_data);
+        cts_cell.setAttribute('rowspan', ae_rowspan);
+        cts_cell.setAttribute('class', 'cts');
+    }
+
+    _insert_speed_cell(row, ae_data, ae_rowspan) {
+        const speed_cell = row.insertCell(-1);
+        speed_cell.innerHTML = ae_data['speed'];
+        speed_cell.dataset.speed = ae_data['speed'];
+        speed_cell.setAttribute('rowspan', ae_rowspan);
+        speed_cell.setAttribute('class', 'speed');
+    }
 
     handleSyncState(event) {
         const table = this.shadowRoot.getElementById("main-table");
@@ -54,14 +109,14 @@ class GenericSystems extends HTMLElement {
             // console.log(`handleSyncState: server=${server}, server_data`, server_data);
             let first_in_server = true;
             let server_rowspan = 0;
-            for (const ae in server_data) {
+            for (const ae in server_data.group_links) {
                 // console.log(`handleSyncState: ae=${ae}`, server_data[ae]['links']);
-                server_rowspan += server_data[ae]['links'].length;
+                server_rowspan += server_data.group_links[ae]['links'].length;
             }
             // console.log(`server: ${server} server_rowspan: ${server_rowspan}`);
-            for (const ae in server_data) {
-                const ae_data = server_data[ae];
-                const ae_rowspan = server_data[ae]['links'].length;
+            for (const ae in server_data.group_links) {
+                const ae_data = server_data.group_links[ae];
+                const ae_rowspan = server_data.group_links[ae]['links'].length;
                 let first_in_ae = true;
                 for (const link in ae_data['links']) {
                     // console.log(`ae: ${ae} ae_data: ${ae_data} link: ${link}`);
@@ -73,37 +128,36 @@ class GenericSystems extends HTMLElement {
 
                     if (server_rowspan > 1) {
                         if (first_in_server) {
-                            const label_cell = row.insertCell(-1);
-                            label_cell.innerHTML = server;
-                            label_cell.setAttribute('rowspan', server_rowspan);
+                            this._insert_label_cell(row, server, server_rowspan)
+                            // const label_cell = row.insertCell(-1);
+                            // label_cell.innerHTML = server;
+                            // label_cell.setAttribute('rowspan', server_rowspan);
                             const new_label_cell = row.insertCell(-1);
                             new_label_cell.innerHTML = '';
                             new_label_cell.setAttribute('rowspan', server_rowspan);
                             first_in_server = false;
                         }
                     } else {
-                        row.insertCell(-1).innerHTML = server;
+                        this._insert_label_cell(row, server, server_rowspan)
+                        // row.insertCell(-1).innerHTML = server;
                         row.insertCell(-1).innerHTML = '';
                     }
 
                     if (ae_rowspan > 1) {
                         if (first_in_ae) {
+                            // ae name
                             const ae_cell = row.insertCell(-1);
-                            ae_cell.innerHTML = ae;
+                            ae_cell.innerHTML = ae_data.ae_name;
                             ae_cell.setAttribute('rowspan', ae_rowspan);
-                            const cts_cell = row.insertCell(-1);
-                            cts_cell.innerHTML = '';
-                            cts_cell.setAttribute('rowspan', ae_rowspan);
+                            this._insert_cts_cell(row, ae_data, ae_rowspan);
                             first_in_ae = false;
-                            const speed_cell = row.insertCell(-1);
-                            speed_cell.innerHTML = ae_data['speed'];
-                            speed_cell.setAttribute('rowspan', ae_rowspan);
+                            this._insert_speed_cell(row, ae_data, ae_rowspan);
                             first_in_ae = false;
                         }
                     } else {
-                        row.insertCell(-1).innerHTML = ae;
-                        row.insertCell(-1).innerHTML = '';
-                        row.insertCell(-1).innerHTML = ae_data['speed'];
+                        row.insertCell(-1).innerHTML = ae_data.ae_name;
+                        this._insert_cts_cell(row, ae_data, ae_rowspan)
+                        this._insert_speed_cell(row, ae_data, ae_rowspan);
                     }
 
                     row.insertCell(-1).innerHTML = link_data.server_intf;

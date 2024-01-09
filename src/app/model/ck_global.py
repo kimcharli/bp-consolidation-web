@@ -194,10 +194,49 @@ class GlobalStore:
         data['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]
 
         data['ct_table'] = pull_interface_vlan_table(tor_bp, data['switches'])
+        # logging.warning(f"pull_tor_bp_data() test2: {data['ct_table'].keys()=}, {data['ct_table']=}")
+        # logging.warning(f"pull_tor_bp_data() test6: {data['servers']=}")
+        # breakpoint()
+        for server_label in data['servers']:
+            server_data = data['servers'][server_label]
+            # breakpoint()
+            for ae_data in server_data['group_links']:
+                if ae_data['ae_name']:
+                    # breakpoint()
+                    ae_name = ae_data['ae_name']
+                    if ae_name in data['ct_table'][CkEnum.REDUNDANCY_GROUP]:
+                        ae_data[CkEnum.TAGGED_VLANS] = data['ct_table'][CkEnum.REDUNDANCY_GROUP][ae_name][CkEnum.TAGGED_VLANS]
+                        ae_data[CkEnum.UNTAGGED_VLAN] = data['ct_table'][CkEnum.REDUNDANCY_GROUP][ae_name][CkEnum.UNTAGGED_VLAN]
+                else:
+                    # none AE, so it will be a single link
+                    the_link = ae_data['links'][0]
+                    the_switch = the_link['switch']
+                    if the_switch in data['ct_table']:
+                        the_if_name = the_link['switch_intf']
+                        if the_if_name == data['ct_table'][the_switch]:
+                            the_if_data = data['ct_table'][the_switch][the_if_name]
+                            ae_data[CkEnum.TAGGED_VLANS] = the_if_data[CkEnum.TAGGED_VLANS]
+                            ae_data[CkEnum.UNTAGGED_VLAN] = the_if_data[CkEnum.UNTAGGED_VLAN]
         return data
 
     @classmethod
-    def pull_server_links(cls, tor_bp):
+    def pull_server_links(cls, tor_bp) -> dict:
+        """
+        return the server and link data
+        data = {
+            <server>:
+                new_label,
+                group_links: [
+                    {
+                        ae_name: aeN or ''
+                        speed:,
+                        CkEnum.TAGGED_VLANS: [],
+                        CkEnum.UNTAGGED_VLAN:,
+                        links: [ server_intf:, switch:, switch_intf:]
+                    }
+                ]
+        }
+        """
         data = {}  # <server>: { links: {} }
         server_links_query = """
             match(
@@ -211,39 +250,36 @@ class GlobalStore:
             )
             """
         servers_link_nodes = tor_bp.query(server_links_query, multiline=True)
-        # for server_link in servers_link_nodes:
-        #     server_label = server_link['server']['label']
-        #     if server_label not in data:
-        #         data[server_label] = { 'links': {} }  # <link_id>: {}
-        #     server_data = data[server_label] 
-        #     link_id = server_link['link']['id']
-        #     if link_id not in server_data['links']:
-        #         server_data['links'][link_id] = {}
-        #     link_data = server_data['links'][link_id]
-        #     link_data['speed'] = server_link['link']['speed']
-        #     link_data['ae'] = server_link['ae']['if_name'] if server_link['ae'] else None
-        #     link_data['switch'] = server_link['switch']['label']
-        #     link_data['switch_intf'] = server_link['switch-intf']['if_name']
-        #     link_data['server'] = server_link['server']['label']
-        #     link_data['server_intf'] = server_link['server-intf']['if_name']            
-
         for server_link in servers_link_nodes:
             server_label = server_link['server']['label']
             if server_label not in data:
-                data[server_label] = {}  # <link_id>: {}
-            server_data = data[server_label]
+                data[server_label] = {'new_label': None, 'group_links': []}  # <link_id>: {}
+            server_data = data[server_label]            
             ae_name = server_link['ae']['if_name'] if server_link['ae'] else ''
-            if ae_name not in server_data:
-                server_data[ae_name] = {'speed': server_link['link']['speed'], 'cst': [], 'links': []}  # speed, CTs, member_links
-            ae_data = server_data[ae_name]
-            link_data = {}
-            link_data['switch'] = server_link['switch']['label']
-            link_data['switch_intf'] = server_link['switch-intf']['if_name']
-            link_data['server_intf'] = server_link['server-intf']['if_name']            
-            ae_data['links'].append(link_data)
+            # logging.warning(f"pull_server_links() test1: {dict(server_data)=}")
+            if ae_name:
+                # breakpoint()
+                ae_data = [x for x in server_data['group_links'] if x['ae_name'] == ae_name]
+                if len(ae_data) == 0:
+                    server_data['group_links'].append({'ae_name': ae_name, 'speed': server_link['link']['speed'], CkEnum.TAGGED_VLANS: [], CkEnum.UNTAGGED_VLAN: None, 'links': []})  # speed, CTs, member_links
+                    ae_data = [x for x in server_data['group_links'] if x['ae_name'] == ae_name]
+                link_data = {}
+                link_data['switch'] = server_link['switch']['label']
+                link_data['switch_intf'] = server_link['switch-intf']['if_name']
+                link_data['server_intf'] = server_link['server-intf']['if_name']            
+                ae_data[0]['links'].append(link_data)
+            else:
+                # breakpoint()
+                ae_data = { 'ae_name': '', 'speed': server_link['link']['speed'], CkEnum.TAGGED_VLANS: [], CkEnum.UNTAGGED_VLAN: None, 'links': []}
+                link_data = {}
+                link_data['switch'] = server_link['switch']['label']
+                link_data['switch_intf'] = server_link['switch-intf']['if_name']
+                link_data['server_intf'] = server_link['server-intf']['if_name']            
+                ae_data['links'].append(link_data)
+                server_data['group_links'].append(ae_data)
+                
 
         return data
-
 
 
 def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:
@@ -253,22 +289,15 @@ def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:
     The return data
     <system_label>:
         <if_name>:
-            tagged_vlans: []
-            untagged_vlan: None
-    redundacy_group:
+            CkEnum.TAGGED_VLANS: []
+            CkEnum.UNTAGGED_VLAN: None
+    redundancy_group:
         <ae_id>:
-            tagged_vlans: []
-            untagged_vlan: None
+            CkEnum.TAGGED_VLANS: []
+            CkEnum.UNTAGGED_VLAN: None
     """
     interface_vlan_table = {
-        # atl1tor-r5r14a:
-        #     xe-0/0/0:
-        #         tagged_vlans: []
-        #         untagged_vlan: None
         CkEnum.REDUNDANCY_GROUP: {
-            # <ae_id>:
-            #     tagged_vlans: []
-            #     untagged_vlan: None
         }
 
     }
@@ -300,7 +329,6 @@ def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:
 
     interface_vlan_nodes = the_bp.query(interface_vlan_query, multiline=True)
     logging.debug(f"BP:{the_bp.label} {len(interface_vlan_nodes)=}")
-    # why so many (3172) entries?
 
     for nodes in interface_vlan_nodes:
         if nodes['ae']:
