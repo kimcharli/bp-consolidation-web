@@ -5,6 +5,8 @@ sequenceDiagram
     participant command
     participant server
     participant blueprint
+    participant accessswitch
+    participant genericsystems
 
     opt Server present on Startup
         common ->> command: FETCH_ENV_INI(data)
@@ -35,6 +37,8 @@ sequenceDiagram
         main.py -->> -command: data
         command ->> common: update GlobalData
         common ->> accessswitch: SYNC_STATES
+        common ->> genericsystems: SYNC_STATES
+        common ->> virtualnetworks: SYNC_STATES
 
     end
 

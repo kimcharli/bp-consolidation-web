@@ -15,8 +15,16 @@ template.innerHTML = `
         th, .th {
             background-color: var(--global-th-color);
         }
+        .old-label {
+            text-align: left;
+            width: 32ch;
+        }
         .old-label[data-state="loaded"] {
             background: var(--global-warning-color);
+        }
+        .new-label {
+            text-align: left;
+            width: 32ch;
         }
         .cts {
             text-align: right;
@@ -77,27 +85,34 @@ class GenericSystems extends HTMLElement {
     }
 
     _insert_label_cell(row, server, server_rowspan) {
-        const label_cell = row.insertCell(-1);
-        label_cell.innerHTML = server;
-        label_cell.setAttribute('rowspan', server_rowspan);
-        label_cell.setAttribute('class', 'old-label');
-        label_cell.dataset.id = 'gs' + server;
-        label_cell.dataset.state = 'loaded';
+        const the_cell = row.insertCell(-1);
+        the_cell.innerHTML = server;
+        the_cell.setAttribute('rowspan', server_rowspan);
+        the_cell.setAttribute('class', 'old-label');
+        the_cell.dataset.id = 'gs' + server;
+        the_cell.dataset.state = 'loaded';
+    }
+
+    _insert_new_label_cell(row, new_label, server_rowspan) {
+        const the_cell = row.insertCell(-1);
+        the_cell.innerHTML = new_label;
+        the_cell.setAttribute('rowspan', server_rowspan);
+        the_cell.setAttribute('class', 'new-label');
     }
 
     _insert_cts_cell(row, ae_data, ae_rowspan) {
-        const cts_cell = row.insertCell(-1);
-        cts_cell.innerHTML = this._ct_count(ae_data);
-        cts_cell.setAttribute('rowspan', ae_rowspan);
-        cts_cell.setAttribute('class', 'cts');
+        const the_cell = row.insertCell(-1);
+        the_cell.innerHTML = this._ct_count(ae_data);
+        the_cell.setAttribute('rowspan', ae_rowspan);
+        the_cell.setAttribute('class', 'cts');
     }
 
     _insert_speed_cell(row, ae_data, ae_rowspan) {
-        const speed_cell = row.insertCell(-1);
-        speed_cell.innerHTML = ae_data['speed'];
-        speed_cell.dataset.speed = ae_data['speed'];
-        speed_cell.setAttribute('rowspan', ae_rowspan);
-        speed_cell.setAttribute('class', 'speed');
+        const the_cell = row.insertCell(-1);
+        the_cell.innerHTML = ae_data['speed'];
+        the_cell.dataset.speed = ae_data['speed'];
+        the_cell.setAttribute('rowspan', ae_rowspan);
+        the_cell.setAttribute('class', 'speed');
     }
 
     handleSyncState(event) {
@@ -129,18 +144,16 @@ class GenericSystems extends HTMLElement {
                     if (server_rowspan > 1) {
                         if (first_in_server) {
                             this._insert_label_cell(row, server, server_rowspan)
-                            // const label_cell = row.insertCell(-1);
-                            // label_cell.innerHTML = server;
-                            // label_cell.setAttribute('rowspan', server_rowspan);
-                            const new_label_cell = row.insertCell(-1);
-                            new_label_cell.innerHTML = '';
-                            new_label_cell.setAttribute('rowspan', server_rowspan);
+                            this._insert_new_label_cell(row, server_data.new_label, server_rowspan)
+                            // const new_label_cell = row.insertCell(-1);
+                            // new_label_cell.innerHTML = '';
+                            // new_label_cell.setAttribute('rowspan', server_rowspan);
                             first_in_server = false;
                         }
                     } else {
                         this._insert_label_cell(row, server, server_rowspan)
-                        // row.insertCell(-1).innerHTML = server;
-                        row.insertCell(-1).innerHTML = '';
+                        this._insert_new_label_cell(row, server_data.new_label, server_rowspan)
+                        // row.insertCell(-1).innerHTML = '';
                     }
 
                     if (ae_rowspan > 1) {

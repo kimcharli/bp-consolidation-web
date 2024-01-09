@@ -161,9 +161,10 @@ class GlobalStore:
     def pull_tor_bp_data(cls):
         data = {
             'switches': [],
+            'tor_name': None,  # coming from switch name
             'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }
             'servers': {},  # <server>: { links: {} }
-            'vnis': [],
+            'vnis': [],            
         }
         cls.logger.warning(f"{cls.bp=}")
         tor_bp = cls.bp['tor_bp']
@@ -189,14 +190,23 @@ class GlobalStore:
             switch_data.append(switch_intf)
         cls.logger.warning(f"{data=}")
 
+        #  setup tor_name
+        if data['switches'][0].endswith(('a', 'b')):
+            data['tor_name'] = data['switches'][0][:-1]
+        elif data['switches'][0].endswith(('c', 'd')):
+            data['tor_name'] = data['switches'][0][:-1] + 'cd'
+        else:
+            logging.critical(f"switch names {data['switches']} does not ends with 'a', 'b', 'c', or 'd'!")
+
         data['servers'] = cls.pull_server_links(tor_bp)
+
+        #  set new_label
+        for old_label, server_data in data['servers'].items():
+            server_data['new_label'] = cls.new_label(data['tor_name'], old_label)
 
         data['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]
 
         data['ct_table'] = pull_interface_vlan_table(tor_bp, data['switches'])
-        # logging.warning(f"pull_tor_bp_data() test2: {data['ct_table'].keys()=}, {data['ct_table']=}")
-        # logging.warning(f"pull_tor_bp_data() test6: {data['servers']=}")
-        # breakpoint()
         for server_label in data['servers']:
             server_data = data['servers'][server_label]
             # breakpoint()
@@ -218,6 +228,30 @@ class GlobalStore:
                             ae_data[CkEnum.TAGGED_VLANS] = the_if_data[CkEnum.TAGGED_VLANS]
                             ae_data[CkEnum.UNTAGGED_VLAN] = the_if_data[CkEnum.UNTAGGED_VLAN]
         return data
+
+    
+    @classmethod
+    def new_label(cls, tor_name, old_label) -> str:
+        """
+        return new label from old label
+        """
+        # the maximum length is 32. Prefix 'r5r14-'
+        old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
+        # get the prefix from tor_name
+        prefix = tor_name[len('atl1tor-'):]
+        for pattern in old_patterns:
+            if old_label.startswith(pattern):
+                # replace the string with the prefix
+                return f"{prefix}-{old_label[len(pattern):]}"
+        # it doesn't starts with the patterns. See if it is too long to prefix
+        max_len = 32
+        if ( len(old_label) + len(prefix) + 1 ) > max_len:
+            # TODO: potential of conflict
+            logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
+            return old_label
+        # just prefix
+        return f"{prefix}-{old_label}"
+
 
     @classmethod
     def pull_server_links(cls, tor_bp) -> dict:
