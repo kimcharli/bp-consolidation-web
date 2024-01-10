@@ -245,7 +245,7 @@ class AccessSwitches extends HTMLElement {
         this.load_id_element("leafgs2-intf2", globalData.leaf_gs.intfs[3]);
         this.load_id_element("leaf2-intf2", globalData.leaf_gs.intfs[3]);
 
-        this.load_id_element("access-gs-label", globalData.tor_name);
+        this.load_id_element("access-gs-label", globalData.tor_gs.label);
         this.shadowRoot.getElementById('leaf-gs-box').dataset.state = "loaded";
 
         this.load_id_element("leaf1-label", globalData.leaf_switches[0][0]);

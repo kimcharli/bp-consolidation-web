@@ -1,6 +1,7 @@
 import logging
 from typing import Optional
 from pydantic import BaseModel, field_validator
+import json
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
@@ -163,7 +164,7 @@ class GlobalStore:
         data = {
             'switches': [],  # the tor switches
             'leaf_switches': {},  # the leaf switches <leaf1,2>: { label:, id:, , links: [{ switch_intf:, server_intf}]}
-            'tor_name': None,  # coming from switch name
+            'tor_gs':{'label': None, 'id': None, 'ae_id': None},  # coming from switch name
             'leaf_gs': {'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
             'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }
             'servers': {},  # <server>: { links: {} }
@@ -194,11 +195,11 @@ class GlobalStore:
             switch_data.append(switch_intf)
         cls.logger.warning(f"{data=}")
 
-        #  setup tor_name
+        #  setup tor_gs
         if data['switches'][0].endswith(('a', 'b')):
-            data['tor_name'] = data['switches'][0][:-1]
+            data['tor_gs']['label'] = data['switches'][0][:-1]
         elif data['switches'][0].endswith(('c', 'd')):
-            data['tor_name'] = data['switches'][0][:-1] + 'cd'
+            data['tor_gs']['label'] = data['switches'][0][:-1] + 'cd'
         else:
             logging.critical(f"switch names {data['switches']} does not ends with 'a', 'b', 'c', or 'd'!")
 
@@ -206,7 +207,7 @@ class GlobalStore:
 
         # set new_label per generic systems
         for old_label, server_data in data['servers'].items():
-            server_data['new_label'] = cls.new_label(data['tor_name'], old_label)                            
+            server_data['new_label'] = cls.new_label(data['tor_gs']['label'], old_label)                            
         
         # update leaf_gs (the generic system in TOR bp for the leaf)
         for server_label, server_data in data['servers'].items():
@@ -253,11 +254,7 @@ class GlobalStore:
                             ae_data[CkEnum.UNTAGGED_VLAN] = the_if_data[CkEnum.UNTAGGED_VLAN]
 
         # get leaf information from main BP
-        tor_interface_nodes_in_main = main_bp.get_server_interface_nodes(data['tor_name'])
-        leaf_switches = [
-            # { 'label': None, 'id': None, 'links': []},
-            # { 'label': None, 'id': None, 'links': []},
-        ]
+        tor_interface_nodes_in_main = main_bp.get_server_interface_nodes(data['tor_gs']['label'])
         leaf_temp = {
             # 'label': { 'label': None, 'id': None, 'links': []},
             # 'label': { 'label': None, 'id': None, 'links': []},
@@ -274,8 +271,10 @@ class GlobalStore:
                 'switch_intf': member_intf_set[CkEnum.MEMBER_INTERFACE]['if_name'],
                 'server_intf': member_intf_set[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'],
                 })
+            data['tor_gs']['ae_id'] = member_intf_set[CkEnum.EVPN_INTERFACE]['id']
         data['leaf_switches'] = sorted(leaf_temp.items(), key=lambda item: item[0])
 
+        data['switch_pair_spec'] = build_switch_pair_spec(tor_interface_nodes_in_main, data['tor_gs']['label'])
         data['tor_interface_nodes_in_main'] = tor_interface_nodes_in_main
 
 
@@ -367,6 +366,63 @@ class GlobalStore:
                 
 
         return data
+
+def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
+    '''
+    Build each "links" data from tor_interface_nodes_in_main
+    It is assumed that the generic system interface names are in et-0/0/48-b format
+    '''
+    # logging.debug(f"{len(a_link_nodes)=}, {a_link_nodes=}")
+
+    translation_table = {
+        "et-0/0/48-a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/48' },
+        "et-0/0/48-b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/48' },
+        "et-0/0/49-a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/49' },
+        "et-0/0/49-b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/49' },
+
+        "et-0/0/48a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/48' },
+        "et-0/0/48b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/48' },
+        "et-0/0/49a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/49' },
+        "et-0/0/49b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/49' },
+    }
+
+    tor_intf_name = a_link_nodes[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name']
+    if tor_intf_name not in translation_table:
+        logging.warning(f"a_link_nodes[{CkEnum.GENERIC_SYSTEM_INTERFACE}]['if_name']: {tor_intf_name}, none of {[x for x in translation_table.keys()]}")
+        return None
+    link_candidate = {
+            "lag_mode": "lacp_active",
+            "system_peer": translation_table[tor_intf_name]['system_peer'],
+            "switch": {
+                "system_id": a_link_nodes[CkEnum.MEMBER_SWITCH]['id'],
+                "transformation_id": 2,
+                "if_name": a_link_nodes[CkEnum.MEMBER_INTERFACE]['if_name']
+            },
+            "system": {
+                "system_id": None,
+                "transformation_id": 1,
+                "if_name": translation_table[tor_intf_name]['system_if_name']
+            }
+        }
+    return link_candidate
+
+def build_switch_pair_spec(tor_interface_nodes_in_main, tor_label) -> dict:
+    '''
+    Build the switch pair spec from the links query
+    '''
+    switch_pair_spec = {
+        "links": [build_access_switch_fabric_links_dict(x) for x in tor_interface_nodes_in_main],
+        "new_systems": None
+    }
+
+    # TODO: 
+    with open('./tests/fixtures/fixture-switch-system-links-5120.json', 'r') as file:
+        sample_data = json.load(file)
+
+    switch_pair_spec['new_systems'] = sample_data['new_systems']
+    switch_pair_spec['new_systems'][0]['label'] = tor_label
+
+    return switch_pair_spec
 
 
 def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:
