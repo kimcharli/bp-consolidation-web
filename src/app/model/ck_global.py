@@ -93,6 +93,7 @@ class GlobalStore:
     bp = {}  # main_bp, tor_bp
     # main_bp = None  # ApstaBlueprint
     # tor_bp = None  # ApstaBlueprint
+    tor_data = {}  # 
 
     env_ini = EnvIni()
     
@@ -160,14 +161,17 @@ class GlobalStore:
     @classmethod
     def pull_tor_bp_data(cls):
         data = {
-            'switches': [],
+            'switches': [],  # the tor switches
+            'leaf_switches': {},  # the leaf switches <leaf1,2>: { label:, id:, , links: [{ switch_intf:, server_intf}]}
             'tor_name': None,  # coming from switch name
+            'leaf_gs': {'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
             'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }
             'servers': {},  # <server>: { links: {} }
             'vnis': [],            
         }
         cls.logger.warning(f"{cls.bp=}")
         tor_bp = cls.bp['tor_bp']
+        main_bp = cls.bp['main_bp']
         peer_link_query = "node('link',role='leaf_leaf',  name='link').in_('link').node('interface', name='intf').in_('hosted_interfaces').node('system', name='switch')"
         peer_link_nodes = tor_bp.query(peer_link_query)
         # cls.logger.warning(f"{peer_link_nodes=}")
@@ -200,12 +204,32 @@ class GlobalStore:
 
         data['servers'] = cls.pull_server_links(tor_bp)
 
-        #  set new_label
+        # set new_label per generic systems
         for old_label, server_data in data['servers'].items():
-            server_data['new_label'] = cls.new_label(data['tor_name'], old_label)
+            server_data['new_label'] = cls.new_label(data['tor_name'], old_label)                            
+        
+        # update leaf_gs (the generic system in TOR bp for the leaf)
+        for server_label, server_data in data['servers'].items():
+            for group_link in server_data['group_links']:
+                if group_link['ae_name']:
+                    for member_link in group_link['links']:
+                        if member_link['switch_intf'] in ['et-0/0/48', 'et-0/0/49']:
+                            data['leaf_gs']['label'] = server_label
+                            if member_link['switch'].endswith(('a', 'c')):  # left tor
+                                if member_link['switch_intf'] == 'et-0/0/48':
+                                    data['leaf_gs']['intfs'][0] = 'et-' + member_link['server_intf'].split('-')[1]
+                                else:
+                                    data['leaf_gs']['intfs'][1] = 'et-' + member_link['server_intf'].split('-')[1]
+                            else:
+                                if member_link['switch_intf'] == 'et-0/0/48':
+                                    data['leaf_gs']['intfs'][2] = 'et-' + member_link['server_intf'].split('-')[1]
+                                else:
+                                    data['leaf_gs']['intfs'][3] = 'et-' + member_link['server_intf'].split('-')[1]
+
 
         data['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]
 
+        # get ct assigment and update the servers
         data['ct_table'] = pull_interface_vlan_table(tor_bp, data['switches'])
         for server_label in data['servers']:
             server_data = data['servers'][server_label]
@@ -227,6 +251,35 @@ class GlobalStore:
                             the_if_data = data['ct_table'][the_switch][the_if_name]
                             ae_data[CkEnum.TAGGED_VLANS] = the_if_data[CkEnum.TAGGED_VLANS]
                             ae_data[CkEnum.UNTAGGED_VLAN] = the_if_data[CkEnum.UNTAGGED_VLAN]
+
+        # get leaf information from main BP
+        tor_interface_nodes_in_main = main_bp.get_server_interface_nodes(data['tor_name'])
+        leaf_switches = [
+            # { 'label': None, 'id': None, 'links': []},
+            # { 'label': None, 'id': None, 'links': []},
+        ]
+        leaf_temp = {
+            # 'label': { 'label': None, 'id': None, 'links': []},
+            # 'label': { 'label': None, 'id': None, 'links': []},
+        }
+        for member_intf_set in tor_interface_nodes_in_main:
+            leaf_label = member_intf_set[CkEnum.MEMBER_SWITCH]['label']
+            if leaf_label not in leaf_temp:
+                leaf_temp[leaf_label] = {
+                    'label': leaf_label, 
+                    'id': member_intf_set[CkEnum.MEMBER_SWITCH]['id'], 
+                    'links': []}
+            leaf_data = leaf_temp[leaf_label]
+            leaf_data['links'].append({
+                'switch_intf': member_intf_set[CkEnum.MEMBER_INTERFACE]['if_name'],
+                'server_intf': member_intf_set[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'],
+                })
+        data['leaf_switches'] = sorted(leaf_temp.items(), key=lambda item: item[0])
+
+        data['tor_interface_nodes_in_main'] = tor_interface_nodes_in_main
+
+
+        cls.tor_data = data
         return data
 
     

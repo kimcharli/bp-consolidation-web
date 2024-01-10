@@ -103,6 +103,10 @@ class GlobalData {
         this.servers = JSON.parse(JSON.stringify(data.servers));
         this.vnis = JSON.parse(JSON.stringify(data.vnis));
         this.ct_table = JSON.parse(JSON.stringify(data.ct_table));
+        this.leaf_gs = JSON.parse(JSON.stringify(data.leaf_gs));
+        this.tor_name = JSON.parse(JSON.stringify(data.tor_name));        
+        this.leaf_switches = JSON.parse(JSON.stringify(data.leaf_switches));        
+        this.tor_interface_nodes_in_main = JSON.parse(JSON.stringify(data.tor_interface_nodes_in_main));        
         console.log('GlobalData:update', this);
         window.dispatchEvent( new CustomEvent(GlobalEventEnum.SYNC_STATE) );
     }

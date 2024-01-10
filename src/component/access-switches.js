@@ -17,9 +17,9 @@ template.innerHTML = `
         }
         svg, line, rect {
             vector-effect: non-scaling-stroke;
-            fill: transparent;
+            stroke-opacity: 1;
             stroke: black;
-            // width: 400px;
+            fill: orange;
         }
         svg text {
             font-family: system-ui, sans-serif;
@@ -32,6 +32,13 @@ template.innerHTML = `
         .interface-name {
             font-size: 0.4em;
             alignment-baseline: middle;
+        }
+        .interface-name[data-state="loaded"] {
+            fill: green;
+            stroke: #0000FF;
+        }
+        svg#leaf-gs-box[data-state="loaded"] {
+            fill: green;
         }
         .blueprint {
             width: 50%;
@@ -107,7 +114,7 @@ template.innerHTML = `
                     <rect id="leaf-gs" width="200" height="25" ry="5" />
                 </defs>
             
-                <use x="0" y="0" href="#leaf-gs" />
+                <use x="0" y="0" href="#leaf-gs" id="leaf-gs-box" />
                 <text id="leaf-gs-label" x="100" y="12" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
             
                 <use x="0" y="50" href="#access" />
@@ -122,10 +129,10 @@ template.innerHTML = `
                 <line x1="170" y1="25" x2="170" y2="50" />
                 <line x1="90" y1="62" x2="110" y2="62" />
 
-                <text id="leaf1-intf1" class="interface-name" x="25" y="22">et-0/0/20</text>
-                <text id="leaf1-intf2" class="interface-name" x="65" y="22">et-0/0/21</text>
-                <text id="leaf2-intf1" class="interface-name" x="135" y="22">et-0/0/20</text>
-                <text id="leaf2-intf2" class="interface-name" x="165" y="22">et-0/0/21</text>
+                <text id="leafgs1-intf1" class="interface-name" x="25" y="22">et-0/0/20</text>
+                <text id="leafgs1-intf2" class="interface-name" x="65" y="22">et-0/0/21</text>
+                <text id="leafgs2-intf1" class="interface-name" x="135" y="22">et-0/0/20</text>
+                <text id="leafgs2-intf2" class="interface-name" x="175" y="22">et-0/0/21</text>
     
                 <text class="interface-name" x="100" y="60">et-0/0/53</text>
 
@@ -228,6 +235,23 @@ class AccessSwitches extends HTMLElement {
         this.load_id_element("tor2-label", globalData.switches[1]);
         this.load_id_element("access1-label", globalData.switches[0]);
         this.load_id_element("access2-label", globalData.switches[1]);
+        this.load_id_element("leaf-gs-label", globalData.leaf_gs.label);
+        this.load_id_element("leafgs1-intf1", globalData.leaf_gs.intfs[0]);
+        this.load_id_element("leaf1-intf1", globalData.leaf_gs.intfs[0]);
+        this.load_id_element("leafgs1-intf2", globalData.leaf_gs.intfs[2]);
+        this.load_id_element("leaf1-intf2", globalData.leaf_gs.intfs[2]);
+        this.load_id_element("leafgs2-intf1", globalData.leaf_gs.intfs[1]);
+        this.load_id_element("leaf2-intf1", globalData.leaf_gs.intfs[1]);
+        this.load_id_element("leafgs2-intf2", globalData.leaf_gs.intfs[3]);
+        this.load_id_element("leaf2-intf2", globalData.leaf_gs.intfs[3]);
+
+        this.load_id_element("access-gs-label", globalData.tor_name);
+        this.shadowRoot.getElementById('leaf-gs-box').dataset.state = "loaded";
+
+        this.load_id_element("leaf1-label", globalData.leaf_switches[0][0]);
+        this.load_id_element("leaf2-label", globalData.leaf_switches[1][0]);
+
+
     }
 }
 customElements.define("access-switches", AccessSwitches);

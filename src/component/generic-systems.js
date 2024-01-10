@@ -26,8 +26,12 @@ template.innerHTML = `
             text-align: left;
             width: 32ch;
         }
+        .ae {
+            width: 4ch;
+        }
         .cts {
             text-align: right;
+            width: 3ch;
         }
         .speed {
             text-align: right;
@@ -107,6 +111,13 @@ class GenericSystems extends HTMLElement {
         the_cell.setAttribute('class', 'cts');
     }
 
+    _insert_ae_cell(row, ae_name, ae_rowspan) {
+        const the_cell = row.insertCell(-1);
+        the_cell.innerHTML = ae_name;
+        the_cell.setAttribute('rowspan', ae_rowspan);
+        the_cell.setAttribute('class', 'ae');
+    }
+
     _insert_speed_cell(row, ae_data, ae_rowspan) {
         const the_cell = row.insertCell(-1);
         the_cell.innerHTML = ae_data['speed'];
@@ -134,7 +145,6 @@ class GenericSystems extends HTMLElement {
                 const ae_rowspan = server_data.group_links[ae]['links'].length;
                 let first_in_ae = true;
                 for (const link in ae_data['links']) {
-                    // console.log(`ae: ${ae} ae_data: ${ae_data} link: ${link}`);
                     const row = table.insertRow(-1);
                     const link_data = ae_data['links'][link]
                     const line_counter = table.rows.length -1;
@@ -145,30 +155,23 @@ class GenericSystems extends HTMLElement {
                         if (first_in_server) {
                             this._insert_label_cell(row, server, server_rowspan)
                             this._insert_new_label_cell(row, server_data.new_label, server_rowspan)
-                            // const new_label_cell = row.insertCell(-1);
-                            // new_label_cell.innerHTML = '';
-                            // new_label_cell.setAttribute('rowspan', server_rowspan);
                             first_in_server = false;
                         }
                     } else {
                         this._insert_label_cell(row, server, server_rowspan)
                         this._insert_new_label_cell(row, server_data.new_label, server_rowspan)
-                        // row.insertCell(-1).innerHTML = '';
                     }
 
                     if (ae_rowspan > 1) {
                         if (first_in_ae) {
-                            // ae name
-                            const ae_cell = row.insertCell(-1);
-                            ae_cell.innerHTML = ae_data.ae_name;
-                            ae_cell.setAttribute('rowspan', ae_rowspan);
+                            this._insert_ae_cell(row, ae_data.ae_name, ae_rowspan);
                             this._insert_cts_cell(row, ae_data, ae_rowspan);
                             first_in_ae = false;
                             this._insert_speed_cell(row, ae_data, ae_rowspan);
                             first_in_ae = false;
                         }
                     } else {
-                        row.insertCell(-1).innerHTML = ae_data.ae_name;
+                        this._insert_ae_cell(row, ae_data.ae_name, ae_rowspan);
                         this._insert_cts_cell(row, ae_data, ae_rowspan)
                         this._insert_speed_cell(row, ae_data, ae_rowspan);
                     }
