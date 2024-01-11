@@ -71,7 +71,11 @@ async def pull_data():
     data = GlobalStore.pull_tor_bp_data()
     return data
 
-
+@app.post("/migrate-access-switches")
+async def migrate_access_switches():
+    data = GlobalStore.remove_old_generic_system_from_main()
+    data = GlobalStore.create_new_access_switch_pair()
+    return data
 
 # from .graphql_main import graphql_app
 # app.add_route("/graphql", graphql_app)

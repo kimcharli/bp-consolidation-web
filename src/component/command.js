@@ -35,11 +35,23 @@ template.innerHTML = `
         background-color: var(--global-ok-color);
     }
 
-    #connect-button[data-connected="yes"] {
-        background-color: var(--global-ok-color);
+    @keyframes pulse {
+        0%, 49% {
+          color: white;
+        }
+        50%, 100% {
+          color: transparent;
+        }
     }
-    #connect-button[data-connected="no"] {
+
+    .data-state[data-state="init"] {
         background-color: var(--global-warning-color);
+    }
+    .data-state[data-state="loading"] {
+        animation: pulse 1s infinite
+    }
+    .data-state[data-state="done"] {
+        background-color: var(--global-ok-color);
     }
 
     </style>
@@ -52,28 +64,28 @@ template.innerHTML = `
             <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" /><input type="file" id="upload-env-ini-input" style="display: none;">
         </div>
         <div>
-            <button id="connect-button" type="button" data-connected="no">Connect</button>
+            <button id="connect-button" type="button" data-state="init" class="data-state">Connect</button>
         </div>
         <div>
-            <button id="sync-state" type="button">Sync States</button>
+            <button id="sync-state" type="button" data-state="init" class="data-state">Sync States</button>
         </div>
         <div>
-            <button type="button">Migrate Access Switches</button>
+            <button id="migrate-access-switches" type="button" data-state="init" class="data-state">Migrate Access Switches</button>
         </div>
         <div>
-            <button type="button">Migrate Generic Systems</button>
+            <button type="button" data-state="init" class="data-state">Migrate Generic Systems</button>
         </div>
         <div>
-            <button type="button">Migrate Virtual Networks</button>
+            <button type="button" data-state="init" class="data-state">Migrate Virtual Networks</button>
         </div>
         <div>
-            <button type="button">Migrate CTs</button>
+            <button type="button" data-state="init" class="data-state">Migrate CTs</button>
         </div>
         <div>
-            <button type="button">Pull Configurations</button>
+            <button type="button" data-state="init" class="data-state">Pull Configurations</button>
         </div>
         <div>
-            <button type="button">Move Devices</button>
+            <button type="button" data-state="init" class="data-state">Move Devices</button>
         </div>
     </div>
 `
@@ -92,12 +104,16 @@ class SideBar extends HTMLElement {
 
         this.shadowRoot.getElementById('connect-button').addEventListener('click', this.handleConnectClick.bind(this));
         this.shadowRoot.getElementById('sync-state').addEventListener('click', this.handleSyncStateClick.bind(this));
+        this.shadowRoot.getElementById('migrate-access-switches').addEventListener('click', this.handleMigrateAccessSwitchesClick.bind(this));
 
         // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.handleConnectSuccess.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.handleServerLogout.bind(this));
+        window.addEventListener(GlobalEventEnum.SYNC_STATE_DONE, (e) => {
+            this.shadowRoot.getElementById('sync-state').dataset.state = 'done';
+        });
     }
 
     // handleLoadLocalData(event) {
@@ -162,11 +178,11 @@ class SideBar extends HTMLElement {
     }
 
     handleConnectSuccess(event) {
-        this.shadowRoot.getElementById('connect-button').dataset.connected = 'yes';
+        this.shadowRoot.getElementById('connect-button').dataset.state = 'done';
     }
 
     handleServerLogout(event) {
-        this.shadowRoot.getElementById('connect-button').dataset.connected = 'no';
+        this.shadowRoot.getElementById('connect-button').dataset.state = 'init';
     }
 
     handleSyncStateClick(event) {
@@ -183,6 +199,26 @@ class SideBar extends HTMLElement {
         })
         .then(data => globalData.update(data))
         .catch(error => console.error('handleSyncStateClick - Error:', error));
+        this.shadowRoot.getElementById('sync-state').dataset.state="loading";
+    }
+
+    handleMigrateAccessSwitchesClick(event) {
+        fetch('/migrate-access-switches', {
+            method: 'POST',
+        })
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return result.json();
+            }
+        })
+        .then(data => {
+            this.shadowRoot.getElementById('migrate-access-switches').dataset.state="done";  
+        })
+        .catch(error => console.error('handleMigrateAccessSwitchesClick - Error:', error));
+        this.shadowRoot.getElementById('migrate-access-switches').dataset.state="loading";
     }
 
 }   

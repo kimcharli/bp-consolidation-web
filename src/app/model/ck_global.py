@@ -2,6 +2,7 @@ import logging
 from typing import Optional
 from pydantic import BaseModel, field_validator
 import json
+import time
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
@@ -168,8 +169,10 @@ class GlobalStore:
             'leaf_gs': {'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
             'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }
             'servers': {},  # <server>: { links: {} }
-            'vnis': [],            
-        }
+            'vnis': [],
+            'tor_interface_nodes_in_main': None,
+            'switch_pair_spec': None,
+            }
         cls.logger.warning(f"{cls.bp=}")
         tor_bp = cls.bp['tor_bp']
         main_bp = cls.bp['main_bp']
@@ -255,6 +258,10 @@ class GlobalStore:
 
         # get leaf information from main BP
         tor_interface_nodes_in_main = main_bp.get_server_interface_nodes(data['tor_gs']['label'])
+        tor_gs_node = main_bp.query(f"node('system', label='{data['tor_gs']['label']}', name='tor').out().node('interface', if_type='port_channel', name='evpn')")
+        if len(tor_gs_node):
+            data['tor_gs']['id'] = tor_gs_node[0]['tor']['id']
+            data['tor_gs']['ae_id'] = tor_gs_node[0]['evpn']['id']
         leaf_temp = {
             # 'label': { 'label': None, 'id': None, 'links': []},
             # 'label': { 'label': None, 'id': None, 'links': []},
@@ -299,7 +306,7 @@ class GlobalStore:
         max_len = 32
         if ( len(old_label) + len(prefix) + 1 ) > max_len:
             # TODO: potential of conflict
-            logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
+            # logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
             return old_label
         # just prefix
         return f"{prefix}-{old_label}"
@@ -366,6 +373,140 @@ class GlobalStore:
                 
 
         return data
+
+    @classmethod
+    def remove_old_generic_system_from_main(cls):
+        """
+        Remove the old generic system from the main blueprint
+        remove the connectivity templates assigned to the generic system
+        remove the generic system (links)
+        """
+        logging.warning('remove_old_generic_system_from_main - begin')
+        tor_interface_nodes_in_main = cls.tor_data['tor_interface_nodes_in_main']
+        tor_ae_id_in_main = cls.tor_data['tor_gs']['ae_id']
+        main_bp = cls.bp['main_bp']
+        if tor_ae_id_in_main is None:
+            logging.warning(f"tor_ae_id_in_main is None")
+            return
+        
+        # remove the connectivity templates assigned to the generic system
+        cts_to_remove = main_bp.get_interface_cts(tor_ae_id_in_main)
+        logging.warning(f"remove_old_generic_system_from_main - {tor_ae_id_in_main=} {len(cts_to_remove)=}")
+
+        # damping CTs in chunks
+        while len(cts_to_remove) > 0:
+            throttle_number = 50
+            cts_chunk = cts_to_remove[:throttle_number]
+            logging.warning(f"Removing Connecitivity Templates on this links: {len(cts_chunk)=}")
+            batch_ct_spec = {
+                "operations": [
+                    {
+                        "path": "/obj-policy-batch-apply",
+                        "method": "PATCH",
+                        "payload": {
+                            "application_points": [
+                                {
+                                    "id": tor_ae_id_in_main,
+                                    "policies": [ {"policy": x, "used": False} for x in cts_chunk]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+            batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
+            del cts_to_remove[:throttle_number]
+
+        # remove the generic system (links)
+        link_remove_spec = {
+            "operations": [
+                {
+                    "path": "/delete-switch-system-links",
+                    "method": "POST",
+                    "payload": {
+                        "link_ids": [ x['link']['id'] for x in tor_interface_nodes_in_main ]
+                    }
+                }
+            ]
+        }
+        batch_result = main_bp.batch(link_remove_spec, params={"comment": "batch-api"})
+        logging.debug(f"{link_remove_spec=}")
+        while True:
+            if_generic_system_present = main_bp.query(f"node('system', label='{cls.tor_data['tor_gs']['label']}')")
+            if len(if_generic_system_present) == 0:
+                break
+            logging.info(f"{if_generic_system_present=}")
+            time.sleep(3)
+        # the generic system is gone.            
+
+        return
+
+    @classmethod
+    def create_new_access_switch_pair(cls):
+        ########
+        # create new access system pair
+        # olg logical device is not useful anymore
+
+        # LD _ATL-AS-Q5100-48T, _ATL-AS-5120-48T created
+        # IM _ATL-AS-Q5100-48T, _ATL-AS-5120-48T created
+        # rack type _ATL-AS-5100-48T, _ATL-AS-5120-48T created and added
+        # ATL-AS-LOOPBACK with 10.29.8.0/22
+        
+        main_bp = cls.bp['main_bp']
+        tor_label = cls.tor_data['tor_gs']['label']
+        switch_pair_spec = cls.tor_data['switch_pair_spec']
+
+        REDUNDANCY_GROUP = 'redundancy_group'
+
+        # skip if the access switch piar already exists
+        tor_a = cls.tor_data['switches'][0]
+        tor_b = cls.tor_data['switches'][1]
+        if main_bp.get_system_node_from_label(tor_a):
+            logging.info(f"{tor_a} already exists in main blueprint")
+            return
+        
+        access_switch_pair_created = main_bp.add_generic_system(switch_pair_spec)
+        logging.warning(f"{access_switch_pair_created=}")
+
+        # wait for the new system to be created
+        while True:
+            new_systems = main_bp.query(f"""
+                node('link', label='{access_switch_pair_created[0]}', name='link')
+                .in_().node('interface')
+                .in_().node('system', name='leaf')
+                .out().node('redundancy_group', name='{REDUNDANCY_GROUP}'
+                )""", multiline=True)
+            # There should be 5 links (including the peer link)
+            if len(new_systems) == 2:
+                break
+            logging.info(f"Waiting for new systems to be created: {len(new_systems)=}")
+            time.sleep(3)
+
+        # The first entry is the peer link
+
+        # rename redundancy group with <tor_label>-pair
+        main_bp.patch_node_single(
+            new_systems[0][REDUNDANCY_GROUP]['id'], 
+            {"label": f"{tor_label}-pair" }
+            )
+
+        # rename each access switch for the label and hostname
+        for leaf in new_systems:
+            given_label = leaf['leaf']['label']
+            # when the label is <tor_label>1, rename it to <tor_label>a
+            if given_label[-1] == '1':
+                new_label = tor_a
+            # when the labe is <tor_label>2, rename it to <tor_label>b
+            elif given_label[-1] == '2':
+                new_label = tor_b
+            else:
+                logging.warning(f"skipp chaning name {given_label=}")
+                continue
+            main_bp.patch_node_single(
+                leaf['leaf']['id'], 
+                {"label": new_label, "hostname": new_label }
+                )
+
 
 def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
     '''
@@ -508,3 +649,5 @@ def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:
     logging.warning(f"BP:{the_bp.label} {summary=}")
 
     return interface_vlan_table
+
+
