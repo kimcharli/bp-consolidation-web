@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,12 +8,10 @@ version = "0.0.9"
 dependencies = [
     'fastapi == 0.104.1',
     'uvicorn[standard] == 0.24.0.post1',
-    'strawberry-graphql[fastapi] == 0.215.1',
-    'jinja2 == 3.1.2',
     'Markdown == 3.5.1',
     'pytest == 7.4.3',
-    'httpx == 0.25.1',
     'ck-apstra-api == 0.2.12',
+    'python-multipart',
 ]
 requires-python = ">=3.11"
 authors = [
