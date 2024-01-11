@@ -67,14 +67,17 @@ async def login_blueprint(blueprint: BlueprintItem):
 
 @app.get("/pull-data")
 async def pull_data():
-    logging.warning(f"/pull_data")
+    logging.warning(f"/pull_data begin")
     data = GlobalStore.pull_tor_bp_data()
+    logging.warning(f"/pull_data end")
     return data
 
 @app.post("/migrate-access-switches")
 async def migrate_access_switches():
+    logging.warning(f"/migrate_access_switches begin")
     data = GlobalStore.remove_old_generic_system_from_main()
     data = GlobalStore.create_new_access_switch_pair()
+    logging.warning(f"/migrate_access_switches end")
     return data
 
 # from .graphql_main import graphql_app

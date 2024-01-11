@@ -221,7 +221,7 @@ class ApstraServer extends HTMLElement {
         .then(data => {
             console.log('/login-server: Apstra version: ', data.version);
             window.dispatchEvent(
-                new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS)
+                new CustomEvent(GlobalEventEnum.CONNECT_SUCCESS, { detail: { name: 'server' }})
             );                                
             thisTarget.innerHTML = 'on';
             thisTarget.dataset.status = 'on';

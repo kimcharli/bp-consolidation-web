@@ -90,46 +90,46 @@ template.innerHTML = `
     </div>
 `
 
-class SideBar extends HTMLElement {
+class SideBar extends HTMLElement {    
     constructor() {
-        super();
+        super();        
         this.attachShadow({ mode: 'open' });
         this.shadowRoot.appendChild(template.content.cloneNode(true));
 
+        this.connect_items = ['server', 'main_bp', 'tor_bp'];  // to check all the connect_success
         // load env initiated
         this.shadowRoot.getElementById('upload-env-ini-img').addEventListener('click', this.handleUploadIniImageClick.bind(this));
         // upload submitted
         this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
         this.shadowRoot.getElementById('trash-env').addEventListener('click', this.handleTrashEnv.bind(this));
 
-        this.shadowRoot.getElementById('connect-button').addEventListener('click', this.handleConnectClick.bind(this));
+        this.shadowRoot.getElementById('connect-button').addEventListener('click', () => {
+            window.dispatchEvent(
+                new CustomEvent(GlobalEventEnum.CONNECT_SERVER)
+            );   
+        });
         this.shadowRoot.getElementById('sync-state').addEventListener('click', this.handleSyncStateClick.bind(this));
         this.shadowRoot.getElementById('migrate-access-switches').addEventListener('click', this.handleMigrateAccessSwitchesClick.bind(this));
 
         // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
-        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, this.handleFetchEnvIni.bind(this));
-        window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
+        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, () => {
+            this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
+        });
+        window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, () => {
+            this.shadowRoot.getElementById('load-env-div').dataset.loaded = '';
+        });
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.handleConnectSuccess.bind(this));
+        window.addEventListener(GlobalEventEnum.CONNECT_SERVER, () => {
+            this.shadowRoot.getElementById('connect-button').dataset.state = 'loading';
+        });
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.handleServerLogout.bind(this));
     }
-
-    // handleLoadLocalData(event) {
-    // }
 
     // load env clicked
     handleUploadIniImageClick(event) {
         console.log('handleUploadIniImageClick() id =', event.currentTarget.id );
         this.shadowRoot.getElementById('upload-env-ini-input').click();
-    }
-
-    handleFetchEnvIni(event) {
-        this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
-    }
-
-    handleClearEnvIni(event) {
-        this.shadowRoot.getElementById('load-env-div').dataset.loaded = '';
-    }
-        
+    }        
 
     handleTrashEnv(event) {
         CkIDB.trashEnv()
@@ -156,25 +156,18 @@ class SideBar extends HTMLElement {
         })
         .then(data => {
             console.log('handleUploadIniInputChange - fetched', data);
-            // this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
             CkIDB.addServerStore(data);
-            // window.dispatchEvent(
-            //     new CustomEvent(GlobalEventEnum.FETCH_ENV_INI )
-            // );
-
         })
         .catch(error => console.error('handleUploadIniInputChange - fetch Error:', error));
-        // this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
     }
 
-    handleConnectClick(event) {
-        window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.CONNECT_SERVER)
-        );
-    }
 
     handleConnectSuccess(event) {
-        this.shadowRoot.getElementById('connect-button').dataset.state = 'done';
+        // console.log('handleConnectSuccess' + event.detail + ' ' + this.connect_items)
+        this.connect_items = this.connect_items.filter((item) => item !== event.detail.name)
+        if (this.connect_items.length === 0) {
+            this.shadowRoot.getElementById('connect-button').dataset.state = 'done';
+        }
     }
 
     handleServerLogout(event) {

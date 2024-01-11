@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bp-consolidation-web"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
     'fastapi == 0.104.1',
     'uvicorn[standard] == 0.24.0.post1',
