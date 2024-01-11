@@ -12,15 +12,15 @@ from .model.ck_global import GlobalStore, ServerItem, BlueprintItem
 logger = logging.getLogger(__name__)
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="src/static"), name="static")
-app.mount("/js", StaticFiles(directory="src/static/js"), name="js")
-app.mount("/css", StaticFiles(directory="src/static/css"), name="css")
-app.mount("/images", StaticFiles(directory="src/static/images"), name="images")
-app.mount("/component", StaticFiles(directory="src/component"), name="component")
+app.mount("/static", StaticFiles(directory="src/app/static"), name="static")
+app.mount("/js", StaticFiles(directory="src/app/static/js"), name="js")
+app.mount("/css", StaticFiles(directory="src/app/static/css"), name="css")
+app.mount("/images", StaticFiles(directory="src/app/static/images"), name="images")
+app.mount("/component", StaticFiles(directory="src/app/component"), name="component")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index_html(request: Request):
-    return FileResponse("src/static/index.html")
+    return FileResponse("src/app/static/index.html")
 
 @app.post("/test", response_class=HTMLResponse)
 async def test(request: Request):
