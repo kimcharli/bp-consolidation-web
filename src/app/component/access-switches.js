@@ -19,7 +19,6 @@ template.innerHTML = `
             vector-effect: non-scaling-stroke;
             stroke-opacity: 1;
             stroke: black;
-            fill: orange;
         }
         svg text {
             font-family: system-ui, sans-serif;
@@ -52,6 +51,26 @@ template.innerHTML = `
         .center {
             text-align: center;
         }
+        @keyframes pulse {
+            0%, 49% {
+              color: white;
+            }
+            50%, 100% {
+              color: transparent;
+            }
+        }
+    
+        .data-set[data-state="init"] {
+            background-color: var(--global-warning-color);
+            fill: var(--global-warning-color);
+        }
+        .data-set[data-state="loading"] {
+            animation: pulse 1s infinite
+        }
+        .data-set[data-state="loaded"] {
+            background-color: var(--global-ok-color);
+            fill: var(--global-ok-color);
+        }
     </style>
 
     <table>
@@ -72,13 +91,13 @@ template.innerHTML = `
                 <rect id="access" width="90" height="25" ry="5" />
                 </defs>
         
-            <use x="0" y="0" href="#leaf" />
-            <text id="leaf1-label" x="50" y="12" text-anchor="middle" alignment-baseline="central">leaf1</text>
+            <use id="leaf1-box" x="0" y="0" href="#leaf" class="data-set" data-state="init" />
+            <text id="leaf1-label" x="50" y="12" text-anchor="middle" alignment-baseline="central" class="data-set" data-state="init">leaf1</text>
         
-            <use x="110" y="0" href="#leaf" />
+            <use id="leaf2-box" x="110" y="0" href="#leaf" class="data-set" data-state="init"/>
             <text id="leaf2-label" x="160" y="12" text-anchor="middle" alignment-baseline="central">leaf2</text>
 
-            <use x="0" y="50" href="#access-gs" />
+            <use id="access-gs-box" x="0" y="50" href="#access-gs" class="data-set" data-state="init" />
             <text id="access-gs-label" x="100" y="62" text-anchor="middle" alignment-baseline="central">access-gs</text>
 
             <use x="0" y="50" href="#access" visibility="hidden" />
@@ -114,13 +133,13 @@ template.innerHTML = `
                     <rect id="leaf-gs" width="200" height="25" ry="5" />
                 </defs>
             
-                <use x="0" y="0" href="#leaf-gs" id="leaf-gs-box" />
+                <use id="leaf-gs-box" x="0" y="0" href="#leaf-gs" class="data-set" data-state="init"/>
                 <text id="leaf-gs-label" x="100" y="12" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
             
-                <use x="0" y="50" href="#access" />
+                <use id="tor1-box" x="0" y="50" href="#access" class="data-set" data-state="init" />
                 <text id="tor1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central">leaf1</text>
             
-                <use x="110" y="50" href="#access" />
+                <use id="tor2-box" x="110" y="50" href="#access" class="data-set" data-state="init"/>
                 <text id="tor2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central">leaf2</text>
             
                 <line x1="30" y1="25" x2="30" y2="50" />
@@ -230,14 +249,18 @@ class AccessSwitches extends HTMLElement {
     load_id_element(id, value) {
         this.shadowRoot.getElementById(id).innerHTML = value;
         this.shadowRoot.getElementById(id).dataset.state = "loaded";
+        this.shadowRoot.getElementById(id).style.fill = "red";
     }
 
     handleSyncState(event) {
-        this.load_id_element("tor1-label", globalData.switches[0]);
-        this.load_id_element("tor2-label", globalData.switches[1]);
-        this.load_id_element("access1-label", globalData.switches[0]);
-        this.load_id_element("access2-label", globalData.switches[1]);
+        this.load_id_element("tor1-label", globalData.access_switches[0][0]);
+        this.shadowRoot.getElementById('tor1-box').dataset.state = "loaded";
+        this.load_id_element("tor2-label", globalData.access_switches[1][0]);
+        this.shadowRoot.getElementById('tor2-box').dataset.state = "loaded";
+        this.load_id_element("access1-label", globalData.access_switches[0]);
+        this.load_id_element("access2-label", globalData.access_switches[1]);
         this.load_id_element("leaf-gs-label", globalData.leaf_gs.label);
+        this.shadowRoot.getElementById('leaf-gs-box').dataset.state = "loaded";
         this.load_id_element("leafgs1-intf1", globalData.leaf_gs.intfs[0]);
         this.load_id_element("leaf1-intf1", globalData.leaf_gs.intfs[0]);
         this.load_id_element("leafgs1-intf2", globalData.leaf_gs.intfs[2]);
@@ -248,10 +271,12 @@ class AccessSwitches extends HTMLElement {
         this.load_id_element("leaf2-intf2", globalData.leaf_gs.intfs[3]);
 
         this.load_id_element("access-gs-label", globalData.tor_gs.label);
-        this.shadowRoot.getElementById('leaf-gs-box').dataset.state = "loaded";
+        this.shadowRoot.getElementById('access-gs-box').dataset.state = "loaded";
 
         this.load_id_element("leaf1-label", globalData.leaf_switches[0][0]);
+        this.shadowRoot.getElementById("leaf1-box").dataset.state = "loaded";
         this.load_id_element("leaf2-label", globalData.leaf_switches[1][0]);
+        this.shadowRoot.getElementById("leaf2-box").dataset.state = "loaded";
 
 
     }

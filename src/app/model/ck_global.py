@@ -163,7 +163,7 @@ class GlobalStore:
     @classmethod
     def pull_tor_bp_data(cls):
         data = {
-            'switches': [],  # the tor switches
+            'access_switches': [],  # the tor switches { label:, id:, }
             'leaf_switches': {},  # the leaf switches <leaf1,2>: { label:, id:, , links: [{ switch_intf:, server_intf}]}
             'tor_gs':{'label': None, 'id': None, 'ae_id': None},  # coming from switch name
             'leaf_gs': {'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
@@ -179,17 +179,21 @@ class GlobalStore:
         peer_link_query = "node('link',role='leaf_leaf',  name='link').in_('link').node('interface', name='intf').in_('hosted_interfaces').node('system', name='switch')"
         peer_link_nodes = tor_bp.query(peer_link_query)
         # cls.logger.warning(f"{peer_link_nodes=}")
+        temp_access_switches = {}
         for link in peer_link_nodes:
+            # register the switch label for further processing later
+            switch_label = link['switch']['label']
+            temp_access_switches[switch_label] = {'label': switch_label}
             link_id = link['link']['id']
-            # cls.logger.warning(f"{data=} {link_id=}")
+            # peer_link 
             if link_id not in data['peer_link']:
                 data['peer_link'][link_id] = { 'system': {} }
             link_data = data['peer_link'][link_id]
             # cls.logger.warning(f"{data=} {link_data=}")
             link_data['speed'] = link['link']['speed']
-            switch_label = link['switch']['label']
-            if switch_label not in data['switches']:
-                data['switches'].append(switch_label)
+            # switch_label = link['switch']['label']
+            # if switch_label not in data['access_switches']:
+            #     data['access_switches'].append(switch_label)
             # cls.logger.warning(f"{data=} {switch_label=}")
             if switch_label not in link_data['system']:
                 link_data['system'][switch_label] = []
@@ -197,12 +201,13 @@ class GlobalStore:
             switch_intf = link['intf']['if_name']
             switch_data.append(switch_intf)
         cls.logger.warning(f"{data=}")
+        data['access_switches'] = sorted(temp_access_switches.items(), key=lambda item: item[0])
 
         #  setup tor_gs
-        if data['switches'][0].endswith(('a', 'b')):
-            data['tor_gs']['label'] = data['switches'][0][:-1]
-        elif data['switches'][0].endswith(('c', 'd')):
-            data['tor_gs']['label'] = data['switches'][0][:-1] + 'cd'
+        if data['access_switches'][0][0].endswith(('a', 'b')):
+            data['tor_gs']['label'] = data['access_switches'][0][0][:-1]
+        elif data['access_switches'][0][0].endswith(('c', 'd')):
+            data['tor_gs']['label'] = data['access_switches'][0][0][:-1] + 'cd'
         else:
             logging.critical(f"switch names {data['switches']} does not ends with 'a', 'b', 'c', or 'd'!")
 
@@ -234,7 +239,7 @@ class GlobalStore:
         data['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]
 
         # get ct assigment and update the servers
-        data['ct_table'] = pull_interface_vlan_table(tor_bp, data['switches'])
+        data['ct_table'] = pull_interface_vlan_table(tor_bp, [x[0] for x in data['access_switches']])
         for server_label in data['servers']:
             server_data = data['servers'][server_label]
             # breakpoint()
@@ -461,8 +466,8 @@ class GlobalStore:
         REDUNDANCY_GROUP = 'redundancy_group'
 
         # skip if the access switch piar already exists
-        tor_a = cls.tor_data['switches'][0]
-        tor_b = cls.tor_data['switches'][1]
+        tor_a = cls.tor_data['access_switches'][0]
+        tor_b = cls.tor_data['access_switches'][1]
         if main_bp.get_system_node_from_label(tor_a):
             logging.info(f"{tor_a} already exists in main blueprint")
             return
@@ -614,7 +619,7 @@ def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:
     """
 
     interface_vlan_nodes = the_bp.query(interface_vlan_query, multiline=True)
-    logging.debug(f"BP:{the_bp.label} {len(interface_vlan_nodes)=}")
+    logging.warning(f"pull_interface_vlan_table(): {the_bp.label=} {interface_vlan_query=} {len(interface_vlan_nodes)=}")
 
     for nodes in interface_vlan_nodes:
         if nodes['ae']:

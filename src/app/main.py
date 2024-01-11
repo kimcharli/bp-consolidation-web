@@ -60,8 +60,9 @@ async def logout_server():
 
 @app.post("/login-blueprint")
 async def login_blueprint(blueprint: BlueprintItem):
-    logging.warning(f"/login_blueprint: {blueprint=}")
+    logging.warning(f"/login_blueprint: begin {blueprint=}")
     id = GlobalStore.login_blueprint(blueprint)
+    logging.warning(f"/login_blueprint: end {blueprint=}")
     return id
 
 

@@ -99,7 +99,7 @@ class GlobalData {
     // #servers = null;
     update(data) {
         this.peer_link = JSON.parse(JSON.stringify(data.peer_link));
-        this.switches = JSON.parse(JSON.stringify(data.switches));
+        this.access_switches = JSON.parse(JSON.stringify(data.access_switches));
         this.servers = JSON.parse(JSON.stringify(data.servers));
         this.vnis = JSON.parse(JSON.stringify(data.vnis));
         this.ct_table = JSON.parse(JSON.stringify(data.ct_table));
