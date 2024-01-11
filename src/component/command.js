@@ -111,9 +111,6 @@ class SideBar extends HTMLElement {
         window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, this.handleClearEnvIni.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.handleConnectSuccess.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.handleServerLogout.bind(this));
-        window.addEventListener(GlobalEventEnum.SYNC_STATE_DONE, (e) => {
-            this.shadowRoot.getElementById('sync-state').dataset.state = 'done';
-        });
     }
 
     // handleLoadLocalData(event) {
@@ -174,7 +171,6 @@ class SideBar extends HTMLElement {
         window.dispatchEvent(
             new CustomEvent(GlobalEventEnum.CONNECT_SERVER)
         );
-
     }
 
     handleConnectSuccess(event) {
@@ -197,7 +193,10 @@ class SideBar extends HTMLElement {
                 return result.json();
             }
         })
-        .then(data => globalData.update(data))
+        .then(data => {
+            globalData.update(data);
+            this.shadowRoot.getElementById('sync-state').dataset.state = 'done';
+        })
         .catch(error => console.error('handleSyncStateClick - Error:', error));
         this.shadowRoot.getElementById('sync-state').dataset.state="loading";
     }

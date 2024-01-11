@@ -262,6 +262,7 @@ class GlobalStore:
         if len(tor_gs_node):
             data['tor_gs']['id'] = tor_gs_node[0]['tor']['id']
             data['tor_gs']['ae_id'] = tor_gs_node[0]['evpn']['id']
+        logging.warning(f"pull_tor_bp_data {data['tor_gs']=} ")
         leaf_temp = {
             # 'label': { 'label': None, 'id': None, 'links': []},
             # 'label': { 'label': None, 'id': None, 'links': []},
@@ -279,6 +280,7 @@ class GlobalStore:
                 'server_intf': member_intf_set[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'],
                 })
             data['tor_gs']['ae_id'] = member_intf_set[CkEnum.EVPN_INTERFACE]['id']
+        logging.warning(f"pull_tor_bp_data {leaf_temp=}")
         data['leaf_switches'] = sorted(leaf_temp.items(), key=lambda item: item[0])
 
         data['switch_pair_spec'] = build_switch_pair_spec(tor_interface_nodes_in_main, data['tor_gs']['label'])

@@ -6,26 +6,26 @@ graph TB
         label["Connectivity Template"]
         EG("ep_group"):::green
         EPI("ep_application_instance"):::green
-        EEPB["ep_endpoint_policy | policy_type_name=batch"]:::orange
-        EEPP["ep_endpoint_policy | policy_type_name=pipeline"]:::green
-        EEPS["ep_endpoint_policy | policy_type_name=AttachSingleVLAN"]:::green
+        EEPB["ep_endpoint_policy<br />policy_type_name=batch"]:::orange
+        EEPP["ep_endpoint_policy<br />policy_type_name=pipeline"]:::green
+        EEPS["ep_endpoint_policy<br />policy_type_name=AttachSingleVLAN"]:::green
     end
 
     RACK("rack")
     RG("redundancy_group"):::green
-    Switch["system | label=atl1tor-r5r14b | system_type=switch"]
-    IF_evpn["interface | if_type=port_channel | po_control_protocol=evpn"]:::orange
-    IF_eth["interface | if_type=ethernet"]:::orange
-    IF_member["interface | if_type=ethernet"]
-    IF_ae["interface | if_type=port_channel"]
+    Switch["system<br />label=atl1tor-r5r14b<br />system_type=switch"]
+    IF_evpn["interface<br />if_type=port_channel<br />po_control_protocol=evpn"]:::orange
+    IF_eth["interface<br />if_type=ethernet"]:::orange
+    IF_member["interface<br />if_type=ethernet"]
+    IF_ae["interface<br />if_type=port_channel"]
     LINK_evpn("link")
     LINK_ethernet("link")
     LINK_member("link")
-    IF_GS_PC["interface | GS/PC"]
-    SS["system | system_type=server"]
-    VN["virtual_network | vn_id=100121"]:::green
+    IF_GS_PC["interface<br />GS/PC"]
+    SS["system<br />system_type=server"]
+    VN["virtual_network<br />vn_id=100121"]:::green
     VE("vn_endpoint"):::green
-    VI["vn_instance | vlan_id=121"]:::green
+    VI["vn_instance<br />vlan_id=121"]:::green
     SZ("security_zone")
 
     RG -->|part_of_rack| RACK

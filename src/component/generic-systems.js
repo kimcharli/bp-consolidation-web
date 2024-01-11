@@ -187,9 +187,6 @@ class GenericSystems extends HTMLElement {
             
         this.shadowRoot.getElementById("num_links").innerHTML = table.rows.length -1;
         this.shadowRoot.getElementById("gs-header").innerHTML = `${gs_count} Generic Systems, ${table.rows.length -1} Links`;
-        window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.SYNC_STATE_DONE)
-        );
     }
 }
 customElements.define("generic-systems", GenericSystems);

@@ -130,6 +130,5 @@ export class GlobalEventEnum {
     static CONNECT_SUCCESS = 'global-connect-success';
     static CONNECT_LOGOUT = 'global-connect-logout';
     static SYNC_STATE = 'global-sync-state-request';
-    static SYNC_STATE_DONE = 'global-sync-state-done';
     static CONNECT_BLUEPRINT = 'blueprint-connect-request';
 }

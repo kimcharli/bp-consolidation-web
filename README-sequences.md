@@ -41,5 +41,8 @@ sequenceDiagram
         common ->> virtualnetworks: SYNC_STATES
 
     end
-
+    opt Click Migrate Access Switche
+        command ->>+main.py: /migrate-access-switches
+        main.py -->> -command: data
+    end
 ```
