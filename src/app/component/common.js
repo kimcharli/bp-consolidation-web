@@ -106,7 +106,8 @@ class GlobalData {
         this.leaf_gs = JSON.parse(JSON.stringify(data.leaf_gs));
         this.tor_gs = JSON.parse(JSON.stringify(data.tor_gs));        
         this.leaf_switches = JSON.parse(JSON.stringify(data.leaf_switches));        
-        this.tor_interface_nodes_in_main = JSON.parse(JSON.stringify(data.tor_interface_nodes_in_main));        
+        this.tor_interface_nodes_in_main = JSON.parse(JSON.stringify(data.tor_interface_nodes_in_main));
+        this.access_interface_nodes_in_main = JSON.parse(JSON.stringify(data.access_interface_nodes_in_main));
         console.log('GlobalData:update', this);
         window.dispatchEvent( new CustomEvent(GlobalEventEnum.SYNC_STATE) );
     }

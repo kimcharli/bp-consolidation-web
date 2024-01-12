@@ -100,10 +100,10 @@ template.innerHTML = `
             <use id="access-gs-box" x="0" y="50" href="#access-gs" class="data-set" data-state="init" />
             <text id="access-gs-label" x="100" y="62" text-anchor="middle" alignment-baseline="central">access-gs</text>
 
-            <use x="0" y="50" href="#access" visibility="hidden" />
+            <use id="access1-box" x="0" y="50" href="#access" visibility="hidden" class="data-set" data-state="init" />
             <text id="access1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central" visibility="hidden">access1</text>
         
-            <use x="110" y="50" href="#access" visibility="hidden" />
+            <use id="access2-box" x="110" y="50" href="#access" visibility="hidden" class="data-set" data-state="init" />
             <text id="access2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central" visibility="hidden">access2</text>
 
             <line x1="30" y1="25" x2="30" y2="50" />
@@ -253,31 +253,48 @@ class AccessSwitches extends HTMLElement {
     }
 
     handleSyncState(event) {
+        // tor_bp side
         this.load_id_element("tor1-label", globalData.access_switches[0][0]);
         this.shadowRoot.getElementById('tor1-box').dataset.state = "loaded";
         this.load_id_element("tor2-label", globalData.access_switches[1][0]);
         this.shadowRoot.getElementById('tor2-box').dataset.state = "loaded";
-        this.load_id_element("access1-label", globalData.access_switches[0]);
-        this.load_id_element("access2-label", globalData.access_switches[1]);
         this.load_id_element("leaf-gs-label", globalData.leaf_gs.label);
         this.shadowRoot.getElementById('leaf-gs-box').dataset.state = "loaded";
         this.load_id_element("leafgs1-intf1", globalData.leaf_gs.intfs[0]);
-        this.load_id_element("leaf1-intf1", globalData.leaf_gs.intfs[0]);
         this.load_id_element("leafgs1-intf2", globalData.leaf_gs.intfs[2]);
-        this.load_id_element("leaf1-intf2", globalData.leaf_gs.intfs[2]);
         this.load_id_element("leafgs2-intf1", globalData.leaf_gs.intfs[1]);
-        this.load_id_element("leaf2-intf1", globalData.leaf_gs.intfs[1]);
         this.load_id_element("leafgs2-intf2", globalData.leaf_gs.intfs[3]);
+
+        // main_bp side
+        this.load_id_element("leaf1-intf1", globalData.leaf_gs.intfs[0]);
+        this.load_id_element("leaf1-intf2", globalData.leaf_gs.intfs[2]);
+        this.load_id_element("leaf2-intf1", globalData.leaf_gs.intfs[1]);
         this.load_id_element("leaf2-intf2", globalData.leaf_gs.intfs[3]);
 
-        this.load_id_element("access-gs-label", globalData.tor_gs.label);
-        this.shadowRoot.getElementById('access-gs-box').dataset.state = "loaded";
-
-        this.load_id_element("leaf1-label", globalData.leaf_switches[0][0]);
-        this.shadowRoot.getElementById("leaf1-box").dataset.state = "loaded";
-        this.load_id_element("leaf2-label", globalData.leaf_switches[1][0]);
-        this.shadowRoot.getElementById("leaf2-box").dataset.state = "loaded";
-
+        if (globalData.tor_gs.id && globalData.tor_gs.ae_id) {
+            // tor_gs exists in the main_bp
+            this.load_id_element("access-gs-label", globalData.tor_gs.label);
+            this.shadowRoot.getElementById('access-gs-box').dataset.state = "loaded";    
+            this.load_id_element("leaf1-label", globalData.leaf_switches[0][0]);
+            this.shadowRoot.getElementById("leaf1-box").dataset.state = "loaded";
+            this.load_id_element("leaf2-label", globalData.leaf_switches[1][0]);
+            this.shadowRoot.getElementById("leaf2-box").dataset.state = "loaded";
+        } else if (globalData.leaf_switches[0][1].id && globalData.leaf_switches[1][1].id) {
+            this.load_id_element("leaf1-label", globalData.leaf_switches[0][0]);
+            this.shadowRoot.getElementById("leaf1-box").dataset.state = "loaded";
+            this.load_id_element("leaf2-label", globalData.leaf_switches[1][0]);
+            this.shadowRoot.getElementById("leaf2-box").dataset.state = "loaded";
+            this.shadowRoot.getElementById("access-gs-box").style.visibility = "hidden";
+            this.shadowRoot.getElementById("access-gs-label").style.visibility = "hidden";
+            this.shadowRoot.getElementById("access1-box").style.visibility = "visible";
+            this.shadowRoot.getElementById("access1-box").dataset.state = "loaded";
+            this.shadowRoot.getElementById("access1-label").style.visibility = "visible";
+            this.shadowRoot.getElementById("access2-box").dataset.state = "loaded";
+            this.shadowRoot.getElementById("access2-box").style.visibility = "visible";
+            this.shadowRoot.getElementById("access2-label").style.visibility = "visible";
+            this.load_id_element("access1-label", globalData.access_switches[0][0]);
+            this.load_id_element("access2-label", globalData.access_switches[1][0]);
+            }
 
     }
 }

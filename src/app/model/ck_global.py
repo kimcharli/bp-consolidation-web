@@ -164,13 +164,14 @@ class GlobalStore:
     def pull_tor_bp_data(cls):
         data = {
             'access_switches': [],  # the tor switches { label:, id:, }
-            'leaf_switches': {},  # the leaf switches <leaf1,2>: { label:, id:, , links: [{ switch_intf:, server_intf}]}
-            'tor_gs':{'label': None, 'id': None, 'ae_id': None},  # coming from switch name
+            'leaf_switches': None,  # the leaf switches <leaf1,2>: { label:, id:, , links: [{ switch_intf:, server_intf}]}
+            'tor_gs':{'label': None, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
             'leaf_gs': {'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
             'peer_link': {},  # <id>: { speed: 100G, system: { <label> : [ <intf> ] } }
             'servers': {},  # <server>: { links: {} }
             'vnis': [],
             'tor_interface_nodes_in_main': None,
+            'access_interface_nodes_in_main': None,
             'switch_pair_spec': None,
             }
         cls.logger.warning(f"{cls.bp=}")
@@ -202,8 +203,9 @@ class GlobalStore:
             switch_data.append(switch_intf)
         cls.logger.warning(f"{data=}")
         data['access_switches'] = sorted(temp_access_switches.items(), key=lambda item: item[0])
+        access_switch_pair = sorted(temp_access_switches)
 
-        #  setup tor_gs
+        #  setup tor_gs label from the name of tor_bp switches
         if data['access_switches'][0][0].endswith(('a', 'b')):
             data['tor_gs']['label'] = data['access_switches'][0][0][:-1]
         elif data['access_switches'][0][0].endswith(('c', 'd')):
@@ -263,34 +265,64 @@ class GlobalStore:
 
         # get leaf information from main BP
         tor_interface_nodes_in_main = main_bp.get_server_interface_nodes(data['tor_gs']['label'])
-        tor_gs_node = main_bp.query(f"node('system', label='{data['tor_gs']['label']}', name='tor').out().node('interface', if_type='port_channel', name='evpn')")
-        if len(tor_gs_node):
-            data['tor_gs']['id'] = tor_gs_node[0]['tor']['id']
-            data['tor_gs']['ae_id'] = tor_gs_node[0]['evpn']['id']
-        logging.warning(f"pull_tor_bp_data {data['tor_gs']=} ")
-        leaf_temp = {
-            # 'label': { 'label': None, 'id': None, 'links': []},
-            # 'label': { 'label': None, 'id': None, 'links': []},
-        }
-        for member_intf_set in tor_interface_nodes_in_main:
-            leaf_label = member_intf_set[CkEnum.MEMBER_SWITCH]['label']
-            if leaf_label not in leaf_temp:
-                leaf_temp[leaf_label] = {
-                    'label': leaf_label, 
-                    'id': member_intf_set[CkEnum.MEMBER_SWITCH]['id'], 
-                    'links': []}
-            leaf_data = leaf_temp[leaf_label]
-            leaf_data['links'].append({
-                'switch_intf': member_intf_set[CkEnum.MEMBER_INTERFACE]['if_name'],
-                'server_intf': member_intf_set[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'],
-                })
-            data['tor_gs']['ae_id'] = member_intf_set[CkEnum.EVPN_INTERFACE]['id']
-        logging.warning(f"pull_tor_bp_data {leaf_temp=}")
-        data['leaf_switches'] = sorted(leaf_temp.items(), key=lambda item: item[0])
+        if len(tor_interface_nodes_in_main):
+            # tor_gs in main_bp
+            tor_gs_node = main_bp.query(f"node('system', label='{data['tor_gs']['label']}', name='tor').out().node('interface', if_type='port_channel', name='evpn')")
+            if len(tor_gs_node):
+                data['tor_gs']['id'] = tor_gs_node[0]['tor']['id']
+                data['tor_gs']['ae_id'] = tor_gs_node[0]['evpn']['id']
+            logging.warning(f"pull_tor_bp_data {data['tor_gs']=} {tor_gs_node=}")
+            leaf_temp = {
+                # 'label': { 'label': None, 'id': None, 'links': []},
+                # 'label': { 'label': None, 'id': None, 'links': []},
+            }
+            for member_intf_set in tor_interface_nodes_in_main:
+                leaf_label = member_intf_set[CkEnum.MEMBER_SWITCH]['label']
+                if leaf_label not in leaf_temp:
+                    leaf_temp[leaf_label] = {
+                        'label': leaf_label, 
+                        'id': member_intf_set[CkEnum.MEMBER_SWITCH]['id'], 
+                        'links': []}
+                leaf_data = leaf_temp[leaf_label]
+                leaf_data['links'].append({
+                    'switch_intf': member_intf_set[CkEnum.MEMBER_INTERFACE]['if_name'],
+                    'server_intf': member_intf_set[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'],
+                    })
+                data['tor_gs']['ae_id'] = member_intf_set[CkEnum.EVPN_INTERFACE]['id']
+            logging.warning(f"pull_tor_bp_data {leaf_temp=}")
+            data['leaf_switches'] = sorted(leaf_temp.items(), key=lambda item: item[0])
 
-        data['switch_pair_spec'] = build_switch_pair_spec(tor_interface_nodes_in_main, data['tor_gs']['label'])
-        data['tor_interface_nodes_in_main'] = tor_interface_nodes_in_main
+            data['switch_pair_spec'] = build_switch_pair_spec(tor_interface_nodes_in_main, data['tor_gs']['label'])
+            data['tor_interface_nodes_in_main'] = tor_interface_nodes_in_main
 
+        # TODO: get data when the access_switches are loaded in main_bp
+        else:
+            access_switch_query = f"""
+                match(
+                    node('system', system_type='switch', label=is_in({access_switch_pair}), name='ACCESS_SWITCH')
+                        .out('hosted_interfaces').node('interface', name='ACCESS_INTF')
+                        .out('link').node('link')
+                        .in_('link').node('interface', name='LEAF_INTF')
+                        .in_('hosted_interfaces').node('system', role='leaf', name='LEAF'),
+                    optional(
+                        node(name='ACCESS_INTF').in_().node('interface', name='ACCESS_AE')
+                    )
+                )
+            """
+            # access_switch_nodes = main_bp.query(f"node('system', label=is_in({access_switch_pair}), name='switch')")
+            access_switch_nodes = main_bp.query(access_switch_query, multiline=True)
+            access_switches = {x['ACCESS_SWITCH']['label']: {
+                'label': x['ACCESS_SWITCH']['label'],
+                'id': x['ACCESS_SWITCH']['id'],
+                } for x in access_switch_nodes}
+            data['access_switches'] = sorted(access_switches.items())
+            leaf_switches = {x['LEAF']['label']: {
+                'label': x['LEAF']['label'],
+                'id': x['LEAF']['id'],
+                } for x in access_switch_nodes}
+            data['leaf_switches'] = sorted(leaf_switches.items())
+            access_interface_nodes_in_main = main_bp.get_switch_interface_nodes([x[0] for x in data['access_switches']])
+            data['access_interface_nodes_in_main'] = access_interface_nodes_in_main
 
         cls.tor_data = data
         return data
@@ -465,9 +497,9 @@ class GlobalStore:
 
         REDUNDANCY_GROUP = 'redundancy_group'
 
-        # skip if the access switch piar already exists
-        tor_a = cls.tor_data['access_switches'][0]
-        tor_b = cls.tor_data['access_switches'][1]
+        # skip if the access switch pair already exists
+        tor_a = cls.tor_data['access_switches'][0][0]
+        tor_b = cls.tor_data['access_switches'][1][0]
         if main_bp.get_system_node_from_label(tor_a):
             logging.info(f"{tor_a} already exists in main blueprint")
             return
