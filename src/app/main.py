@@ -8,6 +8,7 @@ import os
 from pydantic import BaseModel
 
 from .model.ck_global import GlobalStore, ServerItem, BlueprintItem
+from .generic_systems import GenericSystems
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -71,6 +72,13 @@ async def pull_data():
     logging.warning(f"/pull_data begin")
     data = GlobalStore.pull_tor_bp_data()
     logging.warning(f"/pull_data end")
+    return data
+
+@app.get("/get-generic-systems")
+async def get_generic_systems():
+    logging.warning(f"/get_generic_systems begin")
+    data = GenericSystems.get_generic_systems()
+    logging.warning(f"/get_generic_systems end")
     return data
 
 @app.post("/migrate-access-switches")

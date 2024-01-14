@@ -6,6 +6,7 @@ import time
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
+from ..generic_systems import GenericSystems
 
 class ServerItem(BaseModel):
     id: Optional[int] = None
@@ -219,6 +220,8 @@ class GlobalStore:
         for old_label, server_data in data['servers'].items():
             server_data['new_label'] = cls.new_label(data['tor_gs']['label'], old_label)                            
         
+        GenericSystems.pull_generic_systems(cls.bp['main_bp'], cls.bp['tor_bp'], data['tor_gs'], [x[0] for x in data['access_switches']])
+
         # update leaf_gs (the generic system in TOR bp for the leaf)
         for server_label, server_data in data['servers'].items():
             for group_link in server_data['group_links']:

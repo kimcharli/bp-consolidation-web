@@ -35,6 +35,7 @@ template.innerHTML = `
         }
         .speed {
             text-align: right;
+            width: 4ch;
         }
         .speed[data-speed="100G"] {
             background-color: #a153ba;

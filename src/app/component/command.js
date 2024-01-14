@@ -192,6 +192,40 @@ class SideBar extends HTMLElement {
         })
         .catch(error => console.error('handleSyncStateClick - Error:', error));
         this.shadowRoot.getElementById('sync-state').dataset.state="loading";
+
+        fetch('/get-generic-systems', {
+            method: 'GET',
+        })
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return result.json();
+            }
+        })
+        .then(data => {
+            console.log('handleSyncStateClick, /get-generic-systems, data=', data);
+            // console.log('handleSyncStateClick, /get-generic-systems, data.targets=', data.targets);
+            data.targets.forEach(element => {
+                const tbody = document.getElementById(element.target).getElementsByTagName('tbody')[0];
+                // const tr = document.createElement('tr');
+                const tr = tbody.insertRow(-1);
+                tr.innerHTML = element.value;
+            })
+            // // for (const [target, value] of Object.entries(data.targets)) {
+            //     // console.log('handleSyncStateClick, /get-generic-systems target=', target);
+            //     // console.log('handleSyncStateClick, /get-generic-systems, value=', value);
+            //     const tbody = document.getElementById(target).getElementsByTagName('tbody')[0];
+            //     // const tr = document.createElement('tr');
+            //     const tr = tbody.insertRow(-1);
+            //     tr.innerHTML = value;
+            //     // const tr = document.createElement('tr').innerHTML = value;
+            //     tbody.after(tr);
+            //     // insertAfter(tr, the_table.lastElementChild);
+            // }
+        })
+        // .catch(error => console.error('handleSyncStateClick - Error:', error));
     }
 
     handleMigrateAccessSwitchesClick(event) {
