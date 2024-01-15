@@ -1,7 +1,8 @@
 
+import logging
 
 from app.model.ck_global import GlobalStore, ServerItem, BlueprintItem
-
+from app.generic_systems import GenericSystems
 
 
 class EnvData:
@@ -32,3 +33,5 @@ version = GlobalStore.login_server(server)
 id = GlobalStore.login_blueprint(main_bp)
 id = GlobalStore.login_blueprint(tor_bp)
 data = GlobalStore.pull_tor_bp_data()
+gs = GenericSystems.get_generic_systems()
+logging.warning(f"{gs=}")

@@ -31,25 +31,35 @@ def get_data_or_default(data, label, new_value):
 
 
 
-class Memberlink(BaseModel):
+class _Memberlink(BaseModel):
     server_intf: Optional[str]
     switch: str
     switch_intf: str
 
-class GroupLink(BaseModel):
-    ae_name: str
+class _GroupLink(BaseModel):
+    ae_name: str  # the ae in the tor blueprint
     speed: str
-    cts: Optional[str] = '0/0'
+    cts: Optional[List[int]] = []
     tagged_vlans: Optional[List[int]] = []
     untagged_vlan: Optional[int] = None
-    links: List[Memberlink]
+    new_cts: Optional[List[int]] = []  # the connectivity templates in main blueprint  
+    new_ae_name: Optional[str] = None  # the ae in the main blueprint
+    links: Optional[List[_Memberlink]] = []
 
-class GenericSystem(BaseModel):
+class _GenericSystem(BaseModel):
     # original_label: str
-    new_label: str
-    # gs_id: str
-    group_links: List[GroupLink]
+    new_label: str  # the label in the main blueprint (renamed)
+    new_id: Optional[str] = None  # the generic system id on main blueprint
+    tbody_id: Optional[str] = None  # the id on the tbody element
+    group_links: Optional[List[_GroupLink]] = []
 
+    def get_ae(cls, ae_name, speed):
+        found_ae = [x for x in cls.group_links if x.ae_name == ae_name]
+        if len(found_ae):
+            return found_ae[0]
+        ae_link = _GroupLink(ae_name=ae_name, speed=speed)
+        cls.group_links.append(ae_link)
+        return ae_link
 
 class GenericSystems:
     tor_servers = {}  # <server_label>: { GenericSystem }
@@ -58,21 +68,30 @@ class GenericSystems:
     leaf_gs = {'label': None, 'intfs': ['']*4}
     tor_gs = None  # {'label': <>, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
 
-
     @classmethod
     def get_generic_systems(cls) -> dict:
         """
         """
-        content = {
-            'targets': [],  # target: html-string
-            'summary': None,  # 
-            'continue': False,  # more items to update
-        }
+
+        class _TR(BaseModel):
+            id: str
+            value: str
+        class _Response(BaseModel):
+            values: Optional[List[_TR]] = []
+            caption: Optional[str] = None
+
+        # content = {
+        #     'values': [],  # target: html-string
+        #     'summary': None,  # 
+        #     'continue': False,  # more items to update
+        #     'caption': None
+        # }
+        content = _Response()
         index = 0
         gs_count = len(cls.tor_servers)
         for server_label, server_data in cls.tor_servers.items():
             index += 1
-            generic_system_id_on_tr = f"gs-tr-{server_label}"
+            id = f"gs-{server_label}"
             td_list = [ 
                 f"<td data-cell=\"index\">{index}</td>",
                 f"<td data-cell=\"label\" class=\"old-label\">{server_label}</td>",
@@ -84,8 +103,10 @@ class GenericSystems:
                 f"<td data-cell=\"switch\" lass=\"data-state\" data-state=\"init\">{server_data.group_links[0].links[0].switch}</td>",
                 f"<td data-cell=\"switch_intf\" lass=\"data-state\" data-state=\"init\">{server_data.group_links[0].links[0].switch_intf}</td>",
                 ]
-            content['targets'].append({'target': 'generic-systems-table', 'value': ''.join(td_list)})
-        content['targets'].append({'target': 'gs-captiion', 'value': f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"})
+            content.values.append(_TR(id=id, value=''.join(td_list)))
+            # content['values'].append({'id': generic_system_id_on_tbody, 'value': ''.join(td_list)})
+        # content['caption'] = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
+        content.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         return content
 
 
@@ -124,6 +145,7 @@ class GenericSystems:
         """
         return new label from old label
         """
+        # logging.warning(f"new_label() begin, {tor_name=} {old_label=}")
         # the maximum length is 32. Prefix 'r5r14-'
         old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
         # get the prefix from tor_name
@@ -139,6 +161,7 @@ class GenericSystems:
             # logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
             return old_label
         # just prefix
+        # logging.warning(f"new_label() returns: {prefix}-{old_label}")
         return f"{prefix}-{old_label}"
 
 
@@ -151,7 +174,11 @@ class GenericSystems:
         data = {}  # <server>: { GenericSystem }
         server_links_query = """
             match(
-            node('system', system_type='server',  name='server').out().node('interface', if_type='ethernet', name='server_intf').out('link').node('link', name='link').in_('link').node('interface', name='switch_intf').in_('hosted_interfaces').node('system', system_type='switch', name='switch'),
+            node('system', system_type='server',  name='server')
+                .out().node('interface', if_type='ethernet', name='server_intf')
+                .out('link').node('link', name='link')
+                .in_('link').node('interface', name='switch_intf')
+                .in_('hosted_interfaces').node('system', system_type='switch', name='switch'),
             optional(
                 node(name='switch_intf').in_().node('interface', name='ae')
                 ),
@@ -163,119 +190,23 @@ class GenericSystems:
         servers_link_nodes = the_bp.query(server_links_query, multiline=True)
 
         for server_link in servers_link_nodes:
-            logging.warning(f"pull_server_links() {server_link=}")
+            # logging.warning(f"pull_server_links() {server_link=}")
             server_label = server_link['server']['label']
             ae_name = server_link['ae']['if_name'] if server_link['ae'] else ''
+            speed = server_link['link']['speed']
+            switch = server_link['switch']['label']
+            switch_intf = server_link['switch_intf']['if_name']
+            server_intf = server_link['server_intf']['if_name']
 
-            #  every server_link will add a link_data
-            link_data = Memberlink(
-                switch=server_link['switch']['label'],
-                switch_intf=server_link['switch_intf']['if_name'],
-                server_intf=server_link['server_intf']['if_name']
-            )
-            group_link = GroupLink(
-                ae_name=ae_name, 
-                speed=server_link['link']['speed'], 
-                # tagged_vlans=[], 
-                # untagged_vlan=None, 
-                links=[link_data]
-            )
             server_data = get_data_or_default(  # GenericSystem
                 data, 
                 server_label,
-                GenericSystem(
-                    new_label=cls.new_label(cls.tor_gs['label'], server_label),
-                    group_links=[group_link]
+                _GenericSystem(
+                    new_label=server_label,
                 )
             )
+            server_data.get_ae(ae_name, speed).links.append(
+                _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf)
+            )
 
-            if ae_name:
-                group_links = [x for x in data[server_label].group_links if x.ae_name == ae_name]
-                if group_links:
-                    group_links[0].links.append(link_data)
-                else:                    
-                    data[server_label] = server_data
-            else:
-                data[server_label] = server_data
-
-            # server_data = get_data_or_default(  # GenericSystem
-            #     data, 
-            #     server_label,
-            #     GenericSystem(
-            #         new_label=cls.new_label(cls.tor_gs['label'], server_label),
-            #         group_links=[]
-            #     )
-            # )
-            # if server_label not in data:
-            #     data[server_label] = GenericSystem(new_label=cls.new_label(cls.tor_gs['label'], server_label), group_links=[])  # <link_id>: {}
-            # server_data = data[server_label]            
-            # logging.warning(f"pull_server_links() test1: {dict(server_data)=}")
-
-
-            # if ae_name:
-            #     # breakpoint()
-            #     ae_data = [x for x in server_data.# The `group_links` attribute is a list of
-            #     # `GroupLink` objects. Each `GroupLink` object
-            #     # represents a group link configuration for a
-            #     # specific server. It contains information such as
-            #     # the AE (Aggregate Ethernet) name, speed, tagged
-            #     # VLANs, untagged VLAN, and a list of member links.
-            #     # The member links are represented by `Memberlink`
-            #     # objects, which contain the details of the server
-            #     # interface, switch, and switch interface for each
-            #     # member link.
-            #     group_links if x and x.ae_name == ae_name]
-            #     if len(ae_data) == 0:
-            #         server_data.group_links.append(GroupLink(
-            #             ae_name=ae_name, 
-            #             speed=server_link['link']['speed'], 
-            #             tagged_vlans=[], 
-            #             untagged_vlan=None, 
-            #             links=[link_data])
-            #         )
-            #         # ae_data = [x for x in server_data.group_links if x.ae_name == ae_name]
-            #     # link_data = Memberlink(
-            #     #     switch=server_link['switch']['label'],
-            #     #     switch_intf=server_link['switch_intf']['if_name'],
-            #     #     server_intf=server_link['server_intf']['if_name']
-            #     #     )
-            #     # link_data['switch'] = server_link['switch']['label']
-            #     # link_data['switch_intf'] = server_link['switch-intf']['if_name']
-            #     # link_data['server_intf'] = server_link['server-intf']['if_name']            
-            #     server_data.group_links.links.append(link_data)
-            # else:
-            #     # # breakpoint()
-            #     # ae_data = GroupLink(
-            #     #     ae_name='', 
-            #     #     speed=server_link['link']['speed'], 
-            #     #     tagged_vlans=[], 
-            #     #     untagged_vlan=None,
-            #     #     link_data = Memberlink(
-            #     #         switch=server_link['switch']['label'],
-            #     #         switch_intf=server_link['switch-intf']['if_name'],
-            #     #         server_intf=server_link['server-intf']['if_name']
-            #     #     )
-            #     # )
-            #     # #     ae_data.links.append(link_data)
-            #     # # link_data = {}
-            #     # # link_data['switch'] = server_link['switch']['label']
-            #     # # link_data['switch_intf'] = server_link['switch-intf']['if_name']
-            #     # # link_data['server_intf'] = server_link['server-intf']['if_name']            
-            #     # # ae_data['links'].append(link_data)
-            #     # server_data.group_links[ae_data]
-            #     # breakpoint()
-
-
-            #     server_data.group_links = GroupLink(
-            #         ae_name=ae_name, 
-            #         speed=server_link['link']['speed'], 
-            #         tagged_vlans=[], 
-            #         untagged_vlan=None, 
-            #         links = [ link_data ]
-            #         # links=Memberlink(
-            #         #     switch=server_link['switch']['label'],
-            #         #     switch_intf=server_link['switch_intf']['if_name'],
-            #         #     server_intf=server_link['server_intf']['if_name']
-            #         # )
-            #     )
         return data

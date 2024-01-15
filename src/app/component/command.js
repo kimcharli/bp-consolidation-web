@@ -207,12 +207,16 @@ class SideBar extends HTMLElement {
         .then(data => {
             console.log('handleSyncStateClick, /get-generic-systems, data=', data);
             // console.log('handleSyncStateClick, /get-generic-systems, data.targets=', data.targets);
-            data.targets.forEach(element => {
-                const tbody = document.getElementById(element.target).getElementsByTagName('tbody')[0];
+            const the_table = document.getElementById('generic-systems-table');
+            data.values.forEach(element => {
+                const tbody = the_table.createTBody();
+                tbody.setAttribute('id', element.id);
+                // document.getElementById(element.target).getElementsByTagName('tbody')[0];
                 // const tr = document.createElement('tr');
                 const tr = tbody.insertRow(-1);
                 tr.innerHTML = element.value;
-            })
+            });
+            the_table.caption.innerHTML = data.caption;
             // // for (const [target, value] of Object.entries(data.targets)) {
             //     // console.log('handleSyncStateClick, /get-generic-systems target=', target);
             //     // console.log('handleSyncStateClick, /get-generic-systems, value=', value);
