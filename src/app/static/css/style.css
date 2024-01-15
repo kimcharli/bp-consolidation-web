@@ -83,14 +83,7 @@ th, td {
 th, .th, caption {
     background-color: var(--global-th-color);
 }
-.old-label {
-    text-align: left;
-    width: 32ch;
-}
-.old-label[data-state="loaded"] {
-    background: var(--global-warning-color);
-}
-.new-label {
+.system-label {
     text-align: left;
     width: 32ch;
 }

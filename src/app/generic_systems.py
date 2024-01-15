@@ -1,19 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List
 import logging
-# from .model.ck_global import GlobalStore, ServerItem, BlueprintItem
-
-
-
-                # group_links: [
-                #     {
-                #         ae_name: aeN or ''
-                #         speed:,
-                #         CkEnum.TAGGED_VLANS: [],
-                #         CkEnum.UNTAGGED_VLAN:,
-                #         links: [ server_intf:, switch:, switch_intf:]
-                #     }
-                # ]
 
 def get_data_or_default(data, label, new_value):
     """
@@ -30,11 +17,20 @@ def get_data_or_default(data, label, new_value):
     return data[label]
 
 
-
 class _Memberlink(BaseModel):
     server_intf: Optional[str]
     switch: str
     switch_intf: str
+
+    @property
+    def tr(self) -> str:
+        trs = [
+            f'<td data-cell="server_intf" class="data-state" data-state="init">{self.server_intf}</td>',
+            f'<td data-cell="switch" class="data-state" data-state="init">{self.switch}</td>',
+            f'<td data-cell="switch_intf" class="data-state" data-state="init">{self.switch_intf}</td>',
+        ]
+        return ''.join(trs)
+
 
 class _GroupLink(BaseModel):
     ae_name: str  # the ae in the tor blueprint
@@ -46,20 +42,63 @@ class _GroupLink(BaseModel):
     new_ae_name: Optional[str] = None  # the ae in the main blueprint
     links: Optional[List[_Memberlink]] = []
 
+    @property
+    def rowspan(self):
+        return len(self.links)
+
+    @property
+    def tr(self) -> list:
+        row0_head = ''.join([
+            f'<td rowspan={self.rowspan} data-cell="ae" class="data-state ae" data-state="init">{self.ae_name}</td>',
+            f'<td rowspan={self.rowspan} data-cell="cts" class="data-state cts" data-state="init">{self.cts}</td>',
+            f'<td rowspan={self.rowspan} data-cell="speed" class="data-state speed" data-state="init">{self.speed}</td>',
+        ])
+        trs = []
+        for index, link in enumerate(self.links):
+            if index == 0:
+                trs.append(row0_head + link.tr)
+            else:
+                trs.append(link.tr)
+        return trs
+
+
 class _GenericSystem(BaseModel):
-    # original_label: str
+    label: str  # the label in the tor blueprint
     new_label: str  # the label in the main blueprint (renamed)
     new_id: Optional[str] = None  # the generic system id on main blueprint
     tbody_id: Optional[str] = None  # the id on the tbody element
     group_links: Optional[List[_GroupLink]] = []
 
-    def get_ae(cls, ae_name, speed):
-        found_ae = [x for x in cls.group_links if x.ae_name == ae_name]
+    def get_ae(self, ae_name, speed):
+        found_ae = [x for x in self.group_links if x.ae_name == ae_name]
         if len(found_ae):
             return found_ae[0]
         ae_link = _GroupLink(ae_name=ae_name, speed=speed)
-        cls.group_links.append(ae_link)
+        self.group_links.append(ae_link)
         return ae_link
+
+    @property
+    def rowspan(self):
+        return sum([x.rowspan for x in self.group_links])
+
+    def get_tbody(self, index) -> str:
+        """
+        Return the tbody innerHTML
+        """
+        row0_head = ''.join([
+            f'<td rowspan={self.rowspan}>{index}</td>'
+            f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>',
+            f'<td rowspan={self.rowspan} data-cell="new_label" class="data-state system-label" data-state="init">{self.new_label}</td>',
+        ])
+        tbody_lines = []
+        for ae_link in self.group_links:
+            for links in ae_link.tr:
+                if len(tbody_lines):
+                    tbody_lines.append(f'<tr>{links}</tr>')
+                else:                    
+                    tbody_lines.append(f'<tr>{row0_head}{links}</tr>')
+        return ''.join(tbody_lines)
+
 
 class GenericSystems:
     tor_servers = {}  # <server_label>: { GenericSystem }
@@ -73,38 +112,20 @@ class GenericSystems:
         """
         """
 
-        class _TR(BaseModel):
+        class _TBody(BaseModel):
             id: str
             value: str
         class _Response(BaseModel):
-            values: Optional[List[_TR]] = []
+            values: Optional[List[_TBody]] = []
             caption: Optional[str] = None
 
-        # content = {
-        #     'values': [],  # target: html-string
-        #     'summary': None,  # 
-        #     'continue': False,  # more items to update
-        #     'caption': None
-        # }
         content = _Response()
         index = 0
         gs_count = len(cls.tor_servers)
         for server_label, server_data in cls.tor_servers.items():
             index += 1
             id = f"gs-{server_label}"
-            td_list = [ 
-                f"<td data-cell=\"index\">{index}</td>",
-                f"<td data-cell=\"label\" class=\"old-label\">{server_label}</td>",
-                f"<td data-cell=\"new_label\" class=\"data-state new-label\" data-state=\"init\">{server_data.new_label}</td>",
-                f"<td data-cell=\"ae\" class=\"data-state ae\" >{server_data.group_links[0].ae_name}</td>",
-                f"<td data-cell=\"cts\" class=\"data-state cts\">{server_data.group_links[0].cts}</td>",
-                f"<td data-cell=\"speed\" class=\"data-state speed\">{server_data.group_links[0].speed}</td>",
-                f"<td data-cell=\"server_intf\" class=\"data-state\" data-state=\"init\">{server_data.group_links[0].links[0].server_intf}</td>",
-                f"<td data-cell=\"switch\" lass=\"data-state\" data-state=\"init\">{server_data.group_links[0].links[0].switch}</td>",
-                f"<td data-cell=\"switch_intf\" lass=\"data-state\" data-state=\"init\">{server_data.group_links[0].links[0].switch_intf}</td>",
-                ]
-            content.values.append(_TR(id=id, value=''.join(td_list)))
-            # content['values'].append({'id': generic_system_id_on_tbody, 'value': ''.join(td_list)})
+            content.values.append(_TBody(id=id, value=server_data.get_tbody(index)))
         # content['caption'] = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         content.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         return content
@@ -116,10 +137,6 @@ class GenericSystems:
         cls.tor_servers = cls.pull_server_links(tor_bp)
 
 
-        # # set new_label per generic systems
-        # for old_label, server_data in cls.tor_gs.items():
-        #     server_data['new_label'] = cls.new_label(cls.tor_gs['label'], old_label)                            
-        
         # update leaf_gs (the generic system in TOR bp for the leaf)        
         for server_label, server_data in cls.tor_servers.items():
             # y = [x for server_label, server_data in cls.tor_servers.items() if server_data.group_links ]
@@ -141,7 +158,7 @@ class GenericSystems:
                                     cls.leaf_gs['intfs'][3] = 'et-' + member_link.server_intf.split('-')[1]
 
     @classmethod
-    def new_label(cls, tor_name, old_label) -> str:
+    def new_label(cls, old_label) -> str:
         """
         return new label from old label
         """
@@ -149,7 +166,7 @@ class GenericSystems:
         # the maximum length is 32. Prefix 'r5r14-'
         old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
         # get the prefix from tor_name
-        prefix = tor_name[len('atl1tor-'):]
+        prefix = cls.tor_gs['label'][len('atl1tor-'):]
         for pattern in old_patterns:
             if old_label.startswith(pattern):
                 # replace the string with the prefix
@@ -202,7 +219,8 @@ class GenericSystems:
                 data, 
                 server_label,
                 _GenericSystem(
-                    new_label=server_label,
+                    label = server_label,
+                    new_label = cls.new_label(server_label),
                 )
             )
             server_data.get_ae(ae_name, speed).links.append(
