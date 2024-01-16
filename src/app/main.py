@@ -74,11 +74,18 @@ async def pull_data():
     logging.warning(f"/pull_data end")
     return data
 
-@app.get("/get-generic-systems")
-async def get_generic_systems():
-    logging.warning(f"/get_generic_systems begin")
-    data = GenericSystems.get_generic_systems()
-    logging.warning(f"/get_generic_systems end")
+@app.get("/update-generic-systems-table")
+async def update_generic_systems_table():
+    logging.warning(f"/update_generic_systems_table begin")
+    data = GenericSystems.update_generic_systems_table()
+    logging.warning(f"/update_generic_systems_table end")
+    return data
+
+@app.get("/migrate-generic-systems")
+async def migrate_generic_systems():
+    logging.warning(f"/migrate_generic_systems begin")
+    data = GenericSystems.migrate_generic_systems()
+    logging.warning(f"/migrate_generic_systems end")
     return data
 
 @app.post("/migrate-access-switches")

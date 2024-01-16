@@ -99,6 +99,13 @@ class _GenericSystem(BaseModel):
                     tbody_lines.append(f'<tr>{row0_head}{links}</tr>')
         return ''.join(tbody_lines)
 
+    def migrate(self, main_bp) -> str:
+        """
+        """
+        if self.new_id:
+            return self.new_id
+        
+
 
 class GenericSystems:
     tor_servers = {}  # <server_label>: { GenericSystem }
@@ -108,8 +115,10 @@ class GenericSystems:
     tor_gs = None  # {'label': <>, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
 
     @classmethod
-    def get_generic_systems(cls) -> dict:
+    def update_generic_systems_table(cls) -> dict:
         """
+        Called by main.py
+        Build tor_servers from tor_blueprint and return the data 
         """
 
         class _TBody(BaseModel):
@@ -129,6 +138,11 @@ class GenericSystems:
         # content['caption'] = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         content.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         return content
+
+    @classmethod
+    def migrate_generic_systems(cls) -> dict:
+        """
+        """
 
 
     @classmethod

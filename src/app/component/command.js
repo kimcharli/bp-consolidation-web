@@ -1,59 +1,65 @@
 import { GlobalEventEnum, globalData, CkIDB } from "./common.js";
 
+// TODO: use variable in template
+const MIGRATE_GENERIC_SYSTEMS = 'migrate-generic-systems';
+
 const template = document.createElement("template");
 template.innerHTML = `
     <style>
-    div {
-        background: green;
-        width: 180px;
-        hight: max-content;
-    }
-    button {
-        background-color: var(--global-warning-color);
-        text-align: left;
-        // border: none;
-        // color: white;
-        // padding: 15px 32px;
-        // text-align: left;
-        // text-decoration: none;
-        // display: block;
-        // font-size: 16px;
-        width: 100%;
-    }
-    img {
-        width: 20px;
-        height: 20px;
-        background-color: white;
-    }
-    #load-env-div {
-        font-family: Arial, Helvetica, sans-serif;
-    }
-    #load-env-div[data-loaded=""] {
-        background-color: var(--global-warning-color);
-    }
-    #load-env-div[data-loaded="loaded"] {
-        background-color: var(--global-ok-color);
-    }
-
-    @keyframes pulse {
-        0%, 49% {
-          color: white;
+        div {
+            background: green;
+            width: 180px;
+            hight: max-content;
         }
-        50%, 100% {
-          color: transparent;
+        button {
+            background-color: var(--global-warning-color);
+            text-align: left;
+            // border: none;
+            // color: white;
+            // padding: 15px 32px;
+            // text-align: left;
+            // text-decoration: none;
+            // display: block;
+            // font-size: 16px;
+            width: 100%;
         }
-    }
+        img {
+            width: 20px;
+            height: 20px;
+            background-color: white;
+        }
+        #load-env-div {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        #load-env-div[data-loaded=""] {
+            background-color: var(--global-warning-color);
+        }
+        #load-env-div[data-loaded="loaded"] {
+            background-color: var(--global-ok-color);
+        }
 
-    .data-state[data-state="init"] {
-        background-color: var(--global-warning-color);
-    }
-    .data-state[data-state="loading"] {
-        animation: pulse 1s infinite
-    }
-    .data-state[data-state="done"] {
-        background-color: var(--global-ok-color);
-    }
+        @keyframes pulse {
+            0%, 49% {
+            color: white;
+            }
+            50%, 100% {
+            color: transparent;
+            }
+        }
 
+        .data-state[data-state="init"] {
+            background-color: var(--global-warning-color);
+        }
+        .data-state[data-state="loading"] {
+            animation: pulse 1s infinite
+        }
+        .data-state[data-state="done"] {
+            background-color: var(--global-ok-color);
+        }
+        .data-state[data-state="error"] {
+            background-color: var(--global-error-color);
+        }
+    
     </style>
     <h3>Commands</h3>
     <div>
@@ -73,7 +79,7 @@ template.innerHTML = `
             <button id="migrate-access-switches" type="button" data-state="init" class="data-state">Migrate Access Switches</button>
         </div>
         <div>
-            <button type="button" data-state="init" class="data-state">Migrate Generic Systems</button>
+            <button id="migrate-generic-systems" type="button" data-state="init" class="data-state">Migrate Generic Systems</button>
         </div>
         <div>
             <button type="button" data-state="init" class="data-state">Migrate Virtual Networks</button>
@@ -108,8 +114,15 @@ class SideBar extends HTMLElement {
                 new CustomEvent(GlobalEventEnum.CONNECT_SERVER)
             );   
         });
-        this.shadowRoot.getElementById('sync-state').addEventListener('click', this.handleSyncStateClick.bind(this));
+
+        this.buttonSyncState = this.shadowRoot.getElementById('sync-state');
+        this.buttonSyncState.addEventListener('click', this.handleSyncStateClick.bind(this));
+
         this.shadowRoot.getElementById('migrate-access-switches').addEventListener('click', this.handleMigrateAccessSwitchesClick.bind(this));
+
+        this.buttonMigrateGenericSystems = this.shadowRoot.getElementById('migrate-generic-systems');
+        this.buttonMigrateGenericSystems.addEventListener('click', this.handleMigrateGenericSystemsClick.bind(this));
+
 
         // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
         window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, () => {
@@ -188,12 +201,12 @@ class SideBar extends HTMLElement {
         })
         .then(data => {
             globalData.update(data);
-            this.shadowRoot.getElementById('sync-state').dataset.state = 'done';
+            this.buttonSyncState.dataset.state = 'done';
         })
         .catch(error => console.error('handleSyncStateClick - Error:', error));
-        this.shadowRoot.getElementById('sync-state').dataset.state="loading";
+        this.buttonSyncState.dataset.state="loading";
 
-        fetch('/get-generic-systems', {
+        fetch('/update-generic-systems-table', {
             method: 'GET',
         })
         .then(result => {
@@ -205,7 +218,7 @@ class SideBar extends HTMLElement {
             }
         })
         .then(data => {
-            console.log('handleSyncStateClick, /get-generic-systems, data=', data);
+            console.log('handleSyncStateClick, /update-generic-systems-table, data=', data);
             const the_table = document.getElementById('generic-systems-table');
             data.values.forEach(element => {
                 const tbody = the_table.createTBody();
@@ -236,5 +249,27 @@ class SideBar extends HTMLElement {
         this.shadowRoot.getElementById('migrate-access-switches').dataset.state="loading";
     }
 
+    handleMigrateGenericSystemsClick(event) {
+        console.log(event)
+        fetch('/migrate-generic-systems', {
+            method: 'POST',
+        })
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return result.json();
+            }
+        })
+        .then(data => {
+            this.buttonMigrateGenericSystems.dataset.state="done";  
+        })
+        .catch(error => {
+            console.log('handleMigrateAccessSwitchesClick - Error:', error);
+            this.buttonMigrateGenericSystems.dataset.state="error";  
+        });
+        this.buttonMigrateGenericSystems.dataset.state="loading";
+    }
 }   
 customElements.define('side-bar', SideBar);
