@@ -76,10 +76,10 @@ async def pull_data():
     return data
 
 @app.get("/update-access-switches-table")
-async def update_accress_switches_table():
-    logging.warning(f"/update_accress_switches_table begin")
-    data = AccessSwitches.update_accress_switches_table()
-    logging.warning(f"/update_accress_switches_table end")
+async def update_access_switches_table():
+    logging.warning(f"/update_access_switches_table begin")
+    data = AccessSwitches.update_access_switches_table()
+    logging.warning(f"/update_access_switches_table end")
     return data
 
 

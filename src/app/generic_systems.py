@@ -186,7 +186,8 @@ class GenericSystems:
         # the maximum length is 32. Prefix 'r5r14-'
         old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
         # get the prefix from tor_name
-        prefix = cls.tor_gs['label'][len('atl1tor-'):]
+        logging.warning(f"new_label() {cls.tor_gs=}")
+        prefix = cls.tor_gs[len('atl1tor-'):]
         for pattern in old_patterns:
             if old_label.startswith(pattern):
                 # replace the string with the prefix

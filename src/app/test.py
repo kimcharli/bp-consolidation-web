@@ -3,7 +3,7 @@ import logging
 
 from app.model.ck_global import GlobalStore, ServerItem, BlueprintItem
 from app.generic_systems import GenericSystems
-
+from app.access_switches import AccessSwitches
 
 class EnvData:
     __slot__ = ('host', 'port', 'username', 'password', 'main_bp_label', 'tor_bp_label')
@@ -32,6 +32,8 @@ GlobalStore.update_env_ini(EnvData())
 version = GlobalStore.login_server(server)
 id = GlobalStore.login_blueprint(main_bp)
 id = GlobalStore.login_blueprint(tor_bp)
-data = GlobalStore.pull_tor_bp_data()
-gs = GenericSystems.update_generic_systems_table()
-logging.warning(f"{gs=}")
+# data = GlobalStore.pull_tor_bp_data()
+as_data = AccessSwitches.update_access_switches_table()
+logging.warning(f"AccessSwitches {as_data=}")
+gs_data = GenericSystems.update_generic_systems_table()
+logging.warning(f"GenericSystems {gs_data=}")

@@ -283,7 +283,7 @@ class SideBar extends HTMLElement {
         // .catch(error => console.error('handleSyncStateClick - Error:', error));
         // this.buttonSyncState.dataset.state="loading";
 
-        fetch('/update-access-switch-table', {
+        fetch('/update-access-switches-table', {
             method: 'GET',
         })
         .then(result => {
@@ -295,7 +295,15 @@ class SideBar extends HTMLElement {
             }
         })
         .then(data => {
-            globalData.update(data);
+            // globalData.update(data);
+            data.values.forEach(element => {
+                console.log('element=', element)
+                const the_element = document.getElementById(element.id);
+                if (element.value) the_element.innerHTML = element.value;
+                if (element.state) the_element.dataset.state = element.state;
+                if (element.fill) the_element.style.fill = element.fill;
+                if (element.visibility) the_element.style.visibility = element.visibility;
+            })
             this.buttonSyncState.dataset.state = 'done';
         })
         .catch(error => console.error('handleSyncStateClick - Error:', error));
