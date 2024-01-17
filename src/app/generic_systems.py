@@ -99,16 +99,28 @@ class _GenericSystem(BaseModel):
                     tbody_lines.append(f'<tr>{row0_head}{links}</tr>')
         return ''.join(tbody_lines)
 
-    def migrate(self, main_bp) -> str:
+    def migrate(self, main_bp) -> dict:
         """
+        Return:
+            id: tbody-id
+            value: get_tbody()
         """
         if self.new_id:
-            return self.new_id
-        
+            return {}
 
+
+
+class _GenericSystemResponseItem(BaseModel):
+    id: str
+    value: str
+
+class _GenericSystemResponse(BaseModel):
+    done: Optional[bool] = False
+    values: Optional[List[_GenericSystemResponseItem]] = []
+    caption: Optional[str] = None
 
 class GenericSystems:
-    tor_servers = {}  # <server_label>: { GenericSystem }
+    generic_systems = {}  # <server_label>: { GenericSystem }
     main_servers = {}
     tor_ae1 = None
     leaf_gs = {'label': None, 'intfs': ['']*4}
@@ -118,23 +130,15 @@ class GenericSystems:
     def update_generic_systems_table(cls) -> dict:
         """
         Called by main.py
-        Build tor_servers from tor_blueprint and return the data 
+        Build generic_systems from tor_blueprint and return the data 
         """
-
-        class _TBody(BaseModel):
-            id: str
-            value: str
-        class _Response(BaseModel):
-            values: Optional[List[_TBody]] = []
-            caption: Optional[str] = None
-
-        content = _Response()
+        content = _GenericSystemResponse()
         index = 0
-        gs_count = len(cls.tor_servers)
-        for server_label, server_data in cls.tor_servers.items():
+        gs_count = len(cls.generic_systems)
+        for server_label, server_data in cls.generic_systems.items():
             index += 1
             id = f"gs-{server_label}"
-            content.values.append(_TBody(id=id, value=server_data.get_tbody(index)))
+            content.values.append(_GenericSystemResponseItem(id=id, value=server_data.get_tbody(index)))
         # content['caption'] = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         content.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         return content
@@ -143,17 +147,19 @@ class GenericSystems:
     def migrate_generic_systems(cls) -> dict:
         """
         """
+        for gs in cls.generic_systems.items():
+            pass
 
 
     @classmethod
     def pull_generic_systems(cls, main_bp, tor_bp, tor_gs, access_switches):
         cls.tor_gs = tor_gs
-        cls.tor_servers = cls.pull_server_links(tor_bp)
+        cls.generic_systems = cls.pull_server_links(tor_bp)
 
 
         # update leaf_gs (the generic system in TOR bp for the leaf)        
-        for server_label, server_data in cls.tor_servers.items():
-            # y = [x for server_label, server_data in cls.tor_servers.items() if server_data.group_links ]
+        for server_label, server_data in cls.generic_systems.items():
+            # y = [x for server_label, server_data in cls.generic_systems.items() if server_data.group_links ]
             for group_link in server_data.group_links:
                 if group_link.ae_name:
                     for member_link in group_link.links:

@@ -354,67 +354,67 @@ class GlobalStore:
         return f"{prefix}-{old_label}"
 
 
-    @classmethod
-    def pull_server_links(cls, tor_bp) -> dict:
-        """
-        return the server and link data
-        data = {
-            <server>:
-                new_label,
-                group_links: [
-                    {
-                        ae_name: aeN or ''
-                        speed:,
-                        CkEnum.TAGGED_VLANS: [],
-                        CkEnum.UNTAGGED_VLAN:,
-                        links: [ server_intf:, switch:, switch_intf:]
-                    }
-                ]
-        }
-        """
-        data = {}  # <server>: { links: {} }
-        server_links_query = """
-            match(
-            node('system', system_type='server',  name='server').out().node('interface', if_type='ethernet', name='server-intf').out('link').node('link', name='link').in_('link').node('interface', name='switch-intf').in_('hosted_interfaces').node('system', system_type='switch', name='switch'),
-            optional(
-                node(name='switch-intf').in_().node('interface', name='ae')
-                ),
-            optional(
-                node(name='ae').in_().node('interface', name='evpn')
-                )
-            )
-            """
-        servers_link_nodes = tor_bp.query(server_links_query, multiline=True)
-        for server_link in servers_link_nodes:
-            server_label = server_link['server']['label']
-            if server_label not in data:
-                data[server_label] = {'new_label': None, 'group_links': []}  # <link_id>: {}
-            server_data = data[server_label]            
-            ae_name = server_link['ae']['if_name'] if server_link['ae'] else ''
-            # logging.warning(f"pull_server_links() test1: {dict(server_data)=}")
-            if ae_name:
-                # breakpoint()
-                ae_data = [x for x in server_data['group_links'] if x['ae_name'] == ae_name]
-                if len(ae_data) == 0:
-                    server_data['group_links'].append({'ae_name': ae_name, 'speed': server_link['link']['speed'], CkEnum.TAGGED_VLANS: [], CkEnum.UNTAGGED_VLAN: None, 'links': []})  # speed, CTs, member_links
-                    ae_data = [x for x in server_data['group_links'] if x['ae_name'] == ae_name]
-                link_data = {}
-                link_data['switch'] = server_link['switch']['label']
-                link_data['switch_intf'] = server_link['switch-intf']['if_name']
-                link_data['server_intf'] = server_link['server-intf']['if_name']            
-                ae_data[0]['links'].append(link_data)
-            else:
-                # breakpoint()
-                ae_data = { 'ae_name': '', 'speed': server_link['link']['speed'], CkEnum.TAGGED_VLANS: [], CkEnum.UNTAGGED_VLAN: None, 'links': []}
-                link_data = {}
-                link_data['switch'] = server_link['switch']['label']
-                link_data['switch_intf'] = server_link['switch-intf']['if_name']
-                link_data['server_intf'] = server_link['server-intf']['if_name']            
-                ae_data['links'].append(link_data)
-                server_data['group_links'].append(ae_data)
+    # @classmethod
+    # def pull_server_links(cls, tor_bp) -> dict:
+    #     """
+    #     return the server and link data
+    #     data = {
+    #         <server>:
+    #             new_label,
+    #             group_links: [
+    #                 {
+    #                     ae_name: aeN or ''
+    #                     speed:,
+    #                     CkEnum.TAGGED_VLANS: [],
+    #                     CkEnum.UNTAGGED_VLAN:,
+    #                     links: [ server_intf:, switch:, switch_intf:]
+    #                 }
+    #             ]
+    #     }
+    #     """
+    #     data = {}  # <server>: { links: {} }
+    #     server_links_query = """
+    #         match(
+    #         node('system', system_type='server',  name='server').out().node('interface', if_type='ethernet', name='server-intf').out('link').node('link', name='link').in_('link').node('interface', name='switch-intf').in_('hosted_interfaces').node('system', system_type='switch', name='switch'),
+    #         optional(
+    #             node(name='switch-intf').in_().node('interface', name='ae')
+    #             ),
+    #         optional(
+    #             node(name='ae').in_().node('interface', name='evpn')
+    #             )
+    #         )
+    #         """
+    #     servers_link_nodes = tor_bp.query(server_links_query, multiline=True)
+    #     for server_link in servers_link_nodes:
+    #         server_label = server_link['server']['label']
+    #         if server_label not in data:
+    #             data[server_label] = {'new_label': None, 'group_links': []}  # <link_id>: {}
+    #         server_data = data[server_label]            
+    #         ae_name = server_link['ae']['if_name'] if server_link['ae'] else ''
+    #         # logging.warning(f"pull_server_links() test1: {dict(server_data)=}")
+    #         if ae_name:
+    #             # breakpoint()
+    #             ae_data = [x for x in server_data['group_links'] if x['ae_name'] == ae_name]
+    #             if len(ae_data) == 0:
+    #                 server_data['group_links'].append({'ae_name': ae_name, 'speed': server_link['link']['speed'], CkEnum.TAGGED_VLANS: [], CkEnum.UNTAGGED_VLAN: None, 'links': []})  # speed, CTs, member_links
+    #                 ae_data = [x for x in server_data['group_links'] if x['ae_name'] == ae_name]
+    #             link_data = {}
+    #             link_data['switch'] = server_link['switch']['label']
+    #             link_data['switch_intf'] = server_link['switch-intf']['if_name']
+    #             link_data['server_intf'] = server_link['server-intf']['if_name']            
+    #             ae_data[0]['links'].append(link_data)
+    #         else:
+    #             # breakpoint()
+    #             ae_data = { 'ae_name': '', 'speed': server_link['link']['speed'], CkEnum.TAGGED_VLANS: [], CkEnum.UNTAGGED_VLAN: None, 'links': []}
+    #             link_data = {}
+    #             link_data['switch'] = server_link['switch']['label']
+    #             link_data['switch_intf'] = server_link['switch-intf']['if_name']
+    #             link_data['server_intf'] = server_link['server-intf']['if_name']            
+    #             ae_data['links'].append(link_data)
+    #             server_data['group_links'].append(ae_data)
                 
 
-        return data
+    #     return data
 
     @classmethod
     def remove_old_generic_system_from_main(cls):

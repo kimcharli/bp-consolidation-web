@@ -109,7 +109,8 @@ class SideBar extends HTMLElement {
         this.shadowRoot.getElementById('upload-env-ini-input').addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
         this.shadowRoot.getElementById('trash-env').addEventListener('click', this.handleTrashEnv.bind(this));
 
-        this.shadowRoot.getElementById('connect-button').addEventListener('click', () => {
+        this.buttonConnectServer = this.shadowRoot.getElementById('connect-button');
+        this.buttonConnectServer.addEventListener('click', () => {
             window.dispatchEvent(
                 new CustomEvent(GlobalEventEnum.CONNECT_SERVER)
             );   
@@ -125,16 +126,24 @@ class SideBar extends HTMLElement {
 
 
         // window.addEventListener(GlobalEventEnum.LOAD_LOCAL_DATA, this.fetch_blueprint.bind(this));
-        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, () => {
+        window.addEventListener(GlobalEventEnum.FETCH_ENV_INI, (event) => {
+            const data = event.detail
+            document.getElementById('apstra-host').value = data.host;
+            document.getElementById('apstra-port').value = data.port;
+            document.getElementById('apstra-username').value = data.username;
+            document.getElementById('apstra-password').value = data.password;    
+            document.getElementById('apstra-host').dataset.id = data.id;
+
+            document.getElementById("main_bp").innerHTML = data.main_bp_label;
+            document.getElementById("tor_bp").innerHTML = data.tor_bp_label;
+    
             this.shadowRoot.getElementById('load-env-div').dataset.loaded = 'loaded';
         });
         window.addEventListener(GlobalEventEnum.CLEAR_ENV_INI, () => {
             this.shadowRoot.getElementById('load-env-div').dataset.loaded = '';
         });
         window.addEventListener(GlobalEventEnum.CONNECT_SUCCESS, this.handleConnectSuccess.bind(this));
-        window.addEventListener(GlobalEventEnum.CONNECT_SERVER, () => {
-            this.shadowRoot.getElementById('connect-button').dataset.state = 'loading';
-        });
+        window.addEventListener(GlobalEventEnum.CONNECT_SERVER, this.handleConnectServer.bind(this));
         window.addEventListener(GlobalEventEnum.CONNECT_LOGOUT, this.handleServerLogout.bind(this));
     }
 
@@ -175,6 +184,74 @@ class SideBar extends HTMLElement {
     }
 
 
+    handleConnectServer(event) {
+        console.log('handleConnectServer() begin')
+        const apstra_host = document.getElementById('apstra-host').value;
+        const apstra_port = document.getElementById('apstra-port').value;
+        const apstra_username = document.getElementById('apstra-username').value;
+        const apstra_password = document.getElementById('apstra-password').value;
+        fetch('/login-server', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                host: apstra_host,
+                port: apstra_port,
+                username: apstra_username,
+                password: apstra_password                
+            })
+        })
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return result.json();
+            }
+        })
+        .then(data => {
+            console.log('/login-server: Apstra version: ', data.version);
+            this.connect_blueprint();
+            this.buttonConnectServer.dataset.state = 'done';
+        })
+        .catch(error => {
+            console.log(error);
+        })
+        this.buttonConnectServer.dataset.state = 'loading';
+
+    }
+
+    connect_blueprint() {
+        ['main_bp', 'tor_bp'].forEach(element => 
+            fetch('/login-blueprint', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    label: document.getElementById(element).innerHTML,
+                    role: element,
+                })
+            })
+            .then(result => {
+                if(!result.ok) {
+                    return result.text().then(text => { throw new Error(text) });
+                }
+                else {
+                    return result.json();
+                }
+            })
+            .then(data => {
+                console.log(`connect_blueprint then`, data)
+                document.getElementById(element).dataset.id = data.id;
+                document.getElementById(element).innerHTML = `<a href="${data.url}" target="_blank">${data.label}</a>`;
+                document.getElementById(element).dataset.state = 'done';
+            })
+        )
+    }
+
+
     handleConnectSuccess(event) {
         // console.log('handleConnectSuccess' + event.detail + ' ' + this.connect_items)
         this.connect_items = this.connect_items.filter((item) => item !== event.detail.name)
@@ -188,7 +265,25 @@ class SideBar extends HTMLElement {
     }
 
     handleSyncStateClick(event) {
-        fetch('/pull-data', {
+        // fetch('/pull-data', {
+        //     method: 'GET',
+        // })
+        // .then(result => {
+        //     if(!result.ok) {
+        //         return result.text().then(text => { throw new Error(text) });
+        //     }
+        //     else {
+        //         return result.json();
+        //     }
+        // })
+        // .then(data => {
+        //     globalData.update(data);
+        //     this.buttonSyncState.dataset.state = 'done';
+        // })
+        // .catch(error => console.error('handleSyncStateClick - Error:', error));
+        // this.buttonSyncState.dataset.state="loading";
+
+        fetch('/update-access-switch-table', {
             method: 'GET',
         })
         .then(result => {
@@ -206,6 +301,7 @@ class SideBar extends HTMLElement {
         .catch(error => console.error('handleSyncStateClick - Error:', error));
         this.buttonSyncState.dataset.state="loading";
 
+
         fetch('/update-generic-systems-table', {
             method: 'GET',
         })
@@ -218,6 +314,13 @@ class SideBar extends HTMLElement {
             }
         })
         .then(data => {
+            /*
+                values: [
+                    id: id to apply (tbody),
+                    value: html-string
+                ]
+                caption: the caption of the table
+            */
             console.log('handleSyncStateClick, /update-generic-systems-table, data=', data);
             const the_table = document.getElementById('generic-systems-table');
             data.values.forEach(element => {
@@ -251,24 +354,43 @@ class SideBar extends HTMLElement {
 
     handleMigrateGenericSystemsClick(event) {
         console.log(event)
-        fetch('/migrate-generic-systems', {
-            method: 'POST',
-        })
-        .then(result => {
-            if(!result.ok) {
-                return result.text().then(text => { throw new Error(text) });
-            }
-            else {
-                return result.json();
-            }
-        })
-        .then(data => {
-            this.buttonMigrateGenericSystems.dataset.state="done";  
-        })
-        .catch(error => {
-            console.log('handleMigrateAccessSwitchesClick - Error:', error);
-            this.buttonMigrateGenericSystems.dataset.state="error";  
-        });
+        let done = false;
+        while (done === false) {
+            fetch('/migrate-generic-systems', {
+                method: 'POST',
+            })
+            .then(result => {
+                if(!result.ok) {
+                    return result.text().then(text => { throw new Error(text) });
+                }
+                else {
+                    return result.json();
+                }
+            })
+            .then(data => {
+                /*
+                    done: true/false
+                    values: [
+                        id: id of tbody,
+                        value: html-string
+                    ]
+                    caption: the caption of the table
+                */
+                data.values.forEach(element => {
+                    const tbody = document.getElementById(element.id);
+                    tbody.innerHTML = element.value;
+                });
+                the_table.caption.innerHTML = data.caption;
+                if (data.done) {
+                    done = true;
+                    this.buttonMigrateGenericSystems.dataset.state="done";  
+                }
+            })
+            .catch(error => {
+                console.log('handleMigrateAccessSwitchesClick - Error:', error);
+                this.buttonMigrateGenericSystems.dataset.state="error";  
+            });    
+        }
         this.buttonMigrateGenericSystems.dataset.state="loading";
     }
 }   

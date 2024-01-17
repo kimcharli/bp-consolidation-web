@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from .model.ck_global import GlobalStore, ServerItem, BlueprintItem
 from .generic_systems import GenericSystems
+from .access_switches import AccessSwitches
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -74,6 +75,14 @@ async def pull_data():
     logging.warning(f"/pull_data end")
     return data
 
+@app.get("/update-access-switches-table")
+async def update_accress_switches_table():
+    logging.warning(f"/update_accress_switches_table begin")
+    data = AccessSwitches.update_accress_switches_table()
+    logging.warning(f"/update_accress_switches_table end")
+    return data
+
+
 @app.get("/update-generic-systems-table")
 async def update_generic_systems_table():
     logging.warning(f"/update_generic_systems_table begin")
@@ -90,6 +99,9 @@ async def migrate_generic_systems():
 
 @app.post("/migrate-access-switches")
 async def migrate_access_switches():
+    """
+    Remove TOR generic system in main blueprint
+    """
     logging.warning(f"/migrate_access_switches begin")
     data = GlobalStore.remove_old_generic_system_from_main()
     data = GlobalStore.create_new_access_switch_pair()
