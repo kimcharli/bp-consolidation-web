@@ -7,9 +7,10 @@ import uvicorn
 import os
 from pydantic import BaseModel
 
-from .model.ck_global import GlobalStore, ServerItem, BlueprintItem
+from .ck_global import GlobalStore, ServerItem, BlueprintItem
 from .generic_systems import GenericSystems
 from .access_switches import AccessSwitches
+from .virtual_networks import VirtualNetworks
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -88,6 +89,13 @@ async def update_generic_systems_table():
     logging.warning(f"/update_generic_systems_table begin")
     data = GenericSystems.update_generic_systems_table()
     logging.warning(f"/update_generic_systems_table end")
+    return data
+
+@app.get("/update-virtual-networks-data")
+async def update_virtual_networks_data():
+    logging.warning(f"/update_virtual_networks_data begin")
+    data = AccessSwitches.update_virtual_networks_data()
+    logging.warning(f"/update_virtual_networks_data end")
     return data
 
 @app.get("/migrate-generic-systems")

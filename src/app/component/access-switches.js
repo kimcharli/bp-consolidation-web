@@ -284,6 +284,7 @@ class AccessSwitches extends HTMLElement {
             this.shadowRoot.getElementById("leaf1-box").dataset.state = "loaded";
             this.load_id_element("leaf2-label", globalData.leaf_switches[1][0]);
             this.shadowRoot.getElementById("leaf2-box").dataset.state = "loaded";
+
             this.shadowRoot.getElementById("access-gs-box").style.visibility = "hidden";
             this.shadowRoot.getElementById("access-gs-label").style.visibility = "hidden";
             this.shadowRoot.getElementById("access1-box").style.visibility = "visible";

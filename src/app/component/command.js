@@ -247,6 +247,9 @@ class SideBar extends HTMLElement {
                 document.getElementById(element).dataset.id = data.id;
                 document.getElementById(element).innerHTML = `<a href="${data.url}" target="_blank">${data.label}</a>`;
                 document.getElementById(element).dataset.state = 'done';
+
+                // auto continue to sync
+                this.buttonSyncState.click();
             })
         )
     }
@@ -256,12 +259,15 @@ class SideBar extends HTMLElement {
         // console.log('handleConnectSuccess' + event.detail + ' ' + this.connect_items)
         this.connect_items = this.connect_items.filter((item) => item !== event.detail.name)
         if (this.connect_items.length === 0) {
-            this.shadowRoot.getElementById('connect-button').dataset.state = 'done';
+            this.buttonConnectServer.dataset.state = 'done';
+            // auto continue to sync
+            console.log('auto-continue');
+            this.buttonSyncState.click();
         }
     }
 
     handleServerLogout(event) {
-        this.shadowRoot.getElementById('connect-button').dataset.state = 'init';
+        this.buttonConnectServer.dataset.state = 'init';
     }
 
     handleSyncStateClick(event) {
@@ -339,6 +345,40 @@ class SideBar extends HTMLElement {
             the_table.caption.innerHTML = data.caption;
         })
         // .catch(error => console.error('handleSyncStateClick - Error:', error));
+
+        fetch('/update-virtual-networks-data', {
+            method: 'GET',
+        })
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return result.json();
+            }
+        })
+        .then(data => {
+            /*
+                values: [
+                    attrs: [ { name:, value } ]
+                    value: button text
+                ]
+            */
+            console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
+            const vns_div = document.getElementById('virtual-networks');
+            data.values.forEach(element => {
+                const vn_button = document.createElement("button");
+                element.attrs.forEach(attr => {
+                    vn_button.setAttribute(attr.attr, attr.value)
+                })
+                vn_button.appendChild(document.createTextNode(element.value));
+                vns_div.append(vn_button);
+                });
+            const vn_caption = document.getElementById('virtual-networks-caption');
+            vn_caption.innerHTML = data.caption;
+        })
+        // .catch(error => console.error('handleSyncStateClick - Error:', error));
+
     }
 
     handleMigrateAccessSwitchesClick(event) {

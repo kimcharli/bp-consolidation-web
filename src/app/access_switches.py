@@ -4,10 +4,11 @@ from typing import Optional, List
 import time
 import json
 
-from .model.ck_global import GlobalStore
+from .ck_global import GlobalStore
 
 from .generic_systems import GenericSystems
 from ck_apstra_api.apstra_blueprint import CkEnum
+from .virtual_networks import VirtualNetworks
 
 class StateEnum:
     LOADED = 'done'
@@ -113,6 +114,11 @@ class AccessSwitches:
     @classmethod
     def load_id_element(cls, id, value):
         return _AccessSwitchResponseItem(id=id, value=value, state=StateEnum.LOADED, fill='red')
+
+    @classmethod
+    def update_virtual_networks_data(cls):
+        data = VirtualNetworks.update_virtual_networks_data(cls.main_bp, cls.tor_bp)
+        return data
 
 
     @classmethod

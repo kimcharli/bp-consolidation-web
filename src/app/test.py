@@ -1,7 +1,7 @@
 
 import logging
 
-from app.model.ck_global import GlobalStore, ServerItem, BlueprintItem
+from app.ck_global import GlobalStore, ServerItem, BlueprintItem
 from app.generic_systems import GenericSystems
 from app.access_switches import AccessSwitches
 
@@ -37,3 +37,5 @@ as_data = AccessSwitches.update_access_switches_table()
 logging.warning(f"AccessSwitches {as_data=}")
 gs_data = GenericSystems.update_generic_systems_table()
 logging.warning(f"GenericSystems {gs_data=}")
+vn_data = AccessSwitches.update_virtual_networks_data()
+logging.warning(f"VirtualNetworks {vn_data=}")
