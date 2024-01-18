@@ -98,16 +98,16 @@ class GlobalData {
     // #peer_link = null;
     // #servers = null;
     update(data) {
-        this.peer_link = JSON.parse(JSON.stringify(data.peer_link));
-        this.access_switches = JSON.parse(JSON.stringify(data.access_switches));
-        this.servers = JSON.parse(JSON.stringify(data.servers));
-        this.vnis = JSON.parse(JSON.stringify(data.vnis));
-        this.ct_table = JSON.parse(JSON.stringify(data.ct_table));
-        this.leaf_gs = JSON.parse(JSON.stringify(data.leaf_gs));
-        this.tor_gs = JSON.parse(JSON.stringify(data.tor_gs));        
-        this.leaf_switches = JSON.parse(JSON.stringify(data.leaf_switches));        
-        this.tor_interface_nodes_in_main = JSON.parse(JSON.stringify(data.tor_interface_nodes_in_main));
-        this.access_interface_nodes_in_main = JSON.parse(JSON.stringify(data.access_interface_nodes_in_main));
+        // this.peer_link = JSON.parse(JSON.stringify(data.peer_link));
+        // this.access_switches = JSON.parse(JSON.stringify(data.access_switches));
+        // this.servers = JSON.parse(JSON.stringify(data.servers));
+        // this.vnis = JSON.parse(JSON.stringify(data.vnis));
+        // this.ct_table = JSON.parse(JSON.stringify(data.ct_table));
+        // this.leaf_gs = JSON.parse(JSON.stringify(data.leaf_gs));
+        // this.tor_gs = JSON.parse(JSON.stringify(data.tor_gs));        
+        // this.leaf_switches = JSON.parse(JSON.stringify(data.leaf_switches));        
+        // this.tor_interface_nodes_in_main = JSON.parse(JSON.stringify(data.tor_interface_nodes_in_main));
+        // this.access_interface_nodes_in_main = JSON.parse(JSON.stringify(data.access_interface_nodes_in_main));
         console.log('GlobalData:update', this);
         window.dispatchEvent( new CustomEvent(GlobalEventEnum.SYNC_STATE) );
     }

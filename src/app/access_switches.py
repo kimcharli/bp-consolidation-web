@@ -35,6 +35,7 @@ class _AccessSwitchResponse(BaseModel):
     done: Optional[bool] = False
     values: Optional[List[_AccessSwitchResponseItem]] = []
     caption: Optional[str] = None
+    button_state: str = DataStateEnum.INIT
 
 
 def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
@@ -205,11 +206,13 @@ class AccessSwitches:
             response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
             response.values.append(cls.load_id_element('leaf2-label', cls.leaf_switches[1][0])) 
             response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
+            response.button_state = DataStateEnum.INIT
         elif cls.leaf_switches[0][1]['id'] and cls.leaf_switches[1][1]['id']:
             response.values.append(cls.load_id_element('leaf1-label', cls.leaf_switches[0][0])) 
             response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
             response.values.append(cls.load_id_element('leaf2-label', cls.leaf_switches[1][0])) 
             response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
+            response.button_state = DataStateEnum.DONE
 
             response.values.append(_AccessSwitchResponseItem(id='access-gs-box').hidden()) 
             response.values.append(_AccessSwitchResponseItem(id='access-gs-label').hidden()) 

@@ -119,7 +119,8 @@ class SideBar extends HTMLElement {
         this.buttonSyncState = this.shadowRoot.getElementById('sync-state');
         this.buttonSyncState.addEventListener('click', this.handleSyncStateClick.bind(this));
 
-        this.shadowRoot.getElementById('migrate-access-switches').addEventListener('click', this.handleMigrateAccessSwitchesClick.bind(this));
+        this.buttonMigrateAccessSwitches = this.shadowRoot.getElementById('migrate-access-switches');
+        this.buttonMigrateAccessSwitches.addEventListener('click', this.handleMigrateAccessSwitchesClick.bind(this));
 
         this.buttonMigrateGenericSystems = this.shadowRoot.getElementById('migrate-generic-systems');
         this.buttonMigrateGenericSystems.addEventListener('click', this.handleMigrateGenericSystemsClick.bind(this));
@@ -293,6 +294,7 @@ class SideBar extends HTMLElement {
             method: 'GET',
         })
         .then(result => {
+            // console.log(result);
             if(!result.ok) {
                 return result.text().then(text => { throw new Error(text) });
             }
@@ -301,9 +303,10 @@ class SideBar extends HTMLElement {
             }
         })
         .then(data => {
+            console.log('/update-access-switches-table', data)
             // globalData.update(data);
             data.values.forEach(element => {
-                console.log('element=', element)
+                // console.log('element=', element)
                 const the_element = document.getElementById(element.id);
                 if (element.value) the_element.innerHTML = element.value;
                 if (element.state) the_element.dataset.state = element.state;
@@ -311,8 +314,9 @@ class SideBar extends HTMLElement {
                 if (element.visibility) the_element.style.visibility = element.visibility;
             })
             this.buttonSyncState.dataset.state = 'done';
+            this.buttonMigrateAccessSwitches.dataset.state = data.button_state;
         })
-        .catch(error => console.error('handleSyncStateClick - Error:', error));
+        .catch(error => console.error('handleSyncStateClick - Error:', error, error.name, error.message));
         this.buttonSyncState.dataset.state="loading";
 
 
@@ -394,10 +398,10 @@ class SideBar extends HTMLElement {
             }
         })
         .then(data => {
-            this.shadowRoot.getElementById('migrate-access-switches').dataset.state="done";  
+            this.buttonMigrateAccessSwitches.dataset.state="done";  
         })
         .catch(error => console.error('handleMigrateAccessSwitchesClick - Error:', error));
-        this.shadowRoot.getElementById('migrate-access-switches').dataset.state="loading";
+        this.buttonMigrateAccessSwitches.dataset.state="loading";
     }
 
     handleMigrateGenericSystemsClick(event) {
