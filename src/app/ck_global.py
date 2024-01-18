@@ -8,6 +8,13 @@ from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
 from .generic_systems import GenericSystems
 
+class DataStateEnum:
+    LOADED = 'done'
+    INIT = 'init'
+    DONE = 'done'
+    ERROR = 'error'
+    DATA_STATE = 'data-state'
+
 class ServerItem(BaseModel):
     id: Optional[int] = None
     host: str

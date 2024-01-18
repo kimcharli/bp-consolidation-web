@@ -4,17 +4,11 @@ from typing import Optional, List
 import time
 import json
 
-from .ck_global import GlobalStore
+from .ck_global import GlobalStore, DataStateEnum
 
 from .generic_systems import GenericSystems
 from ck_apstra_api.apstra_blueprint import CkEnum
 from .virtual_networks import VirtualNetworks
-
-class StateEnum:
-    LOADED = 'done'
-    INIT = 'init'
-    DONE = 'done'
-    ERROR = 'error'
 
 
 class _AccessSwitchResponseItem(BaseModel):
@@ -25,7 +19,7 @@ class _AccessSwitchResponseItem(BaseModel):
     visibility: Optional[str] = None
 
     def loaded(self):
-        self.state = StateEnum.LOADED
+        self.state = DataStateEnum.LOADED
         return self
 
     def hidden(self):
@@ -113,7 +107,7 @@ class AccessSwitches:
 
     @classmethod
     def load_id_element(cls, id, value):
-        return _AccessSwitchResponseItem(id=id, value=value, state=StateEnum.LOADED, fill='red')
+        return _AccessSwitchResponseItem(id=id, value=value, state=DataStateEnum.LOADED, fill='red')
 
     @classmethod
     def update_virtual_networks_data(cls):
@@ -164,7 +158,7 @@ class AccessSwitches:
             logging.critical(f"switch names {cls.switches} does not ends with 'a', 'b', 'c', or 'd'!")
         logging.warning(f"update_access_switches_table {cls.access_switches=} {cls.tor_gs=}")
 
-        cls.generic_systems = GenericSystems.pull_generic_systems(cls.main_bp, cls.tor_bp, cls.tor_gs['label'], None)
+        cls.generic_systems = GenericSystems.pull_generic_systems(cls.main_bp, cls.tor_bp, cls.tor_gs['label'])
         cls.get_leaf_gs()
 
         for server_label, server_data in GenericSystems.generic_systems.items():

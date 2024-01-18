@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from typing import List
 import logging
 
+from .access_switches import DataStateEnum
+
 class _VirtualNetwork(BaseModel):
     vni: int
     in_main_switch: bool = False  # 
@@ -15,8 +17,8 @@ class _VirtualNetwork(BaseModel):
     def attr_n_value(self):
         content = _VirtualNetworkResponseItems(value=f"vn{self.vni}")
         content.attrs.append(_Attribute(attr='id', value=self.vn_id))
-        content.attrs.append(_Attribute(attr='class', value='data-state'))
-        content.attrs.append(_Attribute(attr='data-state', value='init'))
+        content.attrs.append(_Attribute(attr='class', value=DataStateEnum.DATA_STATE))
+        content.attrs.append(_Attribute(attr=DataStateEnum.DATA_STATE, value=DataStateEnum.INIT))
         return content
 
 class _Attribute(BaseModel):
@@ -42,7 +44,7 @@ class VirtualNetworks:
             vni = vn['vn']['vn_id']
             cls.vns[vni] = _VirtualNetwork(vni=vni)
         response = _VirtualNetworkResponse()
-        logging.warning(f"update_virtual_networks_data {cls.vns=}")
+        # logging.warning(f"update_virtual_networks_data {cls.vns=}")
         response.values = [v.attr_n_value for k, v in cls.vns.items()]
         response.caption = f"Virtual Networks ({len(VirtualNetworks.vns)})"
         return response

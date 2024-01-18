@@ -2,6 +2,14 @@ from pydantic import BaseModel
 from typing import Optional, List
 import logging
 
+# TODO: consolidate
+class DataStateEnum:
+    LOADED = 'done'
+    INIT = 'init'
+    DONE = 'done'
+    ERROR = 'error'
+    DATA_STATE = 'data-state'
+
 def get_data_or_default(data, label, new_value):
     """
     Return the member data. Or set it to new value
@@ -25,9 +33,9 @@ class _Memberlink(BaseModel):
     @property
     def tr(self) -> str:
         trs = [
-            f'<td data-cell="server_intf" class="data-state" data-state="init">{self.server_intf}</td>',
-            f'<td data-cell="switch" class="data-state" data-state="init">{self.switch}</td>',
-            f'<td data-cell="switch_intf" class="data-state" data-state="init">{self.switch_intf}</td>',
+            f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.server_intf}</td>',
+            f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch}</td>',
+            f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch_intf}</td>',
         ]
         return ''.join(trs)
 
@@ -152,7 +160,7 @@ class GenericSystems:
 
 
     @classmethod
-    def pull_generic_systems(cls, main_bp, tor_bp, tor_gs, access_switches):
+    def pull_generic_systems(cls, main_bp, tor_bp, tor_gs):
         cls.tor_gs = tor_gs
         cls.generic_systems = cls.pull_server_links(tor_bp)
 
@@ -176,6 +184,7 @@ class GenericSystems:
                                     cls.leaf_gs['intfs'][2] = 'et-' + member_link.server_intf.split('-')[1]
                                 else:
                                     cls.leaf_gs['intfs'][3] = 'et-' + member_link.server_intf.split('-')[1]
+
 
     @classmethod
     def new_label(cls, old_label) -> str:
