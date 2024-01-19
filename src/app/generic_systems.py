@@ -73,10 +73,34 @@ class _GroupLink(BaseModel):
 
 class _GenericSystem(BaseModel):
     label: str  # the label in the tor blueprint
-    new_label: str  # the label in the main blueprint (renamed)
+    new_label: str = None  # the label in the main blueprint (renamed)
     new_id: Optional[str] = None  # the generic system id on main blueprint
     tbody_id: Optional[str] = None  # the id on the tbody element
     group_links: List[_GroupLink] = []
+
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        """
+        set new label from old label
+        """
+        old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
+        # get the prefix from tor_name
+        prefix = GenericSystems.tor_gs[len('atl1tor-'):]
+        for pattern in old_patterns:
+            if self.label.startswith(pattern):
+                # replace the string with the prefix
+                self.new_label = f"{prefix}-{self.label[len(pattern):]}"
+                return
+        # it doesn't starts with the patterns. See if it is too long to prefix
+        max_len = 32
+        if ( len(self.label) + len(prefix) + 1 ) > max_len:
+            # TODO: too long. potential of conflict
+            self.new_label = self.label
+            return
+        # good to just prefix
+        self.new_label = f"{prefix}-{self.label}"
+        return
 
 
     def get_ae(self, ae_name, speed):
@@ -98,7 +122,7 @@ class _GenericSystem(BaseModel):
         row0_head = ''.join([
             f'<td rowspan={self.rowspan}>{index}</td>'
             f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>',
-            f'<td rowspan={self.rowspan} data-cell="new_label" class="data-state system-label" data-state="init">{self.new_label}</td>',
+            f'<td rowspan={self.rowspan} data-cell="new_label" class="data-state new_label" data-state="init">{self.new_label}</td>',
         ])
         tbody_lines = []
         for ae_link in self.group_links:
@@ -226,9 +250,6 @@ class _GenericSystem(BaseModel):
             }
         }
         generic_system_spec['new_systems'].append(new_system)
-        # ethernet_interfaces = [f"{main_bp.get_system_label(x['switch']['system_id'])}:{x['switch']['if_name']}" for x in generic_system_spec['links']]
-        # # make it warning just to make it visible
-        # logging.warning(f"adding {current_generic_system_count}/{total_generic_system_count} {generic_system_label} with {ethernet_interfaces} {len(lag_group)} LAG in the blueprint {main_bp.label}")
         generic_system_created = main_bp.add_generic_system(generic_system_spec)
         logging.warning(f"generic_system_created: {generic_system_created}")
 
@@ -385,30 +406,30 @@ class GenericSystems:
                                     cls.leaf_gs['intfs'][3] = 'et-' + member_link.server_intf.split('-')[1]
 
 
-    @classmethod
-    def new_label(cls, old_label) -> str:
-        """
-        return new label from old label
-        """
-        # logging.warning(f"new_label() begin, {tor_name=} {old_label=}")
-        # the maximum length is 32. Prefix 'r5r14-'
-        old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
-        # get the prefix from tor_name
-        # logging.warning(f"new_label() {cls.tor_gs=}")
-        prefix = cls.tor_gs[len('atl1tor-'):]
-        for pattern in old_patterns:
-            if old_label.startswith(pattern):
-                # replace the string with the prefix
-                return f"{prefix}-{old_label[len(pattern):]}"
-        # it doesn't starts with the patterns. See if it is too long to prefix
-        max_len = 32
-        if ( len(old_label) + len(prefix) + 1 ) > max_len:
-            # TODO: potential of conflict
-            # logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
-            return old_label
-        # just prefix
-        # logging.warning(f"new_label() returns: {prefix}-{old_label}")
-        return f"{prefix}-{old_label}"
+    # @classmethod
+    # def new_label(cls, old_label) -> str:
+    #     """
+    #     return new label from old label
+    #     """
+    #     # logging.warning(f"new_label() begin, {tor_name=} {old_label=}")
+    #     # the maximum length is 32. Prefix 'r5r14-'
+    #     old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
+    #     # get the prefix from tor_name
+    #     # logging.warning(f"new_label() {cls.tor_gs=}")
+    #     prefix = cls.tor_gs[len('atl1tor-'):]
+    #     for pattern in old_patterns:
+    #         if old_label.startswith(pattern):
+    #             # replace the string with the prefix
+    #             return f"{prefix}-{old_label[len(pattern):]}"
+    #     # it doesn't starts with the patterns. See if it is too long to prefix
+    #     max_len = 32
+    #     if ( len(old_label) + len(prefix) + 1 ) > max_len:
+    #         # TODO: potential of conflict
+    #         # logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
+    #         return old_label
+    #     # just prefix
+    #     # logging.warning(f"new_label() returns: {prefix}-{old_label}")
+    #     return f"{prefix}-{old_label}"
 
 
     @classmethod
@@ -449,7 +470,7 @@ class GenericSystems:
                 f"gs-{server_label}",
                 _GenericSystem(
                     label = server_label,
-                    new_label = cls.new_label(server_label),
+                    # new_label = cls.new_label(server_label),
                 )
             )
             server_data.get_ae(ae_name, speed).links.append(
@@ -459,8 +480,8 @@ class GenericSystems:
         return data
 
 
-    label: str  # the label in the tor blueprint
-    new_label: str  # the label in the main blueprint (renamed)
-    new_id: Optional[str] = None  # the generic system id on main blueprint
-    tbody_id: Optional[str] = None  # the id on the tbody element
-    group_links: List[_GroupLink] = []
+    # label: str  # the label in the tor blueprint
+    # new_label: str  # the label in the main blueprint (renamed)
+    # new_id: Optional[str] = None  # the generic system id on main blueprint
+    # tbody_id: Optional[str] = None  # the id on the tbody element
+    # group_links: List[_GroupLink] = []

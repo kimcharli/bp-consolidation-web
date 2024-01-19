@@ -222,15 +222,7 @@ class MigrateGenericSystemsButton {
                     tbody_id: tbody.getAttribute('id'),
                 })
             })
-            .then(result => {
-                console.log('handleMigrateGenericSystemsClick result=', result)
-                if(!result.ok) {
-                    return result.text().then(text => { throw new Error(text) });
-                }
-                else {
-                    return result.json();
-                }
-            })
+            .then(response => response.json())
             .then(data => {
                 /*
                     done: true/false
@@ -252,7 +244,8 @@ class MigrateGenericSystemsButton {
             .catch(error => {
                 console.log('handleMigrateAccessSwitchesClick - Error:', error);
                 srcButton.dataset.state="error";  
-            });    
+            });
+            tbody.getElementsByClassName('new_label')[0].dataset.state="loading";
         })
         srcButton.dataset.state="loading";        
         

@@ -140,7 +140,7 @@ aside button {
 
 
 /* generic systems */
-.system-label {
+.system-label, .new_label {
     text-align: left;
     width: 32ch;
 }
