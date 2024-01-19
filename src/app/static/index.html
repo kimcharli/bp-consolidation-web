@@ -9,18 +9,51 @@
     <link href="/css/style.css" rel="stylesheet" />
 
     <script src="/js/dexie.js"></script>
+    <script src="/js/main.js"></script>
     <!-- script type="module" src="/component/apstra-server.js" defer></script -->
     <!-- script type="module" src="/component/access-switches.js" defer></script -->
     <!-- script type="module" src="/component/generic-systems.js" defer></script -->
     <!-- script type="module" src="/component/virtual-networks.js" defer></script -->
-    <script type="module" src="/component/command.js" defer></script>
+    <!-- script type="module" src="/component/command.js" defer></script -->
     <!-- script type="module" src="/component/footer-component.js" defer></script -->
 </head>
 
 <body>
     <div class="container">
         <aside class="sidebar">
-            <side-bar></side-bar>
+            <h3>Commands</h3>
+            <div>
+                <div id="load-env-div" class="data-state" style="padding-left: 6px;padding-right: 6px;font-family: Arial;font-size: 14px;" data-state="init">
+                    Load
+                    <img id="trash-env" src="/images/trash.svg" alt="trash env" align="right" />
+                    <a href="/static/env-example.ini" download="env-example.ini"><img src="/images/download.svg" align="right" /></a>
+                    <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" /><input type="file" id="upload-env-ini-input" style="display: none;">
+                </div>
+                <div>
+                    <button id="connect-button" class="data-state" type="button" data-state="init">Connect</button>
+                </div>
+                <div>
+                    <button id="sync-state" type="button" data-state="init" class="data-state">Sync States</button>
+                </div>
+                <div>
+                    <button id="migrate-access-switches" type="button" data-state="init" class="data-state">Migrate Access Switches</button>
+                </div>
+                <div>
+                    <button id="migrate-generic-systems" type="button" data-state="init" class="data-state">Migrate Generic Systems</button>
+                </div>
+                <div>
+                    <button type="button" data-state="init" class="data-state">Migrate Virtual Networks</button>
+                </div>
+                <div>
+                    <button type="button" data-state="init" class="data-state">Migrate CTs</button>
+                </div>
+                <div>
+                    <button type="button" data-state="init" class="data-state">Pull Configurations</button>
+                </div>
+                <div>
+                    <button type="button" data-state="init" class="data-state">Move Devices</button>
+                </div>
+            </div>
         </aside>
 
         <header class="header">

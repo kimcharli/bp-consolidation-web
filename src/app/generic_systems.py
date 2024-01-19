@@ -175,7 +175,7 @@ class _GenericSystem(BaseModel):
             for member_link in ae_link.links:
                 switch_label = member_link.switch
                 switch_intf = member_link.switch_intf
-                breakpoint()
+                # breakpoint()
                 generic_system_spec['links'].append({
                     'lag_mode': None,
                     'system': {

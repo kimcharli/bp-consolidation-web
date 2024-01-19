@@ -13,13 +13,16 @@
 }
 
 .sidebar {
+    grid-area: sidebar;
     background: green;
     width: 180px;
-    height: max-content;
+    height: auto;
+    /* height: max-content; */
 }
 
 .header {
     grid-area: header;
+    background-color: #f5f5f5;
 }
 
 .blueprint {
@@ -44,6 +47,7 @@
 }
 
 
+/* global */
 
 :root {
     --global-warning-color: orange;
@@ -63,10 +67,6 @@ body {
 
 .teal {
     background-color: teal;
-}
-
-.header {
-    background-color: #f5f5f5;
 }
 
 
@@ -125,6 +125,19 @@ th, td {
 th, .th, caption {
     background-color: var(--global-th-color);
 }
+
+/* sidebar */
+aside img {
+    width: 20px;
+    height: 20px;
+    background-color: white;
+}
+
+aside button {
+    width: 100%;
+    text-align: left;
+}
+
 
 /* generic systems */
 .system-label {
@@ -201,3 +214,5 @@ svg .data-state[data-state="error"] {
     /* background-color: var(--global-error-color); */
     fill: var(--global-error-color);
 }
+
+
