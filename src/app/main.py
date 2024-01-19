@@ -98,11 +98,14 @@ async def update_virtual_networks_data():
     logging.warning(f"/update_virtual_networks_data end")
     return data
 
-@app.get("/migrate-generic-systems")
-async def migrate_generic_systems():
-    logging.warning(f"/migrate_generic_systems begin")
-    data = GenericSystems.migrate_generic_systems()
-    logging.warning(f"/migrate_generic_systems end")
+class SystemLabel(BaseModel):
+    tbody_id: str
+
+@app.post("/migrate-generic-system")
+async def migrate_generic_system(system_label: SystemLabel):
+    logging.warning(f"/migrate_generic_system begin {system_label=}")
+    data = AccessSwitches.migrate_generic_system(system_label.tbody_id)
+    logging.warning(f"/migrate_generic_system end {data=}")
     return data
 
 @app.post("/migrate-access-switches")

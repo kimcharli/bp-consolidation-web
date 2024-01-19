@@ -344,6 +344,7 @@ class SideBar extends HTMLElement {
             data.values.forEach(element => {
                 const tbody = the_table.createTBody();
                 tbody.setAttribute('id', element.id);
+                tbody.dataset.newId = element.newId;
                 tbody.innerHTML = element.value;
             });
             the_table.caption.innerHTML = data.caption;
@@ -405,13 +406,28 @@ class SideBar extends HTMLElement {
     }
 
     handleMigrateGenericSystemsClick(event) {
-        console.log(event)
-        let done = false;
-        while (done === false) {
-            fetch('/migrate-generic-systems', {
+        console.log('handleMigrateGenericSystemsClick event=',event)
+        Array.from(document.getElementById('generic-systems-table').getElementsByTagName('tbody'))
+        .forEach(tbody => {
+            console.log('tbody=', tbody);
+            if (tbody.getAttribute('data-new-id') !== '') {
+                return {
+                    values: [],
+                    done: false,
+                }
+            }
+            console.log('trying')
+            fetch('/migrate-generic-system', {
                 method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    tbody_id: tbody.getAttribute('id'),
+                })
             })
             .then(result => {
+                console.log('handleMigrateGenericSystemsClick result=', result)
                 if(!result.ok) {
                     return result.text().then(text => { throw new Error(text) });
                 }
@@ -428,13 +444,12 @@ class SideBar extends HTMLElement {
                     ]
                     caption: the caption of the table
                 */
+                console.log('handleMigrateGenericSystemsClick data=', data)
                 data.values.forEach(element => {
                     const tbody = document.getElementById(element.id);
                     tbody.innerHTML = element.value;
                 });
-                the_table.caption.innerHTML = data.caption;
                 if (data.done) {
-                    done = true;
                     this.buttonMigrateGenericSystems.dataset.state="done";  
                 }
             })
@@ -442,8 +457,9 @@ class SideBar extends HTMLElement {
                 console.log('handleMigrateAccessSwitchesClick - Error:', error);
                 this.buttonMigrateGenericSystems.dataset.state="error";  
             });    
-        }
-        this.buttonMigrateGenericSystems.dataset.state="loading";
+        })
+        this.buttonMigrateGenericSystems.dataset.state="loading";        
+        
     }
 }   
 customElements.define('side-bar', SideBar);

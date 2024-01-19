@@ -105,6 +105,7 @@ class AccessSwitches:
     generic_systems = None
     main_bp = None
     tor_bp = None
+    leaf_switches = None
 
     @classmethod
     def load_id_element(cls, id, value):
@@ -115,6 +116,10 @@ class AccessSwitches:
         data = VirtualNetworks.update_virtual_networks_data(cls.main_bp, cls.tor_bp)
         return data
 
+    @classmethod
+    def migrate_generic_system(cls, label):
+        data = GenericSystems.migrate_generic_system(label, cls.main_bp, cls.leaf_switches)
+        return data
 
     @classmethod
     def update_access_switches_table(cls) -> dict:
@@ -206,13 +211,11 @@ class AccessSwitches:
             response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
             response.values.append(cls.load_id_element('leaf2-label', cls.leaf_switches[1][0])) 
             response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
-            response.button_state = DataStateEnum.INIT
         elif cls.leaf_switches[0][1]['id'] and cls.leaf_switches[1][1]['id']:
             response.values.append(cls.load_id_element('leaf1-label', cls.leaf_switches[0][0])) 
             response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
             response.values.append(cls.load_id_element('leaf2-label', cls.leaf_switches[1][0])) 
             response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
-            response.button_state = DataStateEnum.DONE
 
             response.values.append(_AccessSwitchResponseItem(id='access-gs-box').hidden()) 
             response.values.append(_AccessSwitchResponseItem(id='access-gs-label').hidden()) 
@@ -223,6 +226,11 @@ class AccessSwitches:
 
             response.values.append(cls.load_id_element('access1-label', cls.access_switches[0][0])) 
             response.values.append(cls.load_id_element('access2-label', cls.access_switches[1][0])) 
+
+        if cls.access_switches[0][1]['id'] and cls.access_switches[1][1]['id']:
+            response.button_state = DataStateEnum.DONE
+
+        logging.warning(f"update_access_switches_table end... {cls.access_switches=} {cls.leaf_gs=}")
         return response
 
 
