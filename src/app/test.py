@@ -39,3 +39,5 @@ gs_data = GenericSystems.update_generic_systems_table()
 logging.warning(f"GenericSystems {gs_data=}")
 vn_data = AccessSwitches.update_virtual_networks_data()
 logging.warning(f"VirtualNetworks {vn_data=}")
+gs_new = AccessSwitches.migrate_generic_system('gs-az1kvm1012-az1kvm1028-atl1')
+

@@ -12,18 +12,18 @@
     <!-- script type="module" src="/component/apstra-server.js" defer></script -->
     <!-- script type="module" src="/component/access-switches.js" defer></script -->
     <!-- script type="module" src="/component/generic-systems.js" defer></script -->
-    <script type="module" src="/component/virtual-networks.js" defer></script>
+    <!-- script type="module" src="/component/virtual-networks.js" defer></script -->
     <script type="module" src="/component/command.js" defer></script>
-    <script type="module" src="/component/footer-component.js" defer></script>
+    <!-- script type="module" src="/component/footer-component.js" defer></script -->
 </head>
 
 <body>
-    <div class="container" stype="width: 100%; display: table;">
-        <div class="sidebar" style="display: table-cell; height: max-content; border-style: double;">
+    <div class="container">
+        <aside class="sidebar">
             <side-bar></side-bar>
-        </div>
-        <div style="display: table-cell; width: 100%;">
-            <!-- apstra-server></apstra-server -->
+        </aside>
+
+        <header class="header">
             <table class="no-border">
                 <tr class="no-border">
                     <td class="no-border" style="width: 100%;">
@@ -48,6 +48,10 @@
                     </td>
                 </tr>
             </table>
+        </header>
+
+        <section class="blueprint" style="display: table-cell; width: 100%;">
+            <!-- apstra-server></apstra-server -->
 
             <!-- access-switches></access-switches -->
             <table>
@@ -59,6 +63,11 @@
                     <td id="main_bp" class="blueprint data-state" data-id data-state="init">M</td>
                     <td id="tor_bp" class="blueprint data-state" data-id data-state="init">T</td>
                 </tr>
+            </table>
+        </section>
+
+        <section class="access-switches">
+            <table
                 <tr>
                     <td>
                         <svg viewBox="0 0 200 75" width="400px" xmlns="http://www.w3.org/2000/svg">
@@ -141,6 +150,9 @@
                     </td>
                 </tr>
             </table>
+        </section>
+
+        <section class="generic-systems">
 
             <!-- generic-systems></generic-systems -->
             <table id="generic-systems-table">
@@ -161,15 +173,18 @@
                         <th>switch-intf</th>
                     </tr>                    
                 </thead>
-            </table>                
-            <!-- virtual-networks></virtual-networks -->
+            </table>
+        </section>
+        
+        <section class="virtual-networks">
             <div id="virtual-networks-caption" class="th" data-vns>Virtual Networks</div>
             <div id="virtual-networks"></div>    
-        
-        </div>
-    </div>
-    <div class="footer" style="background: darkslateblue;">
-        <footer-component></footer-component>
+        </section>
+
+        <footer class="footer">
+            ©️ Charlie Kim
+        </footer>
+    
     </div>
 
 </body>

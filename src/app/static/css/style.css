@@ -1,3 +1,50 @@
+/* grid layout */
+.container {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: 1fr min-content;
+    grid-template-areas: 
+        "sidebar header"
+        "sidebar blueprint"
+        "sidebar access-switches"
+        "sidebar generic-systems"
+        "sidebar virtual-networks"
+        "footer footer"
+}
+
+.sidebar {
+    background: green;
+    width: 180px;
+    height: max-content;
+}
+
+.header {
+    grid-area: header;
+}
+
+.blueprint {
+    grid-area: blueprint;
+}
+
+.access-switches {
+    grid-area: access-switches;
+}
+
+.generic-systems {
+    grid-area: generic-systems;
+}
+
+.virtual-networks {
+    grid-area: virtual-networks;
+}
+
+.footer {
+    grid-area: footer;
+    background-color: darkslateblue;
+}
+
+
+
 :root {
     --global-warning-color: orange;
     --global-ok-color: #84b135;
@@ -22,11 +69,6 @@ body {
     background-color: #f5f5f5;
 }
 
-.sidebar {
-    background: green;
-    width: 180px;
-    height: max-content;
-}
 
 /* Tooltip container */
 .tooltip {

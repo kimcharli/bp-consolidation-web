@@ -1,9 +1,10 @@
 from pydantic import BaseModel
 from typing import Optional, List
 import logging
+from enum import Enum, StrEnum, auto
 
 # TODO: consolidate
-class DataStateEnum:
+class DataStateEnum(StrEnum):
     LOADED = 'done'
     INIT = 'init'
     DONE = 'done'
@@ -108,17 +109,15 @@ class _GenericSystem(BaseModel):
                     tbody_lines.append(f'<tr>{row0_head}{links}</tr>')
         return ''.join(tbody_lines)
 
-    def migrate(self, main_bp) -> dict:
+    def migrate(self, main_bp, access_switches) -> dict:
         """
         Return:
             id: tbody-id
             value: get_tbody()
         """
-        logging.warning(f"_GenericSystem::migrate({main_bp=}) {self=}")
+        logging.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
         if self.new_id:
             return {}
-
-    def add(self, main_bp, access_switch_pair) -> dict:
         """
         Create new generic systems in the main blueprint based on the generic systems in the TOR blueprint. 
             <generic_system_label>:
@@ -135,10 +134,11 @@ class _GenericSystem(BaseModel):
             # it is already present
             return {}
         server_nodes = main_bp.get_system_node_from_label(self.new_label)
-        if len(server_nodes):
+        # breakpoint()
+        if server_nodes is not None:
             # it is present in main blueprint
             # TODO: update the tbody
-            return {}
+            return self.update_generic_systems_table()
 
         # # wait for the access switch to be created
         # for switch_label in order.switch_label_pair:
@@ -171,45 +171,37 @@ class _GenericSystem(BaseModel):
             'new_systems': [],
         }
 
-        # the link data has order dependancy
-        link_list = [ x for x in self.group_links]
-        for i in range(len(link_list)):
-        # for _, link_data in generic_system_data.items():
-            link_data = link_list[i]
-            link_spec = {
-                'lag_mode': None,
-                'system': {
-                    'system_id': None
-                },
-                'switch': {
-                    # TODO: this might need to wait for the system to be created
-                    'system_id': main_bp.get_system_node_from_label(link_data['sw_label'])['id'],
-                    'transformation_id': main_bp.get_transformation_id(link_data['sw_label'], link_data['sw_if_name'] , link_data['speed']),
-                    'if_name': link_data['sw_if_name'],
-                }                
-            }
-            if 'aggregate_link' in link_data:
-                old_aggregate_link_id = link_data['aggregate_link']
-                if old_aggregate_link_id not in lag_group:
-                    lag_group[old_aggregate_link_id] = f"link{len(lag_group)+1}"
-                # link_spec['lag_mode'] = 'lacp_active' # this should not set in 4.1.2
-                # link_spec['group_label'] = lag_group[old_aggregate_link_id] # this should not exist in 4.1.2
-            generic_system_spec['links'].append(link_spec)
-            # breakpoint()
+        for ae_link in self.group_links:
+            for member_link in ae_link.links:
+                switch_label = member_link.switch
+                switch_intf = member_link.switch_intf
+                breakpoint()
+                generic_system_spec['links'].append({
+                    'lag_mode': None,
+                    'system': {
+                        'system_id': None,
+                        'if_name': member_link.server_intf,
+                    },
+                    'switch': {
+                        'system_id': access_switches[switch_label].id,
+                        'transformation_id': main_bp.get_transformation_id(switch_label, switch_intf , ae_link.speed),
+                        'if_name': switch_intf,
+                    }                
+                })
         new_system = {
             'system_type': 'server',
-            'label': generic_system_label,
+            'label': self.new_label,
             # 'hostname': None, # hostname should not have '_' in it
             'port_channel_id_min': 0,
             'port_channel_id_max': 0,
             'logical_device': {
-                'display_name': f"auto-{link_data['speed']}x{len(gs_data)}",
-                'id': f"auto-{link_data['speed']}x{len(gs_data)}",
+                'display_name': f"auto-{ae_link.speed}x{self.rowspan}",
+                'id': f"auto-{ae_link.speed}x{self.rowspan}",
                 'panels': [
                     {
                         'panel_layout': {
                             'row_count': 1,
-                            'column_count': len(gs_data),
+                            'column_count': self.rowspan,
                         },
                         'port_indexing': {
                             'order': 'T-B, L-R',
@@ -218,10 +210,10 @@ class _GenericSystem(BaseModel):
                         },
                         'port_groups': [
                             {
-                                'count': len(gs_data),
+                                'count': self.rowspan,
                                 'speed': {
-                                    'unit': link_data['speed'][-1:],
-                                    'value': int(link_data['speed'][:-1])
+                                    'unit': ae_link.speed[-1:],
+                                    'value': int(ae_link.speed[:-1])
                                 },
                                 'roles': [
                                     'leaf',
@@ -234,11 +226,11 @@ class _GenericSystem(BaseModel):
             }
         }
         generic_system_spec['new_systems'].append(new_system)
-        ethernet_interfaces = [f"{main_bp.get_system_label(x['switch']['system_id'])}:{x['switch']['if_name']}" for x in generic_system_spec['links']]
-        # make it warning just to make it visible
-        logging.warning(f"adding {current_generic_system_count}/{total_generic_system_count} {generic_system_label} with {ethernet_interfaces} {len(lag_group)} LAG in the blueprint {main_bp.label}")
+        # ethernet_interfaces = [f"{main_bp.get_system_label(x['switch']['system_id'])}:{x['switch']['if_name']}" for x in generic_system_spec['links']]
+        # # make it warning just to make it visible
+        # logging.warning(f"adding {current_generic_system_count}/{total_generic_system_count} {generic_system_label} with {ethernet_interfaces} {len(lag_group)} LAG in the blueprint {main_bp.label}")
         generic_system_created = main_bp.add_generic_system(generic_system_spec)
-        logging.debug(f"generic_system_created: {generic_system_created}")
+        logging.warning(f"generic_system_created: {generic_system_created}")
 
         # update the lag mode
         """
@@ -258,50 +250,50 @@ class _GenericSystem(BaseModel):
             'links': {}
         }
 
-        for i in range(len(link_list)):
-        # for _, link_data in generic_system_data.items():
-            link_data = link_list[i]
-            if 'aggregate_link' in link_data and link_data['aggregate_link']:
-                lag_spec['links'][generic_system_created[i]] = {
-                    'group_label': link_data['aggregate_link'],
-                    'lag_mode': 'lacp_active' }
+        # for i in range(len(link_list)):
+        # # for _, link_data in generic_system_data.items():
+        #     link_data = link_list[i]
+        #     if 'aggregate_link' in link_data and link_data['aggregate_link']:
+        #         lag_spec['links'][generic_system_created[i]] = {
+        #             'group_label': link_data['aggregate_link'],
+        #             'lag_mode': 'lacp_active' }
 
-            # tag the link
-            if len(link_data['tags']):
-                tagged = main_bp.post_tagging([generic_system_created[i]], tags_to_add=link_data['tags'])
-                logging.debug(f"{tagged=}")
+        #     # tag the link
+        #     if len(link_data['tags']):
+        #         tagged = main_bp.post_tagging([generic_system_created[i]], tags_to_add=link_data['tags'])
+        #         logging.debug(f"{tagged=}")
 
-        if len(lag_spec['links']):
-            lag_updated = main_bp.patch_leaf_server_link_labels(lag_spec)
-            logging.debug(f"lag_updated: {lag_updated}")
+        # if len(lag_spec['links']):
+        #     lag_updated = main_bp.patch_leaf_server_link_labels(lag_spec)
+        #     logging.debug(f"lag_updated: {lag_updated}")
 
-        # update generic system interface name
-        for link_data in [v for _, v in gs_data.items() if v['gs_if_name']]:
-            sw_label = link_data['sw_label']
-            sw_if_name = link_data['sw_if_name']
-            gs_if_name = link_data['gs_if_name']
-            link_query = f"""
-                node('system', name='switch', label='{ sw_label }')
-                    .out().node('interface', if_name='{ sw_if_name }', name='sw_intf')
-                    .out().node('link', name='link')
-                    .in_().node('interface', name='gs_intf')
-                    .in_().node('system', system_type='server', name='server')
-            """
-            for i in range(3):
-                link_nodes = main_bp.query(link_query, multiline=True)
-                if len(link_nodes) > 0:
-                    break
-                logging.info(f"waiting for {sw_label}:{sw_if_name} to be created in {main_bp.label}")
-                time.sleep(3)
-                continue
-            if link_nodes is None or len(link_nodes) == 0:
-                logging.warning(f"{link_nodes=} not found. {gs_if_name=}, {link_query=}. Skipping")
-                continue
-            if link_nodes[0]['gs_intf']['if_name'] != gs_if_name:
-                main_bp.patch_node_single(
-                    link_nodes[0]['gs_intf']['id'], 
-                    {"if_name": gs_if_name }
-                )
+        # # update generic system interface name
+        # for link_data in [v for _, v in gs_data.items() if v['gs_if_name']]:
+        #     sw_label = link_data['sw_label']
+        #     sw_if_name = link_data['sw_if_name']
+        #     gs_if_name = link_data['gs_if_name']
+        #     link_query = f"""
+        #         node('system', name='switch', label='{ sw_label }')
+        #             .out().node('interface', if_name='{ sw_if_name }', name='sw_intf')
+        #             .out().node('link', name='link')
+        #             .in_().node('interface', name='gs_intf')
+        #             .in_().node('system', system_type='server', name='server')
+        #     """
+        #     for i in range(3):
+        #         link_nodes = main_bp.query(link_query, multiline=True)
+        #         if len(link_nodes) > 0:
+        #             break
+        #         logging.info(f"waiting for {sw_label}:{sw_if_name} to be created in {main_bp.label}")
+        #         time.sleep(3)
+        #         continue
+        #     if link_nodes is None or len(link_nodes) == 0:
+        #         logging.warning(f"{link_nodes=} not found. {gs_if_name=}, {link_query=}. Skipping")
+        #         continue
+        #     if link_nodes[0]['gs_intf']['if_name'] != gs_if_name:
+        #         main_bp.patch_node_single(
+        #             link_nodes[0]['gs_intf']['id'], 
+        #             {"if_name": gs_if_name }
+        #         )
     
 
 
@@ -315,7 +307,7 @@ class _GenericSystemResponse(BaseModel):
     values: Optional[List[_GenericSystemResponseItem]] = []
     caption: Optional[str] = None
 
-class _LeafSwitch(BaseModel):
+class _AccessSwitch(BaseModel):
     label: str
     id: str
 class GenericSystems:
@@ -324,7 +316,7 @@ class GenericSystems:
     tor_ae1 = None
     leaf_gs = {'label': None, 'intfs': ['']*4}
     tor_gs = None  # {'label': <>, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
-    leaf_switches = {}  # <label>: _LeafSwitch
+    access_switches = {}  # <label>: _AccessSwitch
 
     @classmethod
     def update_generic_systems_table(cls) -> dict:
@@ -348,15 +340,16 @@ class GenericSystems:
         return content
 
     @classmethod
-    def migrate_generic_system(cls, tbody_id, main_bp, leaf_switches) -> dict:
+    def migrate_generic_system(cls, tbody_id, main_bp, access_switches) -> dict:
         """
         """
-        for i in leaf_switches:
-            leaf_label = i[0]
-            leaf_id = i[1]['id']
-            cls.leaf_switches[leaf_label] = _LeafSwitch(label=leaf_label, id=leaf_id)
-        logging.warning(f"migrate_generic_system {tbody_id=} {leaf_switches=} {cls.leaf_switches=}")
-        data = cls.generic_systems[tbody_id].migrate(main_bp)
+        for i in access_switches:
+            access_label = i[0]
+            access_id = i[1]['id']
+            # breakpoint()
+            cls.access_switches[access_label] = _AccessSwitch(label=access_label, id=access_id)
+        logging.warning(f"migrate_generic_system {tbody_id=} {access_switches=} {cls.access_switches=}")
+        data = cls.generic_systems[tbody_id].migrate(main_bp, cls.access_switches)
         return {
             'done': True,
             'values': [],

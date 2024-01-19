@@ -118,7 +118,7 @@ class AccessSwitches:
 
     @classmethod
     def migrate_generic_system(cls, label):
-        data = GenericSystems.migrate_generic_system(label, cls.main_bp, cls.leaf_switches)
+        data = GenericSystems.migrate_generic_system(label, cls.main_bp, cls.access_switches)
         return data
 
     @classmethod
