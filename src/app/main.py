@@ -76,6 +76,7 @@ async def pull_data():
     logging.warning(f"/pull_data end")
     return data
 
+# from SyncStateButton
 @app.get("/update-access-switches-table")
 async def update_access_switches_table():
     logging.warning(f"/update_access_switches_table begin")
@@ -84,6 +85,7 @@ async def update_access_switches_table():
     return data
 
 
+# from SyncStateButton
 @app.get("/update-generic-systems-table")
 async def update_generic_systems_table():
     logging.warning(f"/update_generic_systems_table begin")

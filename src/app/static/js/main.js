@@ -1,7 +1,47 @@
 
 
 
+class UploadFileButton {
+    constructor() {
+        document.getElementById('upload-env-ini-img')
+            .addEventListener('click', () => document.getElementById('upload-env-ini-input').click());
+        this.input = document.getElementById('upload-env-ini-input');
+        this.input.addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
+    }
 
+    handleUploadIniInputChange(event) {
+        console.log('handleUploadIniInputChange() id =', event.currentTarget.id );
+        const formData = new FormData();
+        formData.append('file', this.input.files[0]);
+        fetch('/upload-env-ini', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('handleUploadIniInputChange - fetched', data);
+            CkIDB.addServerStore(data);
+        })
+        .catch(error => console.error('handleUploadIniInputChange - fetch Error:', error));
+    }
+};
+
+
+class TrashButton {
+    constructor(connectButton) {
+        this.connectButton = connectButton;
+        this.button = document.getElementById('trash-env');
+        this.button.addEventListener('click', this.handleTrashEnv.bind(this));
+    }
+
+    handleTrashEnv(event) {
+        CkIDB.trashEnv()
+        document.getElementById('connect-button').dataset.state = 'init';
+        // TODO: logout
+        // TODO: cascade clear
+    }
+
+}
 
 class ConnectButton {
     constructor() {
@@ -61,7 +101,6 @@ class ConnectButton {
                 document.getElementById(element).dataset.state = 'done';
     
                 // auto continue to sync
-                // this.buttonSyncState.click();
                 document.getElementById('sync-state').click();
             })
         )
@@ -73,7 +112,6 @@ class SyncStateButton {
     constructor() {
         this.button = document.getElementById('sync-state');
         this.button.addEventListener('click', this.handleSyncState.bind(this));
-        // console.log('SyncStateButton: constructor() this.button=', this.button);
     }
 
     handleSyncState(event) {
@@ -338,15 +376,15 @@ class CkIDB {
             const servers = await this.db.apstra_server.clear();
         }).then(() => {
                 console.log(`transaction completed`);
-                window.dispatchEvent(
-                    new CustomEvent(GlobalEventEnum.CLEAR_ENV_INI, { bubbles: true, composed: true } )
-                );        
+                // window.dispatchEvent(
+                //     new CustomEvent(GlobalEventEnum.CLEAR_ENV_INI, { bubbles: true, composed: true } )
+                // );        
             }).catch(err => {
                 console.log(`transaction failed -`, err);
         })
-        window.dispatchEvent(
-            new CustomEvent(GlobalEventEnum.DISCONNECT_SERVER)
-        );
+        // window.dispatchEvent(
+        //     new CustomEvent(GlobalEventEnum.DISCONNECT_SERVER)
+        // );
     }
 }
 
@@ -354,7 +392,9 @@ class CkIDB {
 
 window.addEventListener("load", (event) => {
     console.log("page is fully loaded");
+    const uploadFileButton = new UploadFileButton();
     const connectButton = new ConnectButton();
+    const trashButton = new TrashButton();
     const syncStateButton = new SyncStateButton();
     const migrateAccessSwitchesButton = new MigrateAccessSwitchesButton();
     const migrateGenericSystemsButton = new MigrateGenericSystemsButton();

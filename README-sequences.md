@@ -1,48 +1,47 @@
 ```mermaid
 sequenceDiagram
+    participant main.js
     participant main.py
-    participant common
-    participant command
-    participant server
-    participant blueprint
-    participant accessswitch
-    participant genericsystems
 
     opt Server present on Startup
-        common ->> command: FETCH_ENV_INI(data)
-        common ->> server: FETCH_ENV_INI(data)
+        IDB ->> main.py: /update-env-ini
+        main.py ->> IDB: Click Connect
     end
     opt Load Env ini
-        command ->> +main.py: /upload-env-ini
-        main.py -->> -command: server content
-        command ->> +common: add server
-        common ->> command: FETCH_ENV_INI(data)
-        common ->> -server: FETCH_ENV_INI(data)
+        main.js ->> +main.py: /upload-env-ini
+        main.py -->> -main.js: server content
+        main.js ->> +IDB: add server
+        IDB ->> -main.js: Click Connect
     end
     opt Clear Env ini
         command ->> +common: trashEnv
         common ->> command: CLEAR_ENV_INI
         common ->> -server: CLEAR_ENV_INI
     end
-    opt Click Connect
-        command ->> server: CONNECT_SERVER
-        server ->> +main.py: /login_server
-        main.py -->> -server: version
-        server ->> blueprint: CONNECT_BLUEPRINT
-        blueprint ->> +main.py: /login_blueprint
-        main.py -->> -blueprint: bleprint id
-    end
-    opt Click Sync States
-        command ->> +main.py: /pull-data
-        main.py -->> -command: data
-        command ->> common: update GlobalData
-        common ->> accessswitch: SYNC_STATES
-        common ->> genericsystems: SYNC_STATES
-        common ->> virtualnetworks: SYNC_STATES
 
+    opt Click Connect
+        main.js ->> +main.py: /login_server
+        main.py -->> -main.js: version
+        main.py ->> +main.py: /login_blueprint
+        main.py -->> -main.js: bleprint id
     end
-    opt Click Migrate Access Switche
-        command ->>+main.py: /migrate-access-switches
-        main.py -->> -command: data
+
+    opt Click Sync States
+        main.js ->> +main.py: /update-access-switches-table
+        main.py -->> -main.js: data
+        main.js ->> +main.py: /update-generic-systems-table
+        main.py -->> -main.js: data
+        main.js ->> +main.py: /update-virtual-networks-data
+        main.py -->> -main.js: data
+    end
+
+    opt Click Migrate Access Switches
+        main.js ->>+main.py: /migrate-access-switches
+        main.py -->> -main.js: data
+    end
+
+    opt Click Migrate Generic Systems
+        main.js ->>+main.py: /migrate-generic-system
+        main.py -->> -main.js: data
     end
 ```

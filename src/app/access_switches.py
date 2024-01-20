@@ -121,6 +121,7 @@ class AccessSwitches:
         data = GenericSystems.migrate_generic_system(label, cls.main_bp, cls.access_switches)
         return data
 
+    # by main.py from SyncState
     @classmethod
     def update_access_switches_table(cls) -> dict:
         cls.tor_bp = GlobalStore.bp['tor_bp']

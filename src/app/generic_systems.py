@@ -342,7 +342,7 @@ class GenericSystems:
     @classmethod
     def update_generic_systems_table(cls) -> dict:
         """
-        Called by main.py
+        Called by main.py from SyncState
         Build generic_systems from tor_blueprint and return the data 
         """
         content = _GenericSystemResponse()
@@ -381,7 +381,8 @@ class GenericSystems:
     @classmethod
     def pull_generic_systems(cls, main_bp, tor_bp, tor_gs):
         cls.tor_gs = tor_gs
-        cls.generic_systems = cls.pull_server_links(tor_bp)
+        # load generic_systems
+        cls.pull_server_links(tor_bp)
 
 
         # update leaf_gs (the generic system in TOR bp for the leaf)        
@@ -406,39 +407,11 @@ class GenericSystems:
                                     cls.leaf_gs['intfs'][3] = 'et-' + member_link.server_intf.split('-')[1]
 
 
-    # @classmethod
-    # def new_label(cls, old_label) -> str:
-    #     """
-    #     return new label from old label
-    #     """
-    #     # logging.warning(f"new_label() begin, {tor_name=} {old_label=}")
-    #     # the maximum length is 32. Prefix 'r5r14-'
-    #     old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
-    #     # get the prefix from tor_name
-    #     # logging.warning(f"new_label() {cls.tor_gs=}")
-    #     prefix = cls.tor_gs[len('atl1tor-'):]
-    #     for pattern in old_patterns:
-    #         if old_label.startswith(pattern):
-    #             # replace the string with the prefix
-    #             return f"{prefix}-{old_label[len(pattern):]}"
-    #     # it doesn't starts with the patterns. See if it is too long to prefix
-    #     max_len = 32
-    #     if ( len(old_label) + len(prefix) + 1 ) > max_len:
-    #         # TODO: potential of conflict
-    #         # logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
-    #         return old_label
-    #     # just prefix
-    #     # logging.warning(f"new_label() returns: {prefix}-{old_label}")
-    #     return f"{prefix}-{old_label}"
-
-
     @classmethod
     def pull_server_links(cls, the_bp) -> dict:
         """
-        return the server and link data
-        data = { <server>: GenericSystem }
+        Pull the generic systems data and update generic_systems
         """
-        data = {}  # <server>: { GenericSystem }
         server_links_query = """
             match(
             node('system', system_type='server',  name='server')
@@ -459,6 +432,7 @@ class GenericSystems:
         for server_link in servers_link_nodes:
             # logging.warning(f"pull_server_links() {server_link=}")
             server_label = server_link['server']['label']
+            tbody_id = f"gs-{server_label}"
             ae_name = server_link['ae']['if_name'] if server_link['ae'] else ''
             speed = server_link['link']['speed']
             switch = server_link['switch']['label']
@@ -466,8 +440,8 @@ class GenericSystems:
             server_intf = server_link['server_intf']['if_name']
 
             server_data = get_data_or_default(  # GenericSystem
-                data, 
-                f"gs-{server_label}",
+                cls.generic_systems, 
+                tbody_id,
                 _GenericSystem(
                     label = server_label,
                     # new_label = cls.new_label(server_label),
@@ -476,12 +450,5 @@ class GenericSystems:
             server_data.get_ae(ae_name, speed).links.append(
                 _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf)
             )
+        return
 
-        return data
-
-
-    # label: str  # the label in the tor blueprint
-    # new_label: str  # the label in the main blueprint (renamed)
-    # new_id: Optional[str] = None  # the generic system id on main blueprint
-    # tbody_id: Optional[str] = None  # the id on the tbody element
-    # group_links: List[_GroupLink] = []
