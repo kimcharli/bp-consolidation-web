@@ -119,6 +119,7 @@ class _GenericSystem(BaseModel):
         """
         Return the tbody innerHTML
         """
+        # logging.warning(f"_GenericSystem:get_tbody() begin {self=}")
         row0_head = ''.join([
             f'<td rowspan={self.rowspan}>{index}</td>'
             f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>',
@@ -410,8 +411,10 @@ class GenericSystems:
     @classmethod
     def pull_server_links(cls, the_bp) -> dict:
         """
-        Pull the generic systems data and update generic_systems
+        Pull the generic systems data and rebuild generic_systems
         """
+        cls.generic_systems = {}
+
         server_links_query = """
             match(
             node('system', system_type='server',  name='server')

@@ -161,8 +161,12 @@ class SyncStateButton {
             console.log('handleSyncStateClick, /update-generic-systems-table, data=', data);
             const the_table = document.getElementById('generic-systems-table');
             data.values.forEach(element => {
-                const tbody = the_table.createTBody();
-                tbody.setAttribute('id', element.id);
+                // console.log('tbody=', document.getElementById(element.id));
+                let tbody = document.getElementById(element.id);
+                if ( tbody == null ) {
+                    tbody = the_table.createTBody();
+                    tbody.setAttribute('id', element.id);
+                }
                 tbody.dataset.newId = element.newId;
                 tbody.innerHTML = element.value;
             });
