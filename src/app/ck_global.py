@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, field_validator
 import json
 import time
@@ -32,20 +32,22 @@ class BlueprintItem(BaseModel):
     label: str
     role: str
 
-class EnvIni:
-    def __init__(self, data = None):
-        self.logger = logging.getLogger(f"EnvIni __init__() {data}")
-        if data:
-            self.host = data.host
-            self.port = data.port
-            self.username = data.username
-            self.password = data.password
-            self.main_bp_label = data.main_bp_label
-            self.tor_bp_label = data.tor_bp_label
-        else:
-            self.clear()
-            self.update()
+class EnvIni(BaseModel):
+    logger: Any = logging.getLogger("EnvIni")  # logging.Logger
+    host: str = None
+    port: int = None
+    username: str = None
+    password: str  = None
+    main_bp_label: str = None
+    tor_bp_label: str = None
     
+    @property
+    def url(self) -> str:
+        if not self.host or not self.port:
+            self.logger.warning(f"get_url() {self.host=} {self.port=}")
+            return
+        return f"https://{self.host}:{self.port}"
+
     def clear(self):
         self.host = None
         self.port = None
@@ -54,19 +56,23 @@ class EnvIni:
         self.main_bp_label = None
         self.tor_bp_label = None
 
-    def get_url(self) -> str:
-        if not self.host or not self.port:
-            self.logger.warning(f"get_url() {self.host=} {self.port=}")
-            return
-        return f"https://{self.host}:{self.port}"
-
-    def update(self, file_content=None) -> dict:
+    def update(self, data=None) -> dict:
         """
         Update the environment variables from the file_content, and return the updated dict.
         """
-        # self.logger.warning(f"update(): before update: {self.__dict__}, {file_content=}")
-        self.clear()
-        # self.logger.warning(f"update(): cleared: {self.__dict__}, {file_content=}")
+        # self.clear()
+        self.logger.warning(f"update(): cleared: {self.__dict__}, {data=} {type(data)=} {type(data).__name__=}")
+        if type(data).__name__ == 'ServerItem':
+            self.host = data.host
+            self.port = data.port
+            self.username = data.username
+            self.password = data.password
+            self.main_bp_label = data.main_bp_label
+            self.tor_bp_label = data.tor_bp_label
+            return self
+        
+        # upload case
+        file_content = data
         lines = file_content.decode('utf-8').splitlines() if file_content else []
         for line in lines:
             name_value = line.split("=")
@@ -88,28 +94,28 @@ class EnvIni:
             else:
                 self.logger.warning(f"update(): invalid name: {name_value}")        
         # self.logger.warning(f"update(): after update: {self.__dict__}")
-        return_content = {
-            "host": self.host,
-            "port": self.port,
-            "username": self.username,
-            "password": self.password,
-            "main_bp_label": self.main_bp_label,
-            "tor_bp_label": self.tor_bp_label,
-        }
-        return return_content
+        # return_content = {
+        #     "host": self.host,
+        #     "port": self.port,
+        #     "username": self.username,
+        #     "password": self.password,
+        #     "main_bp_label": self.main_bp_label,
+        #     "tor_bp_label": self.tor_bp_label,
+        # }
+        # return return_content
+        return self
 
-class GlobalStore:
-    apstra_server = None  #  ApstaServer
-    bp = {}  # main_bp, tor_bp
+class GlobalStore(BaseModel):
+    apstra_server: Any = None  #  ApstaServer
+    bp: Dict[str, Any] = {}  # main_bp, tor_bp (CkApstraBlueprint)
     # main_bp = None  # ApstaBlueprint
     # tor_bp = None  # ApstaBlueprint
-    tor_data = {}  # 
+    tor_data: dict = {}  # 
+    env_ini: EnvIni = EnvIni()
+    logger: Any = logging.getLogger("GlobalStore")  # logging.Logger
+    data: dict = {}
 
-    env_ini = EnvIni()
-    
-    logger = logging.getLogger("GlobalStore")
-    data = {
-    }
+    # access_switches: Any = None  # AccessSwitches
 
     @classmethod
     def get_blueprints(cls):
@@ -126,18 +132,19 @@ class GlobalStore:
         cls.logger.warning(f"get_data(): {key=} {cls.data.get(key)=}")
         return cls.data.get(key)
 
-    @classmethod
-    def update_env_ini(cls, data):        
-        cls.logger.warning(f"update_env_ini(): {data=}")
-        cls.env_ini = EnvIni(data)
+    def update_env_ini(self, data):  
+        self.logger.warning(f"update_env_ini(): {data=}")
+        self.env_ini.update(data)
         return
+    
+    def replace_env_ini(self, env_ini: EnvIni):
+        self.env_ini = env_ini
 
-    @classmethod
-    def login_server(cls, server: ServerItem) -> dict:
-        cls.logger.warning(f"login_server() {server=}")
-        cls.apstra_server = CkApstraSession(server.host, int(server.port), server.username, server.password)
-        cls.logger.warning(f"login_server(): {cls.apstra_server.__dict__}")
-        return { "version": cls.apstra_server.version }
+    def login_server(self, server: ServerItem) -> dict:
+        self.logger.warning(f"login_server() {server=}")
+        self.apstra_server = CkApstraSession(server.host, int(server.port), server.username, server.password)
+        self.logger.warning(f"login_server(): {self.apstra_server.__dict__}")
+        return { "version": self.apstra_server.version }
 
     @classmethod
     def logout_server(cls):
@@ -148,18 +155,17 @@ class GlobalStore:
         cls.apstra_server = None
         return
 
-    @classmethod
-    def login_blueprint(cls, blueprint: BlueprintItem):
-        cls.logger.warning(f"login_blueprint {blueprint=} {cls.apstra_server=}")
+    def login_blueprint(self, blueprint: BlueprintItem):
+        self.logger.warning(f"login_blueprint {blueprint=} {self.apstra_server=}")
         role = blueprint.role
         label = blueprint.label
-        bp = CkApstraBlueprint(cls.apstra_server, label)
-        cls.bp[role] = bp
-        cls.logger.warning(f"login_blueprint {bp=}")
+        bp = CkApstraBlueprint(self.apstra_server, label)
+        self.bp[role] = bp
+        self.logger.warning(f"login_blueprint {bp=}")
         id = bp.id
-        url = f"{cls.env_ini.get_url()}/#/blueprints/{id}/staged"
+        url = f"{self.env_ini.url}/#/blueprints/{id}/staged"
         data = { "id": id, "url": url, "label": label }
-        cls.logger.warning(f"login_blueprint() return: {data}")
+        self.logger.warning(f"login_blueprint() return: {data}")
         return data
 
     @classmethod
@@ -699,4 +705,4 @@ def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:
 
     return interface_vlan_table
 
-
+global_store = GlobalStore()

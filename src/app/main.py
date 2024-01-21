@@ -7,9 +7,9 @@ import uvicorn
 import os
 from pydantic import BaseModel
 
-from .ck_global import GlobalStore, ServerItem, BlueprintItem
+from .ck_global import ServerItem, BlueprintItem, global_store
 from .generic_systems import GenericSystems
-from .access_switches import AccessSwitches
+from .access_switches import access_switches
 from .virtual_networks import VirtualNetworks
 
 logger = logging.getLogger(__name__)
@@ -36,22 +36,22 @@ async def test(request: Request):
 async def upload_env_ini(file: UploadFile):
     file_content = await file.read()
     logging.warning(f"/upload_env_ini: {file.filename=} {file_content=}")
-    content = GlobalStore.env_ini.update(file_content)
-    logging.warning(f"/upload_env_ini: {GlobalStore.env_ini.__dict__}")
+    content = global_store.env_ini.update(file_content)
+    logging.warning(f"/upload_env_ini: {global_store.env_ini.__dict__}")
     return content
 
 @app.post("/update-env-ini")
 async def update_env_ini(server: ServerItem):
     logging.warning(f"/update-env-ini: {server=}")
-    GlobalStore.update_env_ini(server)
-    logging.warning(f"/update-env-ini: {GlobalStore.env_ini.__dict__}")
+    global_store.update_env_ini(server)
+    logging.warning(f"/update-env-ini: {global_store.env_ini.__dict__}")
     return server
 
 
 @app.post("/login-server")
 async def login_server(server: ServerItem):
     logging.warning(f"/login_server: {server=}")
-    version = GlobalStore.login_server(server)
+    version = global_store.login_server(server)
     return version
 
 @app.post("/logout-server")
@@ -64,7 +64,7 @@ async def logout_server():
 @app.post("/login-blueprint")
 async def login_blueprint(blueprint: BlueprintItem):
     logging.warning(f"/login_blueprint: begin {blueprint=}")
-    id = GlobalStore.login_blueprint(blueprint)
+    id = global_store.login_blueprint(blueprint)
     logging.warning(f"/login_blueprint: end {blueprint=}")
     return id
 
@@ -80,7 +80,7 @@ async def pull_data():
 @app.get("/update-access-switches-table")
 async def update_access_switches_table():
     logging.warning(f"/update_access_switches_table begin")
-    data = AccessSwitches.update_access_switches_table()
+    data = access_switches.update_access_switches_table()
     logging.warning(f"/update_access_switches_table end")
     return data
 
@@ -89,14 +89,14 @@ async def update_access_switches_table():
 @app.get("/update-generic-systems-table")
 async def update_generic_systems_table():
     logging.warning(f"/update_generic_systems_table begin")
-    data = GenericSystems.update_generic_systems_table()
+    data = access_switches.update_generic_systems_table()
     logging.warning(f"/update_generic_systems_table end")
     return data
 
 @app.get("/update-virtual-networks-data")
 async def update_virtual_networks_data():
     logging.warning(f"/update_virtual_networks_data begin")
-    data = AccessSwitches.update_virtual_networks_data()
+    data = access_switches.update_virtual_networks_data()
     logging.warning(f"/update_virtual_networks_data end")
     return data
 

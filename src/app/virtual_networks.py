@@ -1,6 +1,6 @@
 
 from pydantic import BaseModel
-from typing import List
+from typing import List, Dict, Any
 import logging
 
 from .access_switches import DataStateEnum
@@ -34,18 +34,20 @@ class _VirtualNetworkResponse(BaseModel):
     caption: str = ''
 
 
-class VirtualNetworks:
-    vns = {}  # vni: _VirtualNetwork
+class VirtualNetworks(BaseModel):
+    vns: Dict[int, _VirtualNetwork] = {}  # vni: _VirtualNetwork
+    main_bp: Any
+    tor_bp: Any
 
-    @classmethod
-    def update_virtual_networks_data(cls, main_bp, tor_bp):
-        # cls['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]
-        for vn in tor_bp.query("node('virtual_network', name='vn')"):
-            vni = vn['vn']['vn_id']
-            cls.vns[vni] = _VirtualNetwork(vni=vni)
+
+    def update_virtual_networks_data(self):
+        # cls['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]        
+        for vn_node in self.tor_bp.query("node('virtual_network', name='vn')"):
+            vni = vn_node['vn']['vn_id']
+            self.vns[vni] = _VirtualNetwork(vni=vni)
         response = _VirtualNetworkResponse()
         # logging.warning(f"update_virtual_networks_data {cls.vns=}")
-        response.values = [v.attr_n_value for k, v in cls.vns.items()]
-        response.caption = f"Virtual Networks ({len(VirtualNetworks.vns)})"
+        response.values = [v.attr_n_value for k, v in self.vns.items()]
+        response.caption = f"Virtual Networks ({len(self.vns)})"
         return response
 

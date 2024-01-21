@@ -1,8 +1,9 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict, Any, ClassVar
 import logging
 from enum import Enum, StrEnum, auto
 
+from ck_apstra_api.apstra_blueprint import CkEnum
 # TODO: consolidate
 class DataStateEnum(StrEnum):
     LOADED = 'done'
@@ -27,19 +28,25 @@ def get_data_or_default(data, label, new_value):
 
 
 class _Memberlink(BaseModel):
-    server_intf: Optional[str]
+    tags: List[str] = []
+    server_intf: str = ''
     switch: str
     switch_intf: str
+    main_id: str = ''   # main_id
 
     @property
     def tr(self) -> str:
         trs = [
+            f'<td data-cell="tags" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.tags}</td>',
             f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.server_intf}</td>',
             f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch}</td>',
             f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch_intf}</td>',
         ]
         return ''.join(trs)
 
+    def add_tag(self, tag):
+        if tag  not in self.tags:
+            self.tags.append(tag)
 
 class _GroupLink(BaseModel):
     ae_name: str  # the ae in the tor blueprint
@@ -49,7 +56,7 @@ class _GroupLink(BaseModel):
     untagged_vlan: Optional[int] = None
     new_cts: Optional[List[int]] = []  # the connectivity templates in main blueprint  
     new_ae_name: Optional[str] = None  # the ae in the main blueprint
-    links: List[_Memberlink] = []
+    links: Dict[str, _Memberlink] = {}  # <link id from tor>: _Memberlink
 
     @property
     def rowspan(self):
@@ -63,8 +70,10 @@ class _GroupLink(BaseModel):
             f'<td rowspan={self.rowspan} data-cell="speed" class="data-state speed" data-state="init">{self.speed}</td>',
         ])
         trs = []
-        for index, link in enumerate(self.links):
+        for index, link_id in enumerate(self.links):
+            link = self.links[link_id]
             if index == 0:
+                # breakpoint()
                 trs.append(row0_head + link.tr)
             else:
                 trs.append(link.tr)
@@ -76,7 +85,10 @@ class _GenericSystem(BaseModel):
     new_label: str = None  # the label in the main blueprint (renamed)
     new_id: Optional[str] = None  # the generic system id on main blueprint
     tbody_id: Optional[str] = None  # the id on the tbody element
-    group_links: List[_GroupLink] = []
+    group_links: Dict[str, _GroupLink] = {}  # <group link id or link id of tor>: _GroupLink
+
+    logger: Any = logging.getLogger('_GenericSystem')
+    tor_gs_label: str  # for renaming TODO: remove this
 
 
     def __init__(self, **kwargs):
@@ -86,7 +98,7 @@ class _GenericSystem(BaseModel):
         """
         old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
         # get the prefix from tor_name
-        prefix = GenericSystems.tor_gs[len('atl1tor-'):]
+        prefix = self.tor_gs_label[len('atl1tor-'):]
         for pattern in old_patterns:
             if self.label.startswith(pattern):
                 # replace the string with the prefix
@@ -113,7 +125,8 @@ class _GenericSystem(BaseModel):
 
     @property
     def rowspan(self):
-        return sum([x.rowspan for x in self.group_links])
+        # breakpoint()
+        return sum([v.rowspan for k, v in self.group_links.items()])
 
     def get_tbody(self, index) -> str:
         """
@@ -126,7 +139,7 @@ class _GenericSystem(BaseModel):
             f'<td rowspan={self.rowspan} data-cell="new_label" class="data-state new_label" data-state="init">{self.new_label}</td>',
         ])
         tbody_lines = []
-        for ae_link in self.group_links:
+        for k, ae_link in self.group_links.items():
             for links in ae_link.tr:
                 if len(tbody_lines):
                     tbody_lines.append(f'<tr>{links}</tr>')
@@ -196,8 +209,8 @@ class _GenericSystem(BaseModel):
             'new_systems': [],
         }
 
-        for ae_link in self.group_links:
-            for member_link in ae_link.links:
+        for ae_id, ae_link in self.group_links.items():
+            for member_id, member_link in ae_link.links.items():
                 switch_label = member_link.switch
                 switch_intf = member_link.switch_intf
                 # breakpoint()
@@ -332,24 +345,68 @@ class _GenericSystemResponse(BaseModel):
 class _AccessSwitch(BaseModel):
     label: str
     id: str
-class GenericSystems:
-    generic_systems = {}  # <tbody-id>: { GenericSystem }
-    main_servers = {}
-    tor_ae1 = None
-    leaf_gs = {'label': None, 'intfs': ['']*4}
-    tor_gs = None  # {'label': <>, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
-    access_switches = {}  # <label>: _AccessSwitch
 
-    @classmethod
-    def update_generic_systems_table(cls) -> dict:
+class LeafGS(BaseModel):
+    label: str = None
+    a_48: str = None
+    a_49: str = None
+    b_48: str = None
+    b_49: str = None
+
+class GenericSystems(BaseModel):
+    generic_systems: Dict[str, _GenericSystem] = {}  # <tbody-id>: { GenericSystem }
+    # main_servers = {}
+    # tor_ae1 = None
+    # leaf_gs: LeafGS = LeafGS()  # {'label': None, 'intfs': ['']*4}
+    # tor_gs = None  # {'label': <>, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
+    access_switches: Any = {}  # <label>: _AccessSwitch
+    logger: Any = logging.getLogger('GenericSystems')
+    # given by AccessSwitch
+    main_bp: Any
+    tor_bp: Any
+    tor_gs_label: str
+
+    @property
+    def access_switch_pair(self):
+        return sorted(self.access_switches)
+
+    @property
+    def leaf_gs(self) -> LeafGS:
+        #
+        # update leaf_gs (the generic system in TOR bp for the leaf)
+        #   to be used by AccessSwitch
+        #
+        the_data = LeafGS()
+        for tbody_id, server_data in self.generic_systems.items():
+            server_label = server_data.label
+            for ae_link_id, group_link in server_data.group_links.items():
+                # breakpoint()
+                if group_link.ae_name:
+                    for member_id, member_link in group_link.links.items():
+                        # breakpoint()
+                        if member_link.switch_intf in ['et-0/0/48', 'et-0/0/49']:
+                            the_data.label = server_label                            
+                            if member_link.switch.endswith(('a', 'c')):  # left tor
+                                if member_link.switch_intf == 'et-0/0/48':
+                                    the_data.a_48 = 'et-' + member_link.server_intf.split('-')[1]
+                                else:
+                                    the_data.a_49 = 'et-' + member_link.server_intf.split('-')[1]
+                            else:
+                                if member_link.switch_intf == 'et-0/0/48':
+                                    the_data.b_48 = 'et-' + member_link.server_intf.split('-')[1]
+                                else:
+                                    the_data.b_49 = 'et-' + member_link.server_intf.split('-')[1]
+        return the_data
+
+    def update_generic_systems_table(self) -> dict:
         """
         Called by main.py from SyncState
         Build generic_systems from tor_blueprint and return the data 
         """
         content = _GenericSystemResponse()
         index = 0
-        gs_count = len(cls.generic_systems)
-        for tbody_id, server_data in cls.generic_systems.items():
+        gs_count = len(self.generic_systems)
+        for tbody_id, server_data in self.generic_systems.items():
             index += 1
             # id = f"gs-{server_label}"
             content.values.append(_GenericSystemResponseItem(
@@ -361,97 +418,63 @@ class GenericSystems:
         content.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         return content
 
-    @classmethod
-    def migrate_generic_system(cls, tbody_id, main_bp, access_switches) -> dict:
+    def migrate_generic_system(self, tbody_id) -> dict:
         """
         """
-        for i in access_switches:
-            access_label = i[0]
-            access_id = i[1]['id']
-            # breakpoint()
-            cls.access_switches[access_label] = _AccessSwitch(label=access_label, id=access_id)
-        logging.warning(f"migrate_generic_system {tbody_id=} {access_switches=} {cls.access_switches=}")
-        data = cls.generic_systems[tbody_id].migrate(main_bp, cls.access_switches)
+        self.logger.warning(f"migrate_generic_system {tbody_id=}")
+        data = self.generic_systems[tbody_id].migrate(self.main_bp, self.access_switches)
         return {
             'done': True,
             'values': [],
             'data': data
         }
 
-
-    @classmethod
-    def pull_generic_systems(cls, main_bp, tor_bp, tor_gs):
-        cls.tor_gs = tor_gs
-        # load generic_systems
-        cls.pull_server_links(tor_bp)
-
-
-        # update leaf_gs (the generic system in TOR bp for the leaf)        
-        for tbody_id, server_data in cls.generic_systems.items():
-            server_label = server_data.label
-            # y = [x for server_label, server_data in cls.generic_systems.items() if server_data.group_links ]
-            for group_link in server_data.group_links:
-                if group_link.ae_name:
-                    for member_link in group_link.links:
-                        if member_link.switch_intf in ['et-0/0/48', 'et-0/0/49']:
-                            cls.leaf_gs['label'] = server_label
-                            if member_link.switch.endswith(('a', 'c')):  # left tor
-                                if member_link.switch_intf == 'et-0/0/48':
-                                    cls.leaf_gs['intfs'][0] = 'et-' + member_link.server_intf.split('-')[1]
-                                else:
-                                    cls.leaf_gs['intfs'][1] = 'et-' + member_link.server_intf.split('-')[1]
-                            else:
-                                logging.warning(f"pull_generic_systems {cls.leaf_gs=}")
-                                if member_link.switch_intf == 'et-0/0/48':
-                                    cls.leaf_gs['intfs'][2] = 'et-' + member_link.server_intf.split('-')[1]
-                                else:
-                                    cls.leaf_gs['intfs'][3] = 'et-' + member_link.server_intf.split('-')[1]
-
-
-    @classmethod
-    def pull_server_links(cls, the_bp) -> dict:
+    def pull_generic_systems(self):
         """
+        the 1st call
         Pull the generic systems data and rebuild generic_systems
         """
-        cls.generic_systems = {}
-
-        server_links_query = """
-            match(
-            node('system', system_type='server',  name='server')
-                .out().node('interface', if_type='ethernet', name='server_intf')
-                .out('link').node('link', name='link')
-                .in_('link').node('interface', name='switch_intf')
-                .in_('hosted_interfaces').node('system', system_type='switch', name='switch'),
-            optional(
-                node(name='switch_intf').in_().node('interface', name='ae')
-                ),
-            optional(
-                node(name='ae').in_().node('interface', name='evpn')
-                )
-            )
-            """
-        servers_link_nodes = the_bp.query(server_links_query, multiline=True)
+        self.generic_systems = {}
+        servers_link_nodes = self.tor_bp.get_switch_interface_nodes(self.access_switch_pair)
 
         for server_link in servers_link_nodes:
             # logging.warning(f"pull_server_links() {server_link=}")
-            server_label = server_link['server']['label']
+            server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             tbody_id = f"gs-{server_label}"
-            ae_name = server_link['ae']['if_name'] if server_link['ae'] else ''
-            speed = server_link['link']['speed']
-            switch = server_link['switch']['label']
-            switch_intf = server_link['switch_intf']['if_name']
-            server_intf = server_link['server_intf']['if_name']
+            link_id = server_link[CkEnum.LINK]['id']
+            ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
+            ae_id = server_link[CkEnum.AE_INTERFACE]['id'] if server_link[CkEnum.AE_INTERFACE] else link_id
+            speed = server_link[CkEnum.LINK]['speed']
+            switch = server_link[CkEnum.MEMBER_SWITCH]['label']
+            switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
+            server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or ''
+            # breakpoint()
+            # self.logger.warning(f"{server_link[CkEnum.TAG]=}, {type(server_link[CkEnum.TAG])=}")
+            tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
+            # tag = server_link[CkEnum.TAG]['tag']
 
             server_data = get_data_or_default(  # GenericSystem
-                cls.generic_systems, 
+                self.generic_systems, 
                 tbody_id,
                 _GenericSystem(
                     label = server_label,
+                    tor_gs_label=self.tor_gs_label,
                     # new_label = cls.new_label(server_label),
                 )
             )
-            server_data.get_ae(ae_name, speed).links.append(
+            ae_data = get_data_or_default(
+                server_data.group_links,
+                ae_id,
+                _GroupLink(ae_name=ae_name, speed=speed)
+            )
+            link_data = get_data_or_default(
+                ae_data.links,
+                link_id,
                 _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf)
             )
+            if tag:
+                link_data.add_tag(tag)
+            # breakpoint()
+
         return
 
