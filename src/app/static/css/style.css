@@ -1,15 +1,16 @@
 /* grid layout */
 .container {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto 1fr 1fr;
     grid-template-rows: 1fr min-content;
     grid-template-areas: 
-        "sidebar header"
-        "sidebar blueprint"
-        "sidebar access-switches"
-        "sidebar generic-systems"
-        "sidebar virtual-networks"
-        "footer footer"
+        "sidebar header header"
+        "sidebar main-blueprint tor-blueprint"
+        "sidebar main-access-switch tor-access-switch"
+        "sidebar generic-systems generic-systems"
+        "sidebar virtual-networks virtual-networks"
+        "footer footer footer";
+    row-gap: 2px;
 }
 
 .sidebar {
@@ -25,13 +26,28 @@
     background-color: #f5f5f5;
 }
 
-.blueprint {
-    grid-area: blueprint;
+.main-blueprint {
+    grid-area: main-blueprint;    
+    text-align: left;
+    border: solid 1px;
 }
 
-.access-switches {
-    grid-area: access-switches;
+.tor-blueprint {
+    grid-area: tor-blueprint;
+    text-align: left;
+    border: solid 1px;
 }
+
+.main-access-switch {
+    grid-area: main-access-switch;
+    border: solid 1px;
+}
+.tor-access-switch {
+    grid-area: tor-access-switch;
+    border: solid 1px;
+}
+
+
 
 .generic-systems {
     grid-area: generic-systems;

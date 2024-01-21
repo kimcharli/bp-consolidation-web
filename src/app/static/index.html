@@ -83,107 +83,95 @@
             </table>
         </header>
 
-        <section class="blueprint" style="display: table-cell; width: 100%;">
-            <!-- apstra-server></apstra-server -->
 
-            <!-- access-switches></access-switches -->
-            <table>
-                <tr>
-                    <th>Main Blueprint</th>
-                    <th>ToR Blueprint</th>
-                </tr>
-                <tr>
-                    <td id="main_bp" class="blueprint data-state" data-id data-state="init">M</td>
-                    <td id="tor_bp" class="blueprint data-state" data-id data-state="init">T</td>
-                </tr>
-            </table>
-        </section>
+        <div id="main_bp" class="main-blueprint data-state" data-id data-state="init">
+            M
+        </div>
 
-        <section class="access-switches">
-            <table
-                <tr>
-                    <td>
-                        <svg viewBox="0 0 200 75" width="400px" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <rect id="leaf" width="90" height="25" ry="5" />
-                            <rect id="access-gs" width="200" height="25" ry="5" />
-                            <rect id="access" width="90" height="25" ry="5" />
-                            </defs>
-                    
-                        <use id="leaf1-box" x="0" y="0" href="#leaf" class="data-state" data-state="init" />
-                        <text id="leaf1-label" x="50" y="12" text-anchor="middle" alignment-baseline="central" class="data-state" data-state="init">leaf1</text>
-                    
-                        <use id="leaf2-box" x="110" y="0" href="#leaf" class="data-state" data-state="init"/>
-                        <text id="leaf2-label" x="160" y="12" text-anchor="middle" alignment-baseline="central">leaf2</text>
+
+        <div id="tor_bp" class="tor-blueprint data-state" data-id data-state="init">
+            T
+        </div>
+
+
+        <div class="main-access-switch">
+            <svg viewBox="0 0 200 75" width="400px" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <rect id="leaf" width="90" height="25" ry="5" />
+                    <rect id="access-gs" width="200" height="25" ry="5" />
+                    <rect id="access" width="90" height="25" ry="5" />
+                    </defs>
+                <use id="leaf1-box" x="0" y="0" href="#leaf" class="data-state" data-state="init" />
+                <text id="leaf1-label" x="50" y="12" text-anchor="middle" alignment-baseline="central" class="data-state" data-state="init">leaf1</text>
             
-                        <use id="access-gs-box" x="0" y="50" href="#access-gs" class="data-state" data-state="init" />
-                        <text id="access-gs-label" x="100" y="62" text-anchor="middle" alignment-baseline="central">access-gs</text>
+                <use id="leaf2-box" x="110" y="0" href="#leaf" class="data-state" data-state="init"/>
+                <text id="leaf2-label" x="160" y="12" text-anchor="middle" alignment-baseline="central">leaf2</text>
+
+                <use id="access-gs-box" x="0" y="50" href="#access-gs" class="data-state" data-state="init" />
+                <text id="access-gs-label" x="100" y="62" text-anchor="middle" alignment-baseline="central">access-gs</text>
+
+                <use id="access1-box" x="0" y="50" href="#access" visibility="hidden" class="data-state" data-state="init" />
+                <text id="access1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central" visibility="hidden">access1</text>
             
-                        <use id="access1-box" x="0" y="50" href="#access" visibility="hidden" class="data-state" data-state="init" />
-                        <text id="access1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central" visibility="hidden">access1</text>
-                    
-                        <use id="access2-box" x="110" y="50" href="#access" visibility="hidden" class="data-state" data-state="init" />
-                        <text id="access2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central" visibility="hidden">access2</text>
+                <use id="access2-box" x="110" y="50" href="#access" visibility="hidden" class="data-state" data-state="init" />
+                <text id="access2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central" visibility="hidden">access2</text>
+
+                <line x1="30" y1="25" x2="30" y2="50" />
+                <line x1="60" y1="25" x2="140" y2="50" />
+                <line x1="140" y1="25" x2="60" y2="50" />
+                <line x1="170" y1="25" x2="170" y2="50" />
+                <line x1="90" y1="62" x2="110" y2="62" visibility="hidden" />
+                <text class="interface-name" x="100" y="60" visibility="hidden">et-0/0/53</text>
+
+                <text id="leaf1-intf1" class="interface-name" x="25" y="22">et-0/0/20</text>
+                <text id="leaf1-intf2" class="interface-name" x="65" y="22">et-0/0/21</text>
+                <text id="leaf2-intf1" class="interface-name" x="135" y="22">et-0/0/20</text>
+                <text id="leaf2-intf2" class="interface-name" x="175" y="22">et-0/0/21</text>
+
+                <text id="access1-intf1" class="interface-name" x="25" y="53">et-0/0/48</text>
+                <text id="access1-intf2" class="interface-name" x="65" y="53">et-0/0/49</text>
+                <text id="access2-intf1" class="interface-name" x="135" y="53">et-0/0/48</text>
+                <text id="access2-intf2" class="interface-name" x="175" y="53">et-0/0/49</text>
+            </svg>
+        </div>
+
+
+        <div class="tor-access-switch">
+            <svg viewBox="0 0 200 75" width="400px" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <rect id="access" width="90" height="25" ry="5" />
+                    <rect id="leaf-gs" width="200" height="25" ry="5" />
+                </defs>
             
-                        <line x1="30" y1="25" x2="30" y2="50" />
-                        <line x1="60" y1="25" x2="140" y2="50" />
-                        <line x1="140" y1="25" x2="60" y2="50" />
-                        <line x1="170" y1="25" x2="170" y2="50" />
-                        <line x1="90" y1="62" x2="110" y2="62" visibility="hidden" />
-                        <text class="interface-name" x="100" y="60" visibility="hidden">et-0/0/53</text>
+                <use id="leaf-gs-box" x="0" y="0" href="#leaf-gs" class="data-state" data-state="init"/>
+                <text id="leaf-gs-label" x="100" y="12" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
             
-                        <text id="leaf1-intf1" class="interface-name" x="25" y="22">et-0/0/20</text>
-                        <text id="leaf1-intf2" class="interface-name" x="65" y="22">et-0/0/21</text>
-                        <text id="leaf2-intf1" class="interface-name" x="135" y="22">et-0/0/20</text>
-                        <text id="leaf2-intf2" class="interface-name" x="175" y="22">et-0/0/21</text>
+                <use id="tor1-box" x="0" y="50" href="#access" class="data-state" data-state="init" />
+                <text id="tor1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central">leaf1</text>
             
-                        <text id="access1-intf1" class="interface-name" x="25" y="53">et-0/0/48</text>
-                        <text id="access1-intf2" class="interface-name" x="65" y="53">et-0/0/49</text>
-                        <text id="access2-intf1" class="interface-name" x="135" y="53">et-0/0/48</text>
-                        <text id="access2-intf2" class="interface-name" x="175" y="53">et-0/0/49</text>
+                <use id="tor2-box" x="110" y="50" href="#access" class="data-state" data-state="init"/>
+                <text id="tor2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central">leaf2</text>
             
-                        </svg>
-            
-                    </td>
-                    <td>
-                        <svg viewBox="0 0 200 75" width="400px" xmlns="http://www.w3.org/2000/svg">
-                            <defs>
-                                <rect id="access" width="90" height="25" ry="5" />
-                                <rect id="leaf-gs" width="200" height="25" ry="5" />
-                            </defs>
-                        
-                            <use id="leaf-gs-box" x="0" y="0" href="#leaf-gs" class="data-state" data-state="init"/>
-                            <text id="leaf-gs-label" x="100" y="12" text-anchor="middle" alignment-baseline="central">leaf-gs</text>
-                        
-                            <use id="tor1-box" x="0" y="50" href="#access" class="data-state" data-state="init" />
-                            <text id="tor1-label" x="50" y="62" text-anchor="middle" alignment-baseline="central">leaf1</text>
-                        
-                            <use id="tor2-box" x="110" y="50" href="#access" class="data-state" data-state="init"/>
-                            <text id="tor2-label" x="160" y="62" text-anchor="middle" alignment-baseline="central">leaf2</text>
-                        
-                            <line x1="30" y1="25" x2="30" y2="50" />
-                            <line x1="60" y1="25" x2="140" y2="50" />
-                            <line x1="140" y1="25" x2="60" y2="50" />
-                            <line x1="170" y1="25" x2="170" y2="50" />
-                            <line x1="90" y1="62" x2="110" y2="62" />
-            
-                            <text id="leafgs1-intf1" class="interface-name" x="25" y="22">et-0/0/20</text>
-                            <text id="leafgs1-intf2" class="interface-name" x="65" y="22">et-0/0/21</text>
-                            <text id="leafgs2-intf1" class="interface-name" x="135" y="22">et-0/0/20</text>
-                            <text id="leafgs2-intf2" class="interface-name" x="175" y="22">et-0/0/21</text>
-                
-                            <text class="interface-name" x="100" y="60">et-0/0/53</text>
-            
-                            <text id="access1-intf1" class="interface-name" x="25" y="53">et-0/0/48</text>
-                            <text id="access1-intf2" class="interface-name" x="65" y="53">et-0/0/49</text>
-                            <text id="access2-intf1" class="interface-name" x="135" y="53">et-0/0/48</text>
-                            <text id="access2-intf2" class="interface-name" x="175" y="53">et-0/0/49</text>
-                
-                        </svg>
-                    </td>
-                </tr>
-            </table>
-        </section>
+                <line x1="30" y1="25" x2="30" y2="50" />
+                <line x1="60" y1="25" x2="140" y2="50" />
+                <line x1="140" y1="25" x2="60" y2="50" />
+                <line x1="170" y1="25" x2="170" y2="50" />
+                <line x1="90" y1="62" x2="110" y2="62" />
+
+                <text id="leafgs1-intf1" class="interface-name" x="25" y="22">et-0/0/20</text>
+                <text id="leafgs1-intf2" class="interface-name" x="65" y="22">et-0/0/21</text>
+                <text id="leafgs2-intf1" class="interface-name" x="135" y="22">et-0/0/20</text>
+                <text id="leafgs2-intf2" class="interface-name" x="175" y="22">et-0/0/21</text>
+    
+                <text class="interface-name" x="100" y="60">et-0/0/53</text>
+
+                <text id="access1-intf1" class="interface-name" x="25" y="53">et-0/0/48</text>
+                <text id="access1-intf2" class="interface-name" x="65" y="53">et-0/0/49</text>
+                <text id="access2-intf1" class="interface-name" x="135" y="53">et-0/0/48</text>
+                <text id="access2-intf2" class="interface-name" x="175" y="53">et-0/0/49</text>
+    
+            </svg>
+        </div>
 
         <section class="generic-systems">
 
