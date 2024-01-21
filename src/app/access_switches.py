@@ -125,7 +125,7 @@ class AccessSwitches(BaseModel):
     access_switches: Dict[str, AccessSwitch] = {}  # [('atl1tor-r5r15a', {'label': 'atl1tor-r5r15a'}), ('atl1tor-r5r15b', {'label': 'atl1tor-r5r15b'})]
     tor_gs: TorGS = TorGS(label='')  # {'label': None, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
     leaf_gs: LeafGS = None  # = {'intfs': [None] * 4}  #{'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
-    generic_systems: Any = None
+    generic_systems_data: Any = None
     leaf_switches: Dict[str, LeafSwitch] = None
     logger: Any = logging.getLogger("AccessSwitches") 
     virtual_networks: Any = None
@@ -146,6 +146,12 @@ class AccessSwitches(BaseModel):
     def tor_bp(self):
         return global_store.bp['tor_bp']
 
+    @property
+    def generic_systems(self):
+        if self.generic_systems_data is None:
+            self.generic_systems_data = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, access_switches=self.access_switches, tor_gs_label=self.tor_gs.label)
+        return self.generic_systems_data
+
     @classmethod
     def load_id_element(cls, id, value):
         return _AccessSwitchResponseItem(id=id, value=value, state=DataStateEnum.LOADED, fill='red')
@@ -157,14 +163,10 @@ class AccessSwitches(BaseModel):
         return data
 
     def migrate_generic_system(self, label):
-        if self.generic_systems is None:
-            self.generic_systems = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, access_switches=self.access_switches, tor_gs_label=self.tor_gs.label)
         data = self.generic_systems.migrate_generic_system(label)
         return data
 
     def update_generic_systems_table(self):
-        if self.generic_systems is None:
-            self.generic_systems = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, access_switches=self.access_switches, tor_gs_label=self.tor_gs.label)
         data = self.generic_systems.update_generic_systems_table()
         return data
 
@@ -218,8 +220,6 @@ class AccessSwitches(BaseModel):
         #
         # build generic systems
         # 
-        if self.generic_systems is None:
-            self.generic_systems = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, access_switches=self.access_switches, tor_gs_label=self.tor_gs.label)
         self.generic_systems.pull_generic_systems()
 
         self.leaf_gs = self.generic_systems.leaf_gs

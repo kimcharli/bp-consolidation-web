@@ -88,31 +88,31 @@ class _GenericSystem(BaseModel):
     group_links: Dict[str, _GroupLink] = {}  # <group link id or link id of tor>: _GroupLink
 
     logger: Any = logging.getLogger('_GenericSystem')
-    tor_gs_label: str  # for renaming TODO: remove this
+    # tor_gs_label: str  # for renaming TODO: remove this
 
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        """
-        set new label from old label
-        """
-        old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
-        # get the prefix from tor_name
-        prefix = self.tor_gs_label[len('atl1tor-'):]
-        for pattern in old_patterns:
-            if self.label.startswith(pattern):
-                # replace the string with the prefix
-                self.new_label = f"{prefix}-{self.label[len(pattern):]}"
-                return
-        # it doesn't starts with the patterns. See if it is too long to prefix
-        max_len = 32
-        if ( len(self.label) + len(prefix) + 1 ) > max_len:
-            # TODO: too long. potential of conflict
-            self.new_label = self.label
-            return
-        # good to just prefix
-        self.new_label = f"{prefix}-{self.label}"
-        return
+    # def __init__(self, **kwargs):
+    #     super().__init__(**kwargs)
+    #     """
+    #     set new label from old label
+    #     """
+    #     old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
+    #     # get the prefix from tor_name
+    #     prefix = self.tor_gs_label[len('atl1tor-'):]
+    #     for pattern in old_patterns:
+    #         if self.label.startswith(pattern):
+    #             # replace the string with the prefix
+    #             self.new_label = f"{prefix}-{self.label[len(pattern):]}"
+    #             return
+    #     # it doesn't starts with the patterns. See if it is too long to prefix
+    #     max_len = 32
+    #     if ( len(self.label) + len(prefix) + 1 ) > max_len:
+    #         # TODO: too long. potential of conflict
+    #         self.new_label = self.label
+    #         return
+    #     # good to just prefix
+    #     self.new_label = f"{prefix}-{self.label}"
+    #     return
 
 
     def get_ae(self, ae_name, speed):
@@ -373,7 +373,7 @@ class GenericSystems(BaseModel):
     @property
     def leaf_gs(self) -> LeafGS:
         #
-        # update leaf_gs (the generic system in TOR bp for the leaf)
+        # get leaf_gs (the generic system in TOR bp for the leaf)
         #   to be used by AccessSwitch
         #
         the_data = LeafGS()
@@ -434,11 +434,30 @@ class GenericSystems(BaseModel):
         the 1st call
         Pull the generic systems data and rebuild generic_systems
         """
-        self.generic_systems = {}
-        servers_link_nodes = self.tor_bp.get_switch_interface_nodes(self.access_switch_pair)
+        generic_systems = {}
 
-        for server_link in servers_link_nodes:
-            # logging.warning(f"pull_server_links() {server_link=}")
+        # build generic_systems data from tor_bp
+        for server_link in self.tor_bp.get_switch_interface_nodes(self.access_switch_pair):
+            server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
+            tbody_id = f"gs-{server_label}"
+            link_id = server_link[CkEnum.LINK]['id']
+            ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
+            ae_id = server_link[CkEnum.AE_INTERFACE]['id'] if server_link[CkEnum.AE_INTERFACE] else link_id
+            speed = server_link[CkEnum.LINK]['speed']
+            switch = server_link[CkEnum.MEMBER_SWITCH]['label']
+            switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
+            server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or ''
+            tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
+
+            server_data = generic_systems.setdefault(tbody_id, _GenericSystem(label=server_label, new_label=self.rename_label(server_label)))
+            ae_data = server_data.group_links.setdefault(ae_id, _GroupLink(ae_name=ae_name, speed=speed))
+            link_data = ae_data.links.setdefault(link_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
+            if tag:
+                link_data.add_tag(tag)
+            # breakpoint()
+        self.generic_systems = generic_systems
+
+        for server_link in self.main_bp.get_switch_interface_nodes(self.access_switch_pair):
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             tbody_id = f"gs-{server_label}"
             link_id = server_link[CkEnum.LINK]['id']
@@ -453,28 +472,45 @@ class GenericSystems(BaseModel):
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
             # tag = server_link[CkEnum.TAG]['tag']
 
-            server_data = get_data_or_default(  # GenericSystem
-                self.generic_systems, 
-                tbody_id,
-                _GenericSystem(
-                    label = server_label,
-                    tor_gs_label=self.tor_gs_label,
-                    # new_label = cls.new_label(server_label),
-                )
-            )
-            ae_data = get_data_or_default(
-                server_data.group_links,
-                ae_id,
-                _GroupLink(ae_name=ae_name, speed=speed)
-            )
-            link_data = get_data_or_default(
-                ae_data.links,
-                link_id,
-                _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf)
-            )
-            if tag:
-                link_data.add_tag(tag)
-            # breakpoint()
-
+            # server_data = get_data_or_default(  # GenericSystem
+            #     self.generic_systems, 
+            #     tbody_id,
+            #     _GenericSystem(
+            #         label = server_label,
+            #         tor_gs_label=self.tor_gs_label,
+            #         # new_label = cls.new_label(server_label),
+            #     )
+            # )
+            # ae_data = get_data_or_default(
+            #     server_data.group_links,
+            #     ae_id,
+            #     _GroupLink(ae_name=ae_name, speed=speed)
+            # )
+            # link_data = get_data_or_default(
+            #     ae_data.links,
+            #     link_id,
+            #     _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf)
+            # )
+            # if tag:
+            #     link_data.add_tag(tag)
         return
 
+    def rename_label(self, old_label):
+        """
+        Return new label of the generic system from the old label and tor name
+        This is to avoid duplicate names which was created by old tor_bp
+        """
+        old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
+        # self.logger.warning(f"rename_label() {old_label=} {self.tor_gs_label=}")
+        prefix = self.tor_gs_label[len('atl1tor-'):]
+        for pattern in old_patterns:
+            if old_label.startswith(pattern):
+                # replace the string with the prefix
+                return f"{prefix}-{old_label[len(pattern):]}"
+        # it doesn't starts with the patterns. See if it is too long to prefix
+        max_len = 32
+        if ( len(old_label) + len(prefix) + 1 ) > max_len:
+            # TODO: too long. potential of conflict
+            return old_label
+        # good to just prefix
+        return f"{prefix}-{old_label}"
