@@ -32,14 +32,14 @@ class _Memberlink(BaseModel):
     new_tags: List[str] = []
     switch: str
     switch_intf: str
-    server_intf: str = None
-    new_server_intf: str = None
+    server_intf: Optional[str] = None
+    new_server_intf: Optional[str] = None
     main_id: str = ''   # main_id
 
     @property
     def tr(self) -> str:
         trs = []
-        if sorted(self.tags) == sorted(self.new_tags):
+        if self.main_id and sorted(self.tags) == sorted(self.new_tags):
             trs.append(f'<td data-cell="tags" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.tags}</td>')
         else:
             trs.append(f'<td data-cell="tags" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.tags}</td>')
@@ -47,9 +47,12 @@ class _Memberlink(BaseModel):
             trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.server_intf}</td>')
         else:
             trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.server_intf}</td>')
-        
-        trs.append(f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch}</td>')
-        trs.append(f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch_intf}</td>')
+        if self.main_id:
+            trs.append(f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.switch}</td>')
+            trs.append(f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.switch_intf}</td>')
+        else:
+            trs.append(f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch}</td>')
+            trs.append(f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch_intf}</td>')
         return ''.join(trs)
 
     def add_tag(self, tag):
@@ -450,7 +453,7 @@ class GenericSystems(BaseModel):
             speed = server_link[CkEnum.LINK]['speed']
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
-            server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or ''
+            server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or None
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
 
             server_data = generic_systems.setdefault(tbody_id, _GenericSystem(label=server_label, new_label=self.rename_label(server_label)))
@@ -471,7 +474,7 @@ class GenericSystems(BaseModel):
             speed = server_link[CkEnum.LINK]['speed']
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
-            server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or ''
+            server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or None
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
 
             data_from_tor = self.generic_systems[tbody_id]
