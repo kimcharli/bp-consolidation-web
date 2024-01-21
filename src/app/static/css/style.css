@@ -30,12 +30,21 @@
     grid-area: main-blueprint;    
     text-align: left;
     border: solid 1px;
+    
+}
+.main-blueprint::before {
+    content: "Main Blueprint: ";
+    font-weight: bold;
 }
 
 .tor-blueprint {
     grid-area: tor-blueprint;
     text-align: left;
     border: solid 1px;
+}
+.tor-blueprint::before {
+    content: "TOR Blueprint: ";
+    font-weight: bold;
 }
 
 .main-access-switch {
@@ -46,8 +55,6 @@
     grid-area: tor-access-switch;
     border: solid 1px;
 }
-
-
 
 .generic-systems {
     grid-area: generic-systems;
