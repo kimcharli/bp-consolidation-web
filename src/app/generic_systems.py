@@ -29,19 +29,27 @@ def get_data_or_default(data, label, new_value):
 
 class _Memberlink(BaseModel):
     tags: List[str] = []
-    server_intf: str = ''
+    new_tags: List[str] = []
     switch: str
     switch_intf: str
+    server_intf: str = None
+    new_server_intf: str = None
     main_id: str = ''   # main_id
 
     @property
     def tr(self) -> str:
-        trs = [
-            f'<td data-cell="tags" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.tags}</td>',
-            f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.server_intf}</td>',
-            f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch}</td>',
-            f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch_intf}</td>',
-        ]
+        trs = []
+        if sorted(self.tags) == sorted(self.new_tags):
+            trs.append(f'<td data-cell="tags" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.tags}</td>')
+        else:
+            trs.append(f'<td data-cell="tags" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.tags}</td>')
+        if self.server_intf == self.new_server_intf:
+            trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.server_intf}</td>')
+        else:
+            trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.server_intf}</td>')
+        
+        trs.append(f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch}</td>')
+        trs.append(f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch_intf}</td>')
         return ''.join(trs)
 
     def add_tag(self, tag):
@@ -56,6 +64,7 @@ class _GroupLink(BaseModel):
     untagged_vlan: Optional[int] = None
     new_cts: Optional[List[int]] = []  # the connectivity templates in main blueprint  
     new_ae_name: Optional[str] = None  # the ae in the main blueprint
+    new_speed: str = None
     links: Dict[str, _Memberlink] = {}  # <link id from tor>: _Memberlink
 
     @property
@@ -64,11 +73,22 @@ class _GroupLink(BaseModel):
 
     @property
     def tr(self) -> list:
-        row0_head = ''.join([
-            f'<td rowspan={self.rowspan} data-cell="ae" class="data-state ae" data-state="init">{self.ae_name}</td>',
-            f'<td rowspan={self.rowspan} data-cell="cts" class="data-state cts" data-state="init">{self.cts}</td>',
-            f'<td rowspan={self.rowspan} data-cell="speed" class="data-state speed" data-state="init">{self.speed}</td>',
-        ])
+        row0_head_list = []
+        if self.ae_name == self.new_ae_name:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.ae_name}</td>')
+        else:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.ae_name}</td>')
+        row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="cts" class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.cts}</td>')
+        if self.speed == self.new_speed:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="speed" class="{DataStateEnum.DATA_STATE} speed" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.speed}</td>')
+        else:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="speed" class="{DataStateEnum.DATA_STATE} speed" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.speed}</td>')
+        # row0_head = ''.join([
+        #     f'<td rowspan={self.rowspan} data-cell="ae" class="data-state ae" data-state="init">{self.ae_name}</td>',
+        #     f'<td rowspan={self.rowspan} data-cell="cts" class="data-state cts" data-state="init">{self.cts}</td>',
+        #     f'<td rowspan={self.rowspan} data-cell="speed" class="data-state speed" data-state="{DataStateEnum.INIT}">{self.speed}</td>',
+        # ])
+        row0_head = ''.join(row0_head_list)
         trs = []
         for index, link_id in enumerate(self.links):
             link = self.links[link_id]
@@ -83,37 +103,11 @@ class _GroupLink(BaseModel):
 class _GenericSystem(BaseModel):
     label: str  # the label in the tor blueprint
     new_label: str = None  # the label in the main blueprint (renamed)
-    new_id: Optional[str] = None  # the generic system id on main blueprint
-    tbody_id: Optional[str] = None  # the id on the tbody element
+    new_id: str = None  # the generic system id on main blueprint
+    tbody_id: str = None  # the id on the tbody element
     group_links: Dict[str, _GroupLink] = {}  # <group link id or link id of tor>: _GroupLink
 
     logger: Any = logging.getLogger('_GenericSystem')
-    # tor_gs_label: str  # for renaming TODO: remove this
-
-
-    # def __init__(self, **kwargs):
-    #     super().__init__(**kwargs)
-    #     """
-    #     set new label from old label
-    #     """
-    #     old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
-    #     # get the prefix from tor_name
-    #     prefix = self.tor_gs_label[len('atl1tor-'):]
-    #     for pattern in old_patterns:
-    #         if self.label.startswith(pattern):
-    #             # replace the string with the prefix
-    #             self.new_label = f"{prefix}-{self.label[len(pattern):]}"
-    #             return
-    #     # it doesn't starts with the patterns. See if it is too long to prefix
-    #     max_len = 32
-    #     if ( len(self.label) + len(prefix) + 1 ) > max_len:
-    #         # TODO: too long. potential of conflict
-    #         self.new_label = self.label
-    #         return
-    #     # good to just prefix
-    #     self.new_label = f"{prefix}-{self.label}"
-    #     return
-
 
     def get_ae(self, ae_name, speed):
         found_ae = [x for x in self.group_links if x.ae_name == ae_name]
@@ -133,11 +127,20 @@ class _GenericSystem(BaseModel):
         Return the tbody innerHTML
         """
         # logging.warning(f"_GenericSystem:get_tbody() begin {self=}")
-        row0_head = ''.join([
-            f'<td rowspan={self.rowspan}>{index}</td>'
-            f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>',
-            f'<td rowspan={self.rowspan} data-cell="new_label" class="data-state new_label" data-state="init">{self.new_label}</td>',
-        ])
+        row0_head_list = []
+        row0_head_list.append(f'<td rowspan={self.rowspan}>{index}</td>')
+        row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>')
+        if self.new_id:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.new_label}</td>')
+        else:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.new_label}</td>')
+        row0_head = ''.join(row0_head_list)       
+
+        # row0_head = ''.join([
+        #     f'<td rowspan={self.rowspan}>{index}</td>'
+        #     f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>',
+        #     f'<td rowspan={self.rowspan} data-cell="new_label" class="data-state new_label" data-state="init">{self.new_label}</td>',
+        # ])
         tbody_lines = []
         for k, ae_link in self.group_links.items():
             for links in ae_link.tr:
@@ -439,7 +442,8 @@ class GenericSystems(BaseModel):
         # build generic_systems data from tor_bp
         for server_link in self.tor_bp.get_switch_interface_nodes(self.access_switch_pair):
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
-            tbody_id = f"gs-{server_label}"
+            new_label = self.rename_label(server_label)
+            tbody_id = f"gs-{new_label}"  # to be useful in main_bp
             link_id = server_link[CkEnum.LINK]['id']
             ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
             ae_id = server_link[CkEnum.AE_INTERFACE]['id'] if server_link[CkEnum.AE_INTERFACE] else link_id
@@ -454,12 +458,13 @@ class GenericSystems(BaseModel):
             link_data = ae_data.links.setdefault(link_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
             if tag:
                 link_data.add_tag(tag)
-            # breakpoint()
         self.generic_systems = generic_systems
 
+        # update generic_systems from main_bp
         for server_link in self.main_bp.get_switch_interface_nodes(self.access_switch_pair):
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
-            tbody_id = f"gs-{server_label}"
+            tbody_id = f"gs-{server_label}"  # the server_label would match new_label
+            new_id = server_link[CkEnum.GENERIC_SYSTEM]['id']
             link_id = server_link[CkEnum.LINK]['id']
             ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
             ae_id = server_link[CkEnum.AE_INTERFACE]['id'] if server_link[CkEnum.AE_INTERFACE] else link_id
@@ -467,10 +472,23 @@ class GenericSystems(BaseModel):
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
             server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or ''
-            # breakpoint()
-            # self.logger.warning(f"{server_link[CkEnum.TAG]=}, {type(server_link[CkEnum.TAG])=}")
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
-            # tag = server_link[CkEnum.TAG]['tag']
+
+            data_from_tor = self.generic_systems[tbody_id]
+            data_from_tor.new_id = new_id
+            # search matching member link
+            looking = True
+            for old_ae_id, ae_data in data_from_tor.group_links.items():
+                for old_link_id, link_data in ae_data.links.items():
+                    if link_data.switch == switch and link_data.switch_intf == switch_intf:
+                        # found the matching link
+                        if tag:
+                            link_data.add_tag(tag)
+                        looking = False
+                        link_data.main_id = link_id
+                        ae_data.new_ae_name = ae_name
+                        ae_data.new_speed = speed
+
 
             # server_data = get_data_or_default(  # GenericSystem
             #     self.generic_systems, 
