@@ -247,21 +247,15 @@ class MigrateGenericSystemsButton {
         const srcButton = event.srcElement || event.target;
         Array.from(document.getElementById('generic-systems-table').getElementsByTagName('tbody'))
         .forEach(tbody => {
-            console.log('tbody=', tbody);
-            if (tbody.getAttribute('data-new-id') !== '') {
-                return {
-                    values: [],
-                    done: false,
-                }
-            }
-            console.log('trying')
+            const tbody_id = tbody.getAttribute('id');
+            console.log('migrate generic system begin - tbody_id', tbody_id)
             fetch('/migrate-generic-system', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    tbody_id: tbody.getAttribute('id'),
+                    tbody_id: tbody_id,
                 })
             })
             .then(response => response.json())
@@ -274,14 +268,8 @@ class MigrateGenericSystemsButton {
                     ]
                     caption: the caption of the table
                 */
-                console.log('handleMigrateGenericSystemsClick data=', data)
-                data.values.forEach(element => {
-                    const tbody = document.getElementById(element.id);
-                    tbody.innerHTML = element.value;
-                });
-                if (data.done) {
-                    srcButton.dataset.state="done";  
-                }
+                console.log('migrate generic system data for', tbody_id, '=', data)
+                tbody.innerHTML = data.value;
             })
             .catch(error => {
                 console.log('handleMigrateAccessSwitchesClick - Error:', error);
@@ -289,7 +277,7 @@ class MigrateGenericSystemsButton {
             });
             tbody.getElementsByClassName('new_label')[0].dataset.state="loading";
         })
-        srcButton.dataset.state="loading";        
+        // srcButton.dataset.state="loading";        
         
     }
 }

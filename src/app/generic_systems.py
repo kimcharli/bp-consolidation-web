@@ -104,11 +104,12 @@ class _GroupLink(BaseModel):
 
 
 class _GenericSystem(BaseModel):
+    index: int = 0
     label: str  # the label in the tor blueprint
     new_label: str = None  # the label in the main blueprint (renamed)
     new_id: str = None  # the generic system id on main blueprint
     tbody_id: str = None  # the id on the tbody element
-    group_links: Dict[str, _GroupLink] = {}  # <group link id or link id of tor>: _GroupLink
+    group_links: Dict[str, _GroupLink] = {}  # <group link id or link id of tor>: _GroupLink    
 
     logger: Any = logging.getLogger('_GenericSystem')
 
@@ -125,13 +126,13 @@ class _GenericSystem(BaseModel):
         # breakpoint()
         return sum([v.rowspan for k, v in self.group_links.items()])
 
-    def get_tbody(self, index) -> str:
+    def get_tbody(self) -> str:
         """
         Return the tbody innerHTML
         """
         # logging.warning(f"_GenericSystem:get_tbody() begin {self=}")
         row0_head_list = []
-        row0_head_list.append(f'<td rowspan={self.rowspan}>{index}</td>')
+        row0_head_list.append(f'<td rowspan={self.rowspan}>{self.index}</td>')
         row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>')
         if self.new_id:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.new_label}</td>')
@@ -156,12 +157,16 @@ class _GenericSystem(BaseModel):
     def migrate(self, main_bp, access_switches) -> dict:
         """
         Return:
-            id: tbody-id
+            new_id: new_id
             value: get_tbody()
+            caption: caption
         """
-        logging.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
-        if self.new_id:
-            return {}
+        self.logger.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
+        return {
+            'new_id': self.new_id,  # TODO: no need?
+            'value': self.get_tbody(),
+            'caption': None # TODO: later
+        }
         """
         Create new generic systems in the main blueprint based on the generic systems in the TOR blueprint. 
             <generic_system_label>:
@@ -410,17 +415,13 @@ class GenericSystems(BaseModel):
         Build generic_systems from tor_blueprint and return the data 
         """
         content = _GenericSystemResponse()
-        index = 0
         gs_count = len(self.generic_systems)
         for tbody_id, server_data in self.generic_systems.items():
-            index += 1
-            # id = f"gs-{server_label}"
             content.values.append(_GenericSystemResponseItem(
                 id=tbody_id,
                 newId='',
-                value=server_data.get_tbody(index)
+                value=server_data.get_tbody()
                 ))
-        # content['caption'] = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         content.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         return content
 
@@ -429,11 +430,7 @@ class GenericSystems(BaseModel):
         """
         self.logger.warning(f"migrate_generic_system {tbody_id=}")
         data = self.generic_systems[tbody_id].migrate(self.main_bp, self.access_switches)
-        return {
-            'done': True,
-            'values': [],
-            'data': data
-        }
+        return data
 
     def pull_generic_systems(self):
         """
@@ -461,6 +458,8 @@ class GenericSystems(BaseModel):
             link_data = ae_data.links.setdefault(link_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
             if tag:
                 link_data.add_tag(tag)
+        for index, (k, v) in enumerate(generic_systems.items()):
+            v.index = index + 1
         self.generic_systems = generic_systems
 
         # update generic_systems from main_bp

@@ -162,8 +162,8 @@ class AccessSwitches(BaseModel):
         data = self.virtual_networks.update_virtual_networks_data()
         return data
 
-    def migrate_generic_system(self, label):
-        data = self.generic_systems.migrate_generic_system(label)
+    def migrate_generic_system(self, tbody_id):
+        data = self.generic_systems.migrate_generic_system(tbody_id)
         return data
 
     def update_generic_systems_table(self):

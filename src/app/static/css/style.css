@@ -60,6 +60,7 @@
     grid-area: generic-systems;
 }
 
+
 .virtual-networks {
     grid-area: virtual-networks;
 }
@@ -147,6 +148,7 @@ th, td {
 }
 th, .th, caption {
     background-color: var(--global-th-color);
+    text-align: left;
 }
 
 /* sidebar */
@@ -159,6 +161,35 @@ aside img {
 aside button {
     width: 100%;
     text-align: left;
+}
+
+
+.data-state[data-state="init"] {
+    background-color: var(--global-warning-color);
+}
+.data-state[data-state="loading"] {
+    animation: pulse 1s infinite
+}
+.data-state[data-state="done"] {
+    background-color: var(--global-ok-color);
+}
+.data-state[data-state="error"] {
+    background-color: var(--global-error-color);
+}
+.data-state[data-message]:hover::after,
+.data-state[data-message]:focus::after {
+    content: attr(data-message);
+    position: absolute;
+    left: 0;
+    top: 24px;
+    min-width: 200px;
+    border: 1px #aaaaaa solid;
+    border-radius: 10px;
+    background-color: #ffffcc;
+    padding: 12px;
+    color: #000000;
+    font-size: 14px;
+    z-index: 1;
 }
 
 
@@ -194,18 +225,6 @@ aside button {
     background-color: #e36b00;
 }
 
-.data-state[data-state="init"] {
-    background-color: var(--global-warning-color);
-}
-.data-state[data-state="loading"] {
-    animation: pulse 1s infinite
-}
-.data-state[data-state="done"] {
-    background-color: var(--global-ok-color);
-}
-.data-state[data-state="error"] {
-    background-color: var(--global-error-color);
-}
 
 /* access switches */
 svg, line, rect {

@@ -106,7 +106,7 @@ class SystemLabel(BaseModel):
 @app.post("/migrate-generic-system")
 async def migrate_generic_system(system_label: SystemLabel):
     logging.warning(f"/migrate_generic_system begin {system_label=}")
-    data = AccessSwitches.migrate_generic_system(system_label.tbody_id)
+    data = access_switches.migrate_generic_system(system_label.tbody_id)
     logging.warning(f"/migrate_generic_system end {data=}")
     return data
 
