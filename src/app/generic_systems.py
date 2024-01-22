@@ -39,10 +39,17 @@ class _Memberlink(BaseModel):
     @property
     def tr(self) -> str:
         trs = []
-        if self.main_id and sorted(self.tags) == sorted(self.new_tags):
-            trs.append(f'<td data-cell="tags" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.tags}</td>')
-        else:
-            trs.append(f'<td data-cell="tags" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.tags}</td>')
+        tags_buttons_list = []
+        for i in self.tags:
+            if i in self.new_tags:
+                tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{i}</button>')
+            else:
+                tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{i}</button>')
+        for i in self.new_tags:
+            if i not in self.tags:
+                tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.ERROR}">{i}</button>')
+        tags_buttons = ''.join(tags_buttons_list)
+        trs.append(f'<td data-cell="tags">{tags_buttons}</td>')
         if self.server_intf == self.new_server_intf:
             trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.server_intf}</td>')
         else:

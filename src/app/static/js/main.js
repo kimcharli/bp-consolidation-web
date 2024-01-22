@@ -275,7 +275,9 @@ class MigrateGenericSystemsButton {
                 console.log('handleMigrateAccessSwitchesClick - Error:', error);
                 srcButton.dataset.state="error";  
             });
-            tbody.getElementsByClassName('new_label')[0].dataset.state="loading";
+            const new_label_element = tbody.getElementsByClassName('new_label')[0];
+            console.log(new_label_element)
+            new_label_element.dataset.state="loading";
         })
         // srcButton.dataset.state="loading";        
         
