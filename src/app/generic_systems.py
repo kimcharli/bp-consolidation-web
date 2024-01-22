@@ -226,6 +226,7 @@ class _GenericSystem(BaseModel):
             value: get_tbody()
             caption: caption
         """
+        # breakpoint()
         self.logger.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
         server_links = main_bp.get_server_interface_nodes(self.new_label)
         # create the generic system if absent
@@ -239,7 +240,7 @@ class _GenericSystem(BaseModel):
             new_id = server_link[CkEnum.GENERIC_SYSTEM]['id']
             link_id = server_link[CkEnum.LINK]['id']
             ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
-            ae_id = server_link[CkEnum.AE_INTERFACE]['id'] if server_link[CkEnum.AE_INTERFACE] else link_id
+            ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else link_id
             speed = server_link[CkEnum.LINK]['speed']
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
@@ -549,13 +550,14 @@ class GenericSystems(BaseModel):
             tbody_id = f"gs-{new_label}"  # to be useful in main_bp
             link_id = server_link[CkEnum.LINK]['id']
             ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
-            ae_id = server_link[CkEnum.AE_INTERFACE]['id'] if server_link[CkEnum.AE_INTERFACE] else link_id
+            ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else link_id
             speed = server_link[CkEnum.LINK]['speed']
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
             server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or None
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
 
+            # breakpoint()
             server_data = generic_systems.setdefault(tbody_id, _GenericSystem(label=server_label, new_label=self.rename_label(server_label)))
             ae_data = server_data.group_links.setdefault(ae_id, _GroupLink(ae_name=ae_name, speed=speed))
             link_data = ae_data.links.setdefault(link_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
@@ -572,7 +574,7 @@ class GenericSystems(BaseModel):
             new_id = server_link[CkEnum.GENERIC_SYSTEM]['id']
             link_id = server_link[CkEnum.LINK]['id']
             ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
-            ae_id = server_link[CkEnum.AE_INTERFACE]['id'] if server_link[CkEnum.AE_INTERFACE] else link_id
+            ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else link_id
             speed = server_link[CkEnum.LINK]['speed']
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
