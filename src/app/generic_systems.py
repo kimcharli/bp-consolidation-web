@@ -154,6 +154,71 @@ class _GenericSystem(BaseModel):
                     tbody_lines.append(f'<tr>{row0_head}{links}</tr>')
         return ''.join(tbody_lines)
 
+    def create_generic_system(self, main_bp, access_switches):
+        lag_group = {}
+        generic_system_spec = {
+            'links': [],
+            'new_systems': [],
+        }
+
+        for ae_id, ae_link in self.group_links.items():
+            for member_id, member_link in ae_link.links.items():
+                switch_label = member_link.switch
+                switch_intf = member_link.switch_intf
+                # breakpoint()
+                generic_system_spec['links'].append({
+                    'lag_mode': None,
+                    'system': {
+                        'system_id': None,
+                        'if_name': member_link.server_intf,
+                    },
+                    'switch': {
+                        'system_id': access_switches[switch_label].id,
+                        'transformation_id': main_bp.get_transformation_id(switch_label, switch_intf , ae_link.speed),
+                        'if_name': switch_intf,
+                    }                
+                })
+        new_system = {
+            'system_type': 'server',
+            'label': self.new_label,
+            # 'hostname': None, # hostname should not have '_' in it
+            'port_channel_id_min': 0,
+            'port_channel_id_max': 0,
+            'logical_device': {
+                'display_name': f"auto-{ae_link.speed}x{self.rowspan}",
+                'id': f"auto-{ae_link.speed}x{self.rowspan}",
+                'panels': [
+                    {
+                        'panel_layout': {
+                            'row_count': 1,
+                            'column_count': self.rowspan,
+                        },
+                        'port_indexing': {
+                            'order': 'T-B, L-R',
+                            'start_index': 1,
+                            'schema': 'absolute'
+                        },
+                        'port_groups': [
+                            {
+                                'count': self.rowspan,
+                                'speed': {
+                                    'unit': ae_link.speed[-1:],
+                                    'value': int(ae_link.speed[:-1])
+                                },
+                                'roles': [
+                                    'leaf',
+                                    'access'
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+        generic_system_spec['new_systems'].append(new_system)
+        generic_system_created = main_bp.add_generic_system(generic_system_spec)
+        logging.warning(f"generic_system_created: {generic_system_created}")
+
     def migrate(self, main_bp, access_switches) -> dict:
         """
         Return:
@@ -162,11 +227,48 @@ class _GenericSystem(BaseModel):
             caption: caption
         """
         self.logger.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
+        server_links = main_bp.get_server_interface_nodes(self.new_label)
+        # create the generic system if absent
+        if len(server_links) == 0:
+            self.create_generic_system(main_bp, access_switches)
+            server_links = main_bp.get_server_interface_nodes(self.new_label)
+
+        for server_link in server_links:
+            server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
+            tbody_id = f"gs-{server_label}"  # the server_label would match new_label
+            new_id = server_link[CkEnum.GENERIC_SYSTEM]['id']
+            link_id = server_link[CkEnum.LINK]['id']
+            ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
+            ae_id = server_link[CkEnum.AE_INTERFACE]['id'] if server_link[CkEnum.AE_INTERFACE] else link_id
+            speed = server_link[CkEnum.LINK]['speed']
+            switch = server_link[CkEnum.MEMBER_SWITCH]['label']
+            switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
+            server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or None
+            tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
+
+            # data_from_tor = self.generic_systems[tbody_id]
+            # data_from_tor.new_id = new_id
+            # search matching member link
+            looking = True
+            for old_ae_id, ae_data in self.group_links.items():
+                for old_link_id, link_data in ae_data.links.items():
+                    if link_data.switch == switch and link_data.switch_intf == switch_intf:
+                        # found the matching link
+                        if tag:
+                            link_data.add_tag(tag)
+                        looking = False
+                        link_data.main_id = link_id
+                        ae_data.new_ae_name = ae_name
+                        ae_data.new_speed = speed
+
         return {
             'new_id': self.new_id,  # TODO: no need?
             'value': self.get_tbody(),
-            'caption': None # TODO: later
+            # 'caption': None # TODO: later
         }
+        if not self.new_id:
+            pass
+
         """
         Create new generic systems in the main blueprint based on the generic systems in the TOR blueprint. 
             <generic_system_label>:
@@ -179,15 +281,16 @@ class _GenericSystem(BaseModel):
                     tags: []
 
         """
-        if self.new_id:
-            # it is already present
-            return {}
-        server_nodes = main_bp.get_system_node_from_label(self.new_label)
-        # breakpoint()
-        if server_nodes is not None:
-            # it is present in main blueprint
-            # TODO: update the tbody
-            return self.update_generic_systems_table()
+        # if self.new_id:
+        #     # it is already present
+        #     return {}
+        # server_nodes = main_bp.get_system_node_from_label(self.new_label)
+        # # breakpoint()
+        # if server_nodes is not None:
+        #     # it is present in main blueprint
+        #     # TODO: update the tbody
+        #     return self.update_generic_systems_table()
+
 
         # # wait for the access switch to be created
         # for switch_label in order.switch_label_pair:
@@ -491,28 +594,6 @@ class GenericSystems(BaseModel):
                         ae_data.new_ae_name = ae_name
                         ae_data.new_speed = speed
 
-
-            # server_data = get_data_or_default(  # GenericSystem
-            #     self.generic_systems, 
-            #     tbody_id,
-            #     _GenericSystem(
-            #         label = server_label,
-            #         tor_gs_label=self.tor_gs_label,
-            #         # new_label = cls.new_label(server_label),
-            #     )
-            # )
-            # ae_data = get_data_or_default(
-            #     server_data.group_links,
-            #     ae_id,
-            #     _GroupLink(ae_name=ae_name, speed=speed)
-            # )
-            # link_data = get_data_or_default(
-            #     ae_data.links,
-            #     link_id,
-            #     _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf)
-            # )
-            # if tag:
-            #     link_data.add_tag(tag)
         return
 
     def rename_label(self, old_label):
