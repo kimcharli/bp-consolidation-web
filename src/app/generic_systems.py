@@ -136,6 +136,23 @@ class _GenericSystem(BaseModel):
         # breakpoint()
         return sum([v.rowspan for k, v in self.group_links.items()])
 
+    @property
+    def port_channel_id_min(self) -> int:
+        ae_names = [x.ae_name[2:] for k, x in self.group_links.items() if x.ae_name.startswith('ae')]
+        # self.logger.warning(f"port_channel_id_min {min(ae_names)=}")
+        # breakpoint()
+        if len(ae_names):
+            return int(min(ae_names))
+        return 0
+
+    @property
+    def port_channel_id_max(self) -> int:
+        ae_names = [x.ae_name[2:] for k, x in self.group_links.items() if x.ae_name.startswith('ae')]
+        # self.logger.warning(f"port_channel_id_max {min(ae_names)=}")
+        if len(ae_names):
+            return int(max(ae_names))
+        return 0
+
     def get_tbody(self) -> str:
         """
         Return the tbody innerHTML
@@ -151,11 +168,6 @@ class _GenericSystem(BaseModel):
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}" {message_attr}>{self.new_label}</td>')
         row0_head = ''.join(row0_head_list)       
 
-        # row0_head = ''.join([
-        #     f'<td rowspan={self.rowspan}>{index}</td>'
-        #     f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>',
-        #     f'<td rowspan={self.rowspan} data-cell="new_label" class="data-state new_label" data-state="init">{self.new_label}</td>',
-        # ])
         tbody_lines = []
         for k, ae_link in self.group_links.items():
             for links in ae_link.tr:
@@ -171,7 +183,7 @@ class _GenericSystem(BaseModel):
             'links': [],
             'new_systems': [],
         }
-
+    
         for ae_id, ae_link in self.group_links.items():
             for member_id, member_link in ae_link.links.items():
                 switch_label = member_link.switch
@@ -193,8 +205,8 @@ class _GenericSystem(BaseModel):
             'system_type': 'server',
             'label': self.new_label,
             # 'hostname': None, # hostname should not have '_' in it
-            'port_channel_id_min': 0,
-            'port_channel_id_max': 0,
+            'port_channel_id_min': self.port_channel_id_min,
+            'port_channel_id_max': self.port_channel_id_max,
             'logical_device': {
                 'display_name': f"auto-{ae_link.speed}x{self.rowspan}",
                 'id': f"auto-{ae_link.speed}x{self.rowspan}",
@@ -227,9 +239,7 @@ class _GenericSystem(BaseModel):
             }
         }
         generic_system_spec['new_systems'].append(new_system)
-        # breakpoint()
         generic_system_created = main_bp.add_generic_system(generic_system_spec)
-        # logging.warning(f"generic_system_created: {generic_system_created}")
         return generic_system_created
 
     def migrate(self, main_bp, access_switches) -> dict:
@@ -256,7 +266,7 @@ class _GenericSystem(BaseModel):
             for i in range(10):
                 time.sleep(3)
                 server_links = main_bp.get_server_interface_nodes(self.new_label)
-                self.logger.warning(f"migrate() waiting - {len(server_links)=}")
+                self.logger.warning(f"migrate() waiting - {len(server_links)=} {i}/{10} for {self.new_label}")
                 if len(server_links):
                     break
 
