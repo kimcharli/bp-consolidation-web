@@ -75,6 +75,7 @@ class _GroupLink(BaseModel):
     untagged_vlan: Optional[int] = None
     new_cts: Optional[List[int]] = []  # the connectivity templates in main blueprint  
     new_ae_name: Optional[str] = None  # the ae in the main blueprint
+    new_id: str = None
     new_speed: str = None
     links: Dict[str, _Memberlink] = {}  # <link id from tor>: _Memberlink
 
@@ -270,6 +271,10 @@ class _GenericSystem(BaseModel):
                 if len(server_links):
                     break
 
+        lag_spec = {
+            'links': {}
+        }
+
         for server_link in server_links:
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             tbody_id = f"gs-{server_label}"  # the server_label would match new_label
@@ -282,6 +287,8 @@ class _GenericSystem(BaseModel):
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
             server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or None
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
+
+
 
             # data_from_tor = self.generic_systems[tbody_id]
             # data_from_tor.new_id = new_id
@@ -298,6 +305,19 @@ class _GenericSystem(BaseModel):
                         link_data.main_id = link_id
                         ae_data.new_ae_name = ae_name
                         ae_data.new_speed = speed
+                        ae_data.new_id = ae_id
+                        if ae_data.ae_name and not ae_name:
+                            lag_spec['links'][link_id] = {
+                                'group_label': ae_data.ae_name,
+                                'lag_mode': 'lacp_active'
+                            }
+                            ae_data.new_ae_name = ae_data.ae_name
+                        # breakpoint()
+                        # TODO: tags
+        if len(lag_spec['links']):
+            lag_updated = main_bp.patch_leaf_server_link_labels(lag_spec)
+            self.logger.warning(f"{lag_updated=}")
+            
 
         return {
             'new_id': self.new_id,  # TODO: no need?
