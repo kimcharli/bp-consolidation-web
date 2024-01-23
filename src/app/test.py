@@ -41,5 +41,5 @@ gs_data = access_switches.generic_systems.update_generic_systems_table()
 vn_data = access_switches.update_virtual_networks_data()
 # logging.warning(f"VirtualNetworks {vn_data=}")
 # breakpoint()
-gs_new = access_switches.migrate_generic_system('gs-r5r15-sys018')
+gs_new = access_switches.migrate_generic_system('gs-az1kvm1004-az1kvm1028-atl1-LACP')
 

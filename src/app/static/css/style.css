@@ -177,8 +177,15 @@ aside button {
 .data-state[data-state="error"] {
     background-color: var(--global-error-color);
 }
-.data-state[data-message]:hover::after,
-.data-state[data-message]:focus::after {
+.td[data-message] {
+    position: relative;
+    text-decoration: underline;
+    color: #00f;
+    cursor: help;    
+}
+
+.td[data-message]:hover::after,
+.td[data-message]:focus::after {
     content: attr(data-message);
     position: absolute;
     left: 0;
