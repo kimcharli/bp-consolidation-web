@@ -164,6 +164,7 @@ class AccessSwitches(BaseModel):
 
     def migrate_generic_system(self, tbody_id):
         # breakpoint()
+        self.generic_systems.access_switches = self.access_switches
         data = self.generic_systems.migrate_generic_system(tbody_id)
         return data
 

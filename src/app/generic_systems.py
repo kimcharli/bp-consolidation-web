@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any, ClassVar
 import logging
 from enum import Enum, StrEnum, auto
+import time
 
 from ck_apstra_api.apstra_blueprint import CkEnum
 # TODO: consolidate
@@ -116,6 +117,8 @@ class _GenericSystem(BaseModel):
     new_label: str = None  # the label in the main blueprint (renamed)
     new_id: str = None  # the generic system id on main blueprint
     tbody_id: str = None  # the id on the tbody element
+    message: str = None  # creation message
+    is_uplink: bool = False
     group_links: Dict[str, _GroupLink] = {}  # <group link id or link id of tor>: _GroupLink    
 
     logger: Any = logging.getLogger('_GenericSystem')
@@ -138,13 +141,14 @@ class _GenericSystem(BaseModel):
         Return the tbody innerHTML
         """
         # logging.warning(f"_GenericSystem:get_tbody() begin {self=}")
+        message_attr = f' data-message="{self.message}" ' if self.message else ''
         row0_head_list = []
         row0_head_list.append(f'<td rowspan={self.rowspan}>{self.index}</td>')
         row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>')
         if self.new_id:
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.new_label}</td>')
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}" {message_attr}>{self.new_label}</td>')
         else:
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.new_label}</td>')
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}" {message_attr}>{self.new_label}</td>')
         row0_head = ''.join(row0_head_list)       
 
         # row0_head = ''.join([
@@ -177,7 +181,7 @@ class _GenericSystem(BaseModel):
                     'lag_mode': None,
                     'system': {
                         'system_id': None,
-                        'if_name': member_link.server_intf,
+                        # 'if_name': member_link.server_intf,  ### THIS WILL FAIL
                     },
                     'switch': {
                         'system_id': access_switches[switch_label].id,
@@ -223,8 +227,10 @@ class _GenericSystem(BaseModel):
             }
         }
         generic_system_spec['new_systems'].append(new_system)
+        # breakpoint()
         generic_system_created = main_bp.add_generic_system(generic_system_spec)
-        logging.warning(f"generic_system_created: {generic_system_created}")
+        # logging.warning(f"generic_system_created: {generic_system_created}")
+        return generic_system_created
 
     def migrate(self, main_bp, access_switches) -> dict:
         """
@@ -233,13 +239,26 @@ class _GenericSystem(BaseModel):
             value: get_tbody()
             caption: caption
         """
-        # breakpoint()
+        # do not create leaf_gs
+        if self.is_uplink:
+            return {
+                'value': self.get_tbody(),
+            }
+
         self.logger.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
         server_links = main_bp.get_server_interface_nodes(self.new_label)
         # create the generic system if absent
         if len(server_links) == 0:
-            self.create_generic_system(main_bp, access_switches)
-            server_links = main_bp.get_server_interface_nodes(self.new_label)
+            created = self.create_generic_system(main_bp, access_switches)
+            self.message = created
+            self.logger.warning(f"migrate() {created=}")
+            # it was that 18+ seconds delay. wait for 3 x 10 
+            for i in range(10):
+                time.sleep(3)
+                server_links = main_bp.get_server_interface_nodes(self.new_label)
+                self.logger.warning(f"migrate() waiting - {len(server_links)=}")
+                if len(server_links):
+                    break
 
         for server_link in server_links:
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
@@ -258,6 +277,7 @@ class _GenericSystem(BaseModel):
             # data_from_tor.new_id = new_id
             # search matching member link
             looking = True
+            self.new_id = new_id
             for old_ae_id, ae_data in self.group_links.items():
                 for old_link_id, link_data in ae_data.links.items():
                     if link_data.switch == switch and link_data.switch_intf == switch_intf:
@@ -566,6 +586,8 @@ class GenericSystems(BaseModel):
 
             # breakpoint()
             server_data = generic_systems.setdefault(tbody_id, _GenericSystem(label=server_label, new_label=self.rename_label(server_label)))
+            if switch_intf == 'et-0/0/48':
+                server_data.is_uplink = True
             ae_data = server_data.group_links.setdefault(ae_id, _GroupLink(ae_name=ae_name, speed=speed))
             link_data = ae_data.links.setdefault(link_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
             if tag:

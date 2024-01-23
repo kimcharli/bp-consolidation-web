@@ -168,6 +168,7 @@ aside button {
     background-color: var(--global-warning-color);
 }
 .data-state[data-state="loading"] {
+    background-color: var(--global-warning-color);
     animation: pulse 1s infinite
 }
 .data-state[data-state="done"] {

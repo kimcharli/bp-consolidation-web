@@ -279,7 +279,7 @@ class MigrateGenericSystemsButton {
             console.log(new_label_element)
             new_label_element.dataset.state="loading";
         })
-        // srcButton.dataset.state="loading";        
+        srcButton.dataset.state = 'done';
         
     }
 }
