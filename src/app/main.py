@@ -124,8 +124,8 @@ async def migrate_generic_system(system_label: SystemLabel):
 
 
 @app.post("/migrate-virtual-networks")
-async def migrate_virtual_networks(system_label: SystemLabel):
-    logging.warning(f"/migrate_virtual_networks begin {system_label=}")
+async def migrate_virtual_networks():
+    logging.warning(f"/migrate_virtual_networks begin")
     data = access_switches.migrate_virtual_networks()
     logging.warning(f"/migrate_virtual_networks end {data=}")
     return data

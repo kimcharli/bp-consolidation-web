@@ -210,7 +210,6 @@ class SyncStateButton {
             const vn_caption = document.getElementById('virtual-networks-caption');
             vn_caption.innerHTML = data.caption;
         })
-        // .catch(error => console.error('handleSyncStateClick - Error:', error));
 
     }
 
@@ -411,13 +410,7 @@ class CkIDB {
 
         document.getElementById('load-env-div').dataset.state = 'done';
 
-        // console.log('ConnectButton=', ConnectButton);
         this.connectButton.button.click();
-        // ConnectButton.click();
-        // document.getElementById('connect-server').click();
-        // window.dispatchEvent(
-        //     new CustomEvent(GlobalEventEnum.CONNECT_SERVER)
-        // );
     }
 
     static trashEnv() {
@@ -447,6 +440,7 @@ window.addEventListener("load", (event) => {
     const syncStateButton = new SyncStateButton();
     const migrateAccessSwitchesButton = new MigrateAccessSwitchesButton();
     const migrateGenericSystemsButton = new MigrateGenericSystemsButton();
+    const migrateVirtualNetworksButtion = new MigrateVirtualNetworksButton();
     CkIDB.openDB(connectButton);
 
 });

@@ -1,25 +1,31 @@
+
+/* side bar in fixed position */
+.sidebar {
+    background: green;
+    height: 100%;
+    width: 180px;
+    height: auto;
+    position: fixed;
+    z-index: 1;
+    /* height: max-content; */
+}
+
 /* grid layout */
 .container {
+    margin-left: 185px;
     display: grid;
-    grid-template-columns: auto 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr min-content;
     grid-template-areas: 
-        "sidebar header header"
-        "sidebar main-blueprint tor-blueprint"
-        "sidebar main-access-switch tor-access-switch"
-        "sidebar generic-systems generic-systems"
-        "sidebar virtual-networks virtual-networks"
-        "footer footer footer";
+        "header header"
+        "main-blueprint tor-blueprint"
+        "main-access-switch tor-access-switch"
+        "generic-systems generic-systems"
+        "virtual-networks virtual-networks"
+        "footer footer";
     row-gap: 2px;
 }
 
-.sidebar {
-    grid-area: sidebar;
-    background: green;
-    width: 180px;
-    height: auto;
-    /* height: max-content; */
-}
 
 .header {
     grid-area: header;
