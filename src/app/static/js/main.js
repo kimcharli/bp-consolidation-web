@@ -194,6 +194,7 @@ class SyncStateButton {
             */
             console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
             const vns_div = document.getElementById('virtual-networks');
+            window.scrollTo(0, document.body.scrollHeight);
             data.values.forEach(element => {
                 // console.log('tbody=', document.getElementById(element.id));
                 let vn_button = document.getElementById(element.id);
@@ -206,7 +207,7 @@ class SyncStateButton {
                 element.attrs.forEach(attr => {
                     vn_button.setAttribute(attr.attr, attr.value)
                 })
-                });
+            });
             const vn_caption = document.getElementById('virtual-networks-caption');
             vn_caption.innerHTML = data.caption;
         })
@@ -316,6 +317,7 @@ class MigrateVirtualNetworksButton {
                 caption: the caption of the table
             */
             const vns_div = document.getElementById('virtual-networks');
+            window.scrollTo(0, document.body.scrollHeight);
             data.values.forEach(element => {
                 // console.log('tbody=', document.getElementById(element.id));
                 let vn_button = document.getElementById(element.id);
