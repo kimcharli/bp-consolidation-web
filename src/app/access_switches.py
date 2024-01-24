@@ -156,21 +156,32 @@ class AccessSwitches(BaseModel):
     def load_id_element(cls, id, value):
         return _AccessSwitchResponseItem(id=id, value=value, state=DataStateEnum.LOADED, fill='red')
 
+    # 
+    # generic systems
+    # 
+    def update_generic_systems_table(self):
+        data = self.generic_systems.update_generic_systems_table()
+        return data
+
+    def migrate_generic_system(self, tbody_id):
+        self.generic_systems.access_switches = self.access_switches
+        data = self.generic_systems.migrate_generic_system(tbody_id)
+        return data
+
+    # 
+    # virtual networks
+    # 
     def update_virtual_networks_data(self):
         if self.virtual_networks is None:
             self.virtual_networks = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp)
         data = self.virtual_networks.update_virtual_networks_data()
         return data
 
-    def migrate_generic_system(self, tbody_id):
-        # breakpoint()
-        self.generic_systems.access_switches = self.access_switches
-        data = self.generic_systems.migrate_generic_system(tbody_id)
+
+    def migrate_virtual_networks(self):
+        data = self.virtual_networks.migrate_virtual_networks()
         return data
 
-    def update_generic_systems_table(self):
-        data = self.generic_systems.update_generic_systems_table()
-        return data
 
     # the 1st action: called by main.py from SyncState
     def update_access_switches_table(self) -> dict:

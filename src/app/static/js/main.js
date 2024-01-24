@@ -195,12 +195,17 @@ class SyncStateButton {
             console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
             const vns_div = document.getElementById('virtual-networks');
             data.values.forEach(element => {
-                const vn_button = document.createElement("button");
+                // console.log('tbody=', document.getElementById(element.id));
+                let vn_button = document.getElementById(element.id);
+                if ( vn_button == null ) {
+                    vn_button = document.createElement("button");
+                    vn_button.setAttribute('id', element.id);
+                    vn_button.appendChild(document.createTextNode(element.value));
+                    vns_div.append(vn_button);
+                }
                 element.attrs.forEach(attr => {
                     vn_button.setAttribute(attr.attr, attr.value)
                 })
-                vn_button.appendChild(document.createTextNode(element.value));
-                vns_div.append(vn_button);
                 });
             const vn_caption = document.getElementById('virtual-networks-caption');
             vn_caption.innerHTML = data.caption;
@@ -216,7 +221,6 @@ class MigrateAccessSwitchesButton {
     constructor() {
         this.button = document.getElementById('migrate-access-switches');
         this.button.addEventListener('click', this.handleMigrateAccessSwitches.bind(this));
-        // console.log('MigrateAccessSwitches: constructor() this.button=', this.button);
     }
 
     handleMigrateAccessSwitches(event) {
@@ -240,7 +244,6 @@ class MigrateGenericSystemsButton {
     constructor() {
         this.button = document.getElementById('migrate-generic-systems');
         this.button.addEventListener('click', this.handleMigrateGenericSystems.bind(this));
-        // console.log('MigrateGenericSystemsButton: constructor() this.button=', this.button);
     }
 
     handleMigrateGenericSystems(event) {
@@ -285,6 +288,57 @@ class MigrateGenericSystemsButton {
     }
 }
 
+
+class MigrateVirtualNetworksButton {
+    constructor() {
+        this.button = document.getElementById('migrate-virtual-networks');
+        this.button.addEventListener('click', this.handleMigrateVirtualNetworks.bind(this));
+    }
+
+    handleMigrateVirtualNetworks(event) {
+        const srcButton = event.srcElement || event.target;
+        fetch('/migrate-virtual-networks', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+            },
+            // body: JSON.stringify({
+            //     tbody_id: tbody_id,
+            // })
+        })
+        .then(response => response.json())
+        .then(data => {
+            /*
+                done: true/false
+                values: [
+                    id: id of tbody,
+                    value: html-string
+                ]
+                caption: the caption of the table
+            */
+            const vns_div = document.getElementById('virtual-networks');
+            data.values.forEach(element => {
+                // console.log('tbody=', document.getElementById(element.id));
+                let vn_button = document.getElementById(element.id);
+                if ( vn_button == null ) {
+                    vn_button = document.createElement("button");
+                    vn_button.setAttribute('id', element.id);
+                    vns_div.append(vn_button);
+                }
+                element.attrs.forEach(attr => {
+                    vn_button.setAttribute(attr.attr, attr.value)
+                })
+                vn_button.appendChild(document.createTextNode(element.value));
+                });
+            const vn_caption = document.getElementById('virtual-networks-caption');
+            vn_caption.innerHTML = data.caption;
+        })
+        .catch(error => {
+            console.log('handleMigrateAccessSwitchesClick - Error:', error);
+            srcButton.dataset.state="error";  
+        });    
+    }
+}
 
 class CkIDB {
     static db = null;

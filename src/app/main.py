@@ -103,6 +103,18 @@ async def update_virtual_networks_data():
 class SystemLabel(BaseModel):
     tbody_id: str
 
+@app.post("/migrate-access-switches")
+async def migrate_access_switches():
+    """
+    Remove TOR generic system in main blueprint
+    """
+    logging.warning(f"/migrate_access_switches begin")
+    data = global_store.remove_old_generic_system_from_main()
+    data = global_store.create_new_access_switch_pair()
+    logging.warning(f"/migrate_access_switches end")
+    return data
+
+
 @app.post("/migrate-generic-system")
 async def migrate_generic_system(system_label: SystemLabel):
     logging.warning(f"/migrate_generic_system begin {system_label=}")
@@ -110,19 +122,15 @@ async def migrate_generic_system(system_label: SystemLabel):
     logging.warning(f"/migrate_generic_system end {data=}")
     return data
 
-@app.post("/migrate-access-switches")
-async def migrate_access_switches():
-    """
-    Remove TOR generic system in main blueprint
-    """
-    logging.warning(f"/migrate_access_switches begin")
-    data = GlobalStore.remove_old_generic_system_from_main()
-    data = GlobalStore.create_new_access_switch_pair()
-    logging.warning(f"/migrate_access_switches end")
+
+@app.post("/migrate-virtual-networks")
+async def migrate_virtual_networks(system_label: SystemLabel):
+    logging.warning(f"/migrate_virtual_networks begin {system_label=}")
+    data = access_switches.migrate_virtual_networks()
+    logging.warning(f"/migrate_virtual_networks end {data=}")
     return data
 
-# from .graphql_main import graphql_app
-# app.add_route("/graphql", graphql_app)
+
 
 def main():
     dotenv.load_dotenv()

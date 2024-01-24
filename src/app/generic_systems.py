@@ -7,6 +7,8 @@ import html
 
 from ck_apstra_api.apstra_blueprint import CkEnum
 # TODO: consolidate
+# TODO: catch AE creation delay
+# TODO: generic systems done update
 class DataStateEnum(StrEnum):
     LOADED = 'done'
     INIT = 'init'
