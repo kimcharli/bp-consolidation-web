@@ -9,6 +9,7 @@ from .ck_global import global_store, DataStateEnum
 from .generic_systems import GenericSystems, LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
 from .virtual_networks import VirtualNetworks
+from .vlan_cts import pull_interface_vlan_table
 
 
 class _AccessSwitchResponseItem(BaseModel):
@@ -182,6 +183,15 @@ class AccessSwitches(BaseModel):
 
     def migrate_virtual_networks(self):
         data = self.virtual_networks.migrate_virtual_networks()
+        return data
+
+
+    # 
+    # connectivity template
+    #
+    def update_connectivity_template_data(self):
+        data = pull_interface_vlan_table(global_store.bp['tor_bp'], self.generic_systems, self.access_switch_pair)
+        data = self.generic_systems.update_generic_systems_table()
         return data
 
 

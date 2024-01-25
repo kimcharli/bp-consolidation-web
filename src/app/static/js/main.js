@@ -218,6 +218,50 @@ class SyncStateButton {
             this.button.dataset.state = 'done'
         })
 
+
+        fetch('/update-connectivity-template-data', {
+            method: 'GET',
+        })
+        .then(result => {
+            if(!result.ok) {
+                return result.text().then(text => { throw new Error(text) });
+            }
+            else {
+                return result.json();
+            }
+        })
+        .then(data => {
+            /*
+                values: [
+                    attrs: [ { name:, value } ]
+                    value: button text
+                ]
+            */
+            console.log('handleSyncStateClick, /update-connectivity-template-data, data=', data);
+            // const vns_div = document.getElementById('virtual-networks');
+            // window.scrollTo(0, document.body.scrollHeight);
+            data.values.forEach(element => {
+                // console.log('tbody=', document.getElementById(element.id));
+                let vn_button = document.getElementById(element.id);
+                if ( vn_button == null ) {
+                    vn_button = document.createElement("button");
+                    vn_button.setAttribute('id', element.id);
+                    vn_button.appendChild(document.createTextNode(element.value));
+                    vns_div.append(vn_button);
+                }
+                element.attrs.forEach(attr => {
+                    vn_button.setAttribute(attr.attr, attr.value)
+                })
+            });
+            // const vn_caption = document.getElementById('virtual-networks-caption');
+            // vn_caption.innerHTML = data.caption;
+            // if (data.done)
+            //     this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'done';
+            // else
+            //     this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'init';
+            // this.button.dataset.state = 'done'
+        })
+
     }
 
 };

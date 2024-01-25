@@ -100,6 +100,13 @@ async def update_virtual_networks_data():
     logging.warning(f"/update_virtual_networks_data end")
     return data
 
+@app.get("/update-connectivity-template-data")
+async def update_connectivity_template_data():
+    logging.warning(f"/update-connectivity-template-data begin")
+    data = access_switches.update_connectivity_template_data()
+    logging.warning(f"/update-connectivity-template-data end")
+    return data
+
 class SystemLabel(BaseModel):
     tbody_id: str
 

@@ -3,7 +3,6 @@ from typing import Optional, List, Dict, Any, ClassVar
 import logging
 from enum import Enum, StrEnum, auto
 import time
-import html
 
 from ck_apstra_api.apstra_blueprint import CkEnum
 # TODO: consolidate
@@ -63,10 +62,9 @@ class _Memberlink(BaseModel):
             }
         return None
 
-    @property
-    def tr(self) -> str:
+    def tr(self, is_leaf_gs) -> str:
         trs = []
-        tags_buttons_list = []
+        tags_buttons_list = []        
         for i in self.tags:
             if i in self.new_tags:
                 tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{i}</button>')
@@ -77,11 +75,16 @@ class _Memberlink(BaseModel):
                 tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.ERROR}">{i}</button>')
         tags_buttons = ''.join(tags_buttons_list)
         trs.append(f'<td data-cell="tags">{tags_buttons}</td>')
-        if self.new_id and self.server_intf == self.new_server_intf:
+        if is_leaf_gs:
+            trs.append(f'<td data-cell="server_intf" >{self.server_intf}</td>')
+        elif self.new_id and self.server_intf == self.new_server_intf:
             trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.server_intf}</td>')
         else:
             trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.server_intf}</td>')
-        if self.new_id:
+        if is_leaf_gs:
+            trs.append(f'<td data-cell="switch" >{self.switch}</td>')
+            trs.append(f'<td data-cell="switch_intf" >{self.switch_intf}</td>')
+        elif self.new_id:
             trs.append(f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.switch}</td>')
             trs.append(f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.switch_intf}</td>')
         else:
@@ -111,13 +114,19 @@ class _Memberlink(BaseModel):
         return False
 
 
+class CtData(BaseModel):
+    # multiple per link
+    vn_id: int
+    ct_id: str = None  # to capture the ct_id from main_bp
+
+
 class _GroupLink(BaseModel):
     ae_name: str = '' # the ae in the tor blueprint
     speed: str
-    cts: Optional[List[int]] = []
-    tagged_vlans: Optional[List[int]] = []
-    untagged_vlan: Optional[int] = None
-    links: Dict[str, _Memberlink] = {}  # <link id from tor>: _Memberlink
+    # cts: List[CtData] = []
+    tagged_vlans: Dict[int, CtData] = {}
+    untagged_vlan: Dict[int, CtData] = {}  # one entry at most
+    links: Dict[str, _Memberlink] = {}  # <member interface id from tor>: _Memberlink
     # from main_bp
     new_ae_name: str = ''  # the ae in the main blueprint
     new_id: str = None  # the id of the ae link
@@ -127,6 +136,19 @@ class _GroupLink(BaseModel):
     @property
     def rowspan(self):
         return len(self.links)
+
+    def cts(self, is_leaf_gs):
+        ct_count_in_tor = len(self.tagged_vlans) + len(self.untagged_vlan)
+        if is_leaf_gs or (self.speed and len(self.tagged_vlans) == 0 and len(self.untagged_vlan) == 0):
+            state_attribute = f'class="cts"'
+        else:
+            tagged_vlans = [ct.vn_id for _, ct in self.tagged_vlans.items()]
+            untagged_vlans = [ct.vn_id for _, ct in self.untagged_vlan.items()]
+            if (tagged_vlans + untagged_vlans) == ct_count_in_tor:
+                state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}"'
+            else:
+                state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}"'
+        return f'<td rowspan={self.rowspan} data-cell="cts" {state_attribute}>0/{ct_count_in_tor}</td>'
 
     def is_not_done(self) -> bool:
         if self.speed != self.new_speed:
@@ -170,15 +192,18 @@ class _GroupLink(BaseModel):
         return changed
 
 
-    @property
-    def tr(self) -> list:
+    def tr(self, is_leaf_gs) -> list:
         row0_head_list = []
-        if self.ae_name == self.new_ae_name:
+        if is_leaf_gs:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="ae">{self.ae_name}</td>')
+        elif self.ae_name == self.new_ae_name:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.ae_name}</td>')
         else:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.ae_name}</td>')
-        row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="cts" class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.cts}</td>')
-        if self.speed == self.new_speed:
+        row0_head_list.append(self.cts(is_leaf_gs))
+        if is_leaf_gs:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="speed" class="speed">{self.speed}</td>')
+        elif self.speed == self.new_speed:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="speed" class="{DataStateEnum.DATA_STATE} speed" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.speed}</td>')
         else:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="speed" class="{DataStateEnum.DATA_STATE} speed" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.speed}</td>')
@@ -187,18 +212,18 @@ class _GroupLink(BaseModel):
         for index, link_id in enumerate(self.links):
             link = self.links[link_id]
             if index == 0:
-                trs.append(row0_head + link.tr)
+                trs.append(row0_head + link.tr(is_leaf_gs))
             else:
-                trs.append(link.tr)
+                trs.append(link.tr(is_leaf_gs))
         return trs
 
 
 class _GenericSystem(BaseModel):
     index: int = 0
-    label: str  # the label in the tor blueprint
-    new_label: str = None  # the label in the main blueprint (renamed)
+    label: str  # the generic system label in the tor blueprint
+    new_label: str = None  # the generic system label in the main blueprint (renamed)
     is_leaf_gs: bool = False
-    group_links: Dict[str, _GroupLink] = {}  # <group link id or link id of tor>: _GroupLink    
+    group_links: Dict[str, _GroupLink] = {}  # <evpn/member interface id from tor>: _GroupLink    
     # set by main_bp
     message: str = None  # creation message
     new_id: str = None  # the generic system id on main blueprint
@@ -264,15 +289,17 @@ class _GenericSystem(BaseModel):
         row0_head_list = []
         row0_head_list.append(f'<td rowspan={self.rowspan}>{self.index}</td>')
         row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>')
-        if self.new_id:
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}" {message_attr}>{self.new_label}</td>')
-        else:
+        if self.is_leaf_gs:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="new_label">{self.new_label}</td>')
+        elif self.is_not_done():
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}" {message_attr}>{self.new_label}</td>')
+        else:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}" {message_attr}>{self.new_label}</td>')
         row0_head = ''.join(row0_head_list)       
 
         tbody_lines = []
         for k, ae_link in self.group_links.items():
-            for links in ae_link.tr:
+            for links in ae_link.tr(self.is_leaf_gs):
                 if len(tbody_lines):
                     tbody_lines.append(f'<tr>{links}</tr>')
                 else:                    
@@ -571,9 +598,10 @@ class GenericSystems(BaseModel):
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             new_label = self.set_new_generic_system_label(server_label)
             tbody_id = f"gs-{new_label}"
-            link_id = server_link[CkEnum.LINK]['id']
+            # link_id = server_link[CkEnum.LINK]['id']
+            member_intf_id = server_link[CkEnum.MEMBER_INTERFACE]['id']
             ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
-            ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else link_id
+            ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else member_intf_id
             speed = server_link[CkEnum.LINK]['speed']
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
@@ -584,7 +612,7 @@ class GenericSystems(BaseModel):
             if switch_intf == 'et-0/0/48':
                 server_data.is_leaf_gs = True
             ae_data = server_data.group_links.setdefault(ae_id, _GroupLink(ae_name=ae_name, speed=speed))
-            link_data = ae_data.links.setdefault(link_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
+            link_data = ae_data.links.setdefault(member_intf_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
             if tag:
                 link_data.add_tag(tag)
         for index, (k, v) in enumerate(generic_systems.items()):
@@ -603,7 +631,7 @@ class GenericSystems(BaseModel):
         return
 
 
-    def set_new_generic_system_label(self, old_label):
+    def set_new_generic_system_label(self, old_label) -> str:
         """
         Return new label of the generic system from the old label and tor name
         This is to avoid duplicate names which was created by old tor_bp
