@@ -131,7 +131,7 @@ class SyncStateButton {
                 if (element.fill) the_element.style.fill = element.fill;
                 if (element.visibility) the_element.style.visibility = element.visibility;
             })
-            srcButton.dataset.state = 'done';
+            // srcButton.dataset.state = 'done';
             document.getElementById("migrate-access-switches").dataset.state = data.button_state;
             // this.buttonMigrateAccessSwitches.dataset.state = data.button_state;
         })
@@ -210,6 +210,11 @@ class SyncStateButton {
             });
             const vn_caption = document.getElementById('virtual-networks-caption');
             vn_caption.innerHTML = data.caption;
+            if (data.done)
+                this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'done';
+            else
+                this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'init';
+            this.button.dataset.state = 'done'
         })
 
     }
@@ -318,8 +323,8 @@ class MigrateVirtualNetworksButton {
             */
             const vns_div = document.getElementById('virtual-networks');
             window.scrollTo(0, document.body.scrollHeight);
+            console.log('migrate-virtual-networks data=', data)
             data.values.forEach(element => {
-                // console.log('tbody=', document.getElementById(element.id));
                 let vn_button = document.getElementById(element.id);
                 if ( vn_button == null ) {
                     vn_button = document.createElement("button");
@@ -329,15 +334,17 @@ class MigrateVirtualNetworksButton {
                 element.attrs.forEach(attr => {
                     vn_button.setAttribute(attr.attr, attr.value)
                 })
-                vn_button.appendChild(document.createTextNode(element.value));
-                });
+            });
             const vn_caption = document.getElementById('virtual-networks-caption');
             vn_caption.innerHTML = data.caption;
+            if (data.done)
+                this.button.dataset.state = 'done';
         })
         .catch(error => {
             console.log('handleMigrateAccessSwitchesClick - Error:', error);
             srcButton.dataset.state="error";  
         });    
+        this.button.dataset.state = 'loading';
     }
 }
 

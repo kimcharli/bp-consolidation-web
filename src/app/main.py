@@ -127,7 +127,7 @@ async def migrate_generic_system(system_label: SystemLabel):
 async def migrate_virtual_networks():
     logging.warning(f"/migrate_virtual_networks begin")
     data = access_switches.migrate_virtual_networks()
-    logging.warning(f"/migrate_virtual_networks end {data=}")
+    logging.warning(f"/migrate_virtual_networks end")
     return data
 
 

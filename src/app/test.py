@@ -43,3 +43,5 @@ vn_data = access_switches.update_virtual_networks_data()
 # breakpoint()
 gs_new = access_switches.migrate_generic_system('gs-az1kvm1004-az1kvm1028-atl1-LACP')
 
+vn_mig = access_switches.migrate_virtual_networks()
+
