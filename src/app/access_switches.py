@@ -129,6 +129,8 @@ class AccessSwitches(BaseModel):
     leaf_switches: Dict[str, LeafSwitch] = None
     logger: Any = logging.getLogger("AccessSwitches") 
     virtual_networks: Any = None
+    # TODO:
+    this_bound_to: str = 'atl1tor-r5r15-pair'  # to be updated
 
     @property
     def access_switch_pair(self):
@@ -173,7 +175,7 @@ class AccessSwitches(BaseModel):
     # 
     def update_virtual_networks_data(self):
         if self.virtual_networks is None:
-            self.virtual_networks = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp)
+            self.virtual_networks = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.this_bound_to)
         data = self.virtual_networks.update_virtual_networks_data()
         return data
 
@@ -190,7 +192,7 @@ class AccessSwitches(BaseModel):
         # TODO: remove peer_link
         #
         if self.virtual_networks is None:
-            self.virtual_networks = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp)
+            self.virtual_networks = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.this_bound_to)
 
         class PeerLink(BaseModel):
             speed: str

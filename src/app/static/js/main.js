@@ -171,6 +171,7 @@ class SyncStateButton {
                 tbody.innerHTML = element.value;
             });
             the_table.caption.innerHTML = data.caption;
+            if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
         })
         // .catch(error => console.error('handleSyncStateClick - Error:', error));
 
@@ -278,6 +279,7 @@ class MigrateGenericSystemsButton {
                 */
                 console.log('migrate generic system data for', tbody_id, '=', data)
                 tbody.innerHTML = data.value;
+                if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
             })
             .catch(error => {
                 console.log('handleMigrateAccessSwitchesClick - Error:', error);
@@ -289,6 +291,7 @@ class MigrateGenericSystemsButton {
         })
         // TODO: 
         this.button.dataset.state = 'done';
+            if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
         
     }
 }

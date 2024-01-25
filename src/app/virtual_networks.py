@@ -6,8 +6,8 @@ import time
 
 from .access_switches import DataStateEnum
 
+# TODO: minimize _VirtualNetwork content with csv_bulk line
 class _BoundTo(BaseModel):
-    # label: str  # label for the RG or system. TODO: omit?
     vlan_id: int  # like '1323'
 class _VirtualNetwork(BaseModel):
     vn_id: int
@@ -80,8 +80,7 @@ class VirtualNetworks(BaseModel):
     main_bp: Any
     tor_bp: Any
     bound_to: Dict[str, _BoundTo] = {}
-
-    this_bound_to: str = 'atl1tor-r5r15-pair'  # to be updated
+    this_bound_to: str
 
     logger: Any = logging.getLogger('VirtualNetworks')
 

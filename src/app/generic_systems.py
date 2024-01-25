@@ -29,6 +29,12 @@ class _Memberlink(BaseModel):
     switch_intf_id: str = ''
     server_intf_id: str = ''
 
+    def is_not_done(self) -> bool:
+        if not self.switch_intf_id or self.tags != self.new_tags or self.server_intf != self.new_server_intf:
+            logging.warning(f"_Memberlink is_not_done ##################### {self=}")
+            return True
+        return False
+     
     def reset_to_tor_data(self):
         self.new_tags = []
         self.new_server_intf = ''
@@ -114,13 +120,23 @@ class _GroupLink(BaseModel):
     links: Dict[str, _Memberlink] = {}  # <link id from tor>: _Memberlink
     # from main_bp
     new_ae_name: str = ''  # the ae in the main blueprint
-    new_id: str = None
+    new_id: str = None  # the id of the ae link
     new_cts: Optional[List[int]] = []  # the connectivity templates in main blueprint  
     new_speed: str = None
 
     @property
     def rowspan(self):
         return len(self.links)
+
+    def is_not_done(self) -> bool:
+        if self.speed != self.new_speed:
+            logging.warning(f"_GroupLink is_not_done ##################### {self.new_id=} {self.speed=} {self.new_speed=}")
+            return True
+        for _, link in self.links.items():
+            if link.is_not_done():
+                logging.warning(f"_GroupLink is_not_done ##################### {link=}")
+                return True
+        return False
 
     def reset_to_tor_data(self):
         self.new_ae_name = None
@@ -210,6 +226,18 @@ class _GenericSystem(BaseModel):
         if len(ae_names):
             return int(max(ae_names))
         return 0
+
+    def is_not_done(self) -> bool:
+        if self.is_leaf_gs:
+            return False
+        if not self.new_id:
+            self.logger.warning(f"is_not_done {self.new_label=} {self.new_id=}")
+            return True
+        for _, ae in self.group_links.items():
+            if ae.is_not_done():
+                self.logger.warning(f"is_not_done {self.new_label=}")
+                return True
+        return False
 
     def reset_to_tor_data(self):
         self.new_id = None
@@ -506,16 +534,23 @@ class GenericSystems(BaseModel):
         Called by main.py from SyncState
         Build generic_systems from tor_blueprint and return the data 
         """
-        content = _GenericSystemResponse()
+        response = _GenericSystemResponse()
         gs_count = len(self.generic_systems)
         for tbody_id, server_data in self.generic_systems.items():
-            content.values.append(_GenericSystemResponseItem(
+            response.values.append(_GenericSystemResponseItem(
                 id=tbody_id,
                 newId='',
                 value=server_data.get_tbody()
                 ))
-        content.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
-        return content
+        response.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
+        response.done = True
+        for _, gs in self.generic_systems.items():
+            if gs.is_not_done():
+                # breakpoint()
+                response.done = False
+                break
+ 
+        return response
 
     def migrate_generic_system(self, tbody_id) -> dict:
         """
