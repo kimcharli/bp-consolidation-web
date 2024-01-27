@@ -19,6 +19,7 @@ class DataStateEnum(StrEnum):
     LOADING = 'loading'
     DONE = 'done'
     ERROR = 'error'
+    NONE = 'none'
     DATA_STATE = 'data-state'
 
 

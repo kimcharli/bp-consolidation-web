@@ -189,10 +189,46 @@ class AccessSwitches(BaseModel):
     # 
     # connectivity template
     #
-    def update_connectivity_template_data(self):
+    async def update_connectivity_template_data(self):
         data = pull_interface_vlan_table(global_store.bp['tor_bp'], self.generic_systems, self.access_switch_pair)
-        data = self.generic_systems.update_generic_systems_table()
-        return data
+        # await self.generic_systems.update_generic_systems_table()
+        for tbody_id, gs in self.generic_systems.generic_systems.items():
+            for ae_id, ae_data in gs.group_links.items():
+                ct_count_in_tor = len(ae_data.tagged_vlans) + len(ae_data.untagged_vlan)
+                self.logger.warning(f"update_connectivity_template_data {tbody_id=} {ae_id=} {ct_count_in_tor=} {ae_data.tagged_vlans=} {ae_data.untagged_vlan=}")
+                if gs.is_leaf_gs or (ae_data.speed and len(ae_data.tagged_vlans) == 0 and len(ae_data.untagged_vlan) == 0):
+                    # state_attribute = f'class="cts"'
+                    class_items = 'cts'
+                    data_state = DataStateEnum.NONE
+                else:
+                    class_items = f'cts {DataStateEnum.DATA_STATE}'
+                    tagged_vlans = [ct.vn_id for _, ct in ae_data.tagged_vlans.items()]
+                    untagged_vlans = [ct.vn_id for _, ct in ae_data.untagged_vlan.items()]
+                    if (tagged_vlans + untagged_vlans) == ct_count_in_tor:
+                        data_state = DataStateEnum.DONE
+                        # state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}"'
+                    else:
+                        data_state = DataStateEnum.INIT
+                        # state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}"'
+                # return f'<td rowspan={self.rowspan} data-cell="cts" {state_attribute}>0/{ct_count_in_tor}</td>'
+                # data_state = DataStateEnum.INIT
+                # class_items = 'cts'
+                sse_data = {
+                    'event': 'ct-update',
+                    'data': json.dumps({
+                        'id': tbody_id,
+                        # 'class': 'cts',
+                        'rowspan': ae_data.rowspan,
+                        'attrs': [
+                            {'attr': 'class', 'value': class_items},
+                            {'attr': DataStateEnum.DATA_STATE, 'value': data_state},
+                        ],
+                        'value': f"0/{ct_count_in_tor}",
+                    })
+                }
+                await sse_queue.put(sse_data)
+
+        return {}
 
 
     # the 1st action: called by main.py from SyncState
