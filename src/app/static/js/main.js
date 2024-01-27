@@ -142,14 +142,7 @@ class SyncStateButton {
         fetch('/update-generic-systems-table', {
             method: 'GET',
         })
-        .then(result => {
-            if(!result.ok) {
-                return result.text().then(text => { throw new Error(text) });
-            }
-            else {
-                return result.json();
-            }
-        })
+        .then(response => response.json())
         .then(data => {
             /*
                 values: [
@@ -178,89 +171,56 @@ class SyncStateButton {
         fetch('/update-virtual-networks-data', {
             method: 'GET',
         })
-        .then(result => {
-            if(!result.ok) {
-                return result.text().then(text => { throw new Error(text) });
-            }
-            else {
-                return result.json();
-            }
-        })
+        .then(response => response.json())
         .then(data => {
-            /*
-                values: [
-                    attrs: [ { name:, value } ]
-                    value: button text
-                ]
-            */
             console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
-            const vns_div = document.getElementById('virtual-networks');
-            window.scrollTo(0, document.body.scrollHeight);
-            data.values.forEach(element => {
-                // console.log('tbody=', document.getElementById(element.id));
-                let vn_button = document.getElementById(element.id);
-                if ( vn_button == null ) {
-                    vn_button = document.createElement("button");
-                    vn_button.setAttribute('id', element.id);
-                    vn_button.appendChild(document.createTextNode(element.value));
-                    vns_div.append(vn_button);
-                }
-                element.attrs.forEach(attr => {
-                    vn_button.setAttribute(attr.attr, attr.value)
-                })
-            });
-            const vn_caption = document.getElementById('virtual-networks-caption');
-            vn_caption.innerHTML = data.caption;
-            if (data.done)
-                this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'done';
-            else
-                this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'init';
-            this.button.dataset.state = 'done'
+            this.button.dataset.state = 'done';
         })
+        this.button.dataset.state = 'loading';
 
 
-        fetch('/update-connectivity-template-data', {
-            method: 'GET',
-        })
-        .then(result => {
-            if(!result.ok) {
-                return result.text().then(text => { throw new Error(text) });
-            }
-            else {
-                return result.json();
-            }
-        })
-        .then(data => {
-            /*
-                values: [
-                    attrs: [ { name:, value } ]
-                    value: button text
-                ]
-            */
-            console.log('handleSyncStateClick, /update-connectivity-template-data, data=', data);
-            // const vns_div = document.getElementById('virtual-networks');
-            // window.scrollTo(0, document.body.scrollHeight);
-            data.values.forEach(element => {
-                // console.log('tbody=', document.getElementById(element.id));
-                let vn_button = document.getElementById(element.id);
-                if ( vn_button == null ) {
-                    vn_button = document.createElement("button");
-                    vn_button.setAttribute('id', element.id);
-                    vn_button.appendChild(document.createTextNode(element.value));
-                    vns_div.append(vn_button);
-                }
-                element.attrs.forEach(attr => {
-                    vn_button.setAttribute(attr.attr, attr.value)
-                })
-            });
-            // const vn_caption = document.getElementById('virtual-networks-caption');
-            // vn_caption.innerHTML = data.caption;
-            // if (data.done)
-            //     this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'done';
-            // else
-            //     this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'init';
-            // this.button.dataset.state = 'done'
-        })
+        // fetch('/update-connectivity-template-data', {
+        //     method: 'GET',
+        // })
+        // .then(result => {
+        //     if(!result.ok) {
+        //         return result.text().then(text => { throw new Error(text) });
+        //     }
+        //     else {
+        //         return result.json();
+        //     }
+        // })
+        // .then(data => {
+        //     /*
+        //         values: [
+        //             attrs: [ { name:, value } ]
+        //             value: button text
+        //         ]
+        //     */
+        //     console.log('handleSyncStateClick, /update-connectivity-template-data, data=', data);
+        //     // const vns_div = document.getElementById('virtual-networks');
+        //     // window.scrollTo(0, document.body.scrollHeight);
+        //     data.values.forEach(element => {
+        //         // console.log('tbody=', document.getElementById(element.id));
+        //         let vn_button = document.getElementById(element.id);
+        //         if ( vn_button == null ) {
+        //             vn_button = document.createElement("button");
+        //             vn_button.setAttribute('id', element.id);
+        //             vn_button.appendChild(document.createTextNode(element.value));
+        //             vns_div.append(vn_button);
+        //         }
+        //         element.attrs.forEach(attr => {
+        //             vn_button.setAttribute(attr.attr, attr.value)
+        //         })
+        //     });
+        //     // const vn_caption = document.getElementById('virtual-networks-caption');
+        //     // vn_caption.innerHTML = data.caption;
+        //     // if (data.done)
+        //     //     this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'done';
+        //     // else
+        //     //     this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'init';
+        //     // this.button.dataset.state = 'done'
+        // })
 
     }
 
@@ -345,6 +305,20 @@ class MigrateVirtualNetworksButton {
     constructor() {
         this.button = document.getElementById('migrate-virtual-networks');
         this.button.addEventListener('click', this.handleMigrateVirtualNetworks.bind(this));
+
+        // eventSource.addEventListener('update-vn', (event) => {
+        //     const data = JSON.parse(event.data);
+        //     // id: id of the button
+        //     // attrs: [ { attr: , value: } ]
+        //     // value: button text
+        //     // console.log('sse update-vn', data)
+        //     const target = document.getElementById(data.id);
+        //     // console.log('sse update-vn', target)
+        //     data.attrs.forEach(attr => {
+        //         target.setAttribute(attr.attr, attr.value)
+        //     })
+        //     target.innerHTML = data.value;
+        // });        
     }
 
     handleMigrateVirtualNetworks(event) {
@@ -354,42 +328,17 @@ class MigrateVirtualNetworksButton {
             headers: { 
                 'Content-Type': 'application/json',
             },
-            // body: JSON.stringify({
-            //     tbody_id: tbody_id,
-            // })
         })
         .then(response => response.json())
         .then(data => {
-            /*
-                done: true/false
-                values: [
-                    id: id of tbody,
-                    value: html-string
-                ]
-                caption: the caption of the table
-            */
-            const vns_div = document.getElementById('virtual-networks');
-            window.scrollTo(0, document.body.scrollHeight);
+            // const vns_div = document.getElementById('virtual-networks');
+            // window.scrollTo(0, document.body.scrollHeight);
             console.log('migrate-virtual-networks data=', data)
-            data.values.forEach(element => {
-                let vn_button = document.getElementById(element.id);
-                if ( vn_button == null ) {
-                    vn_button = document.createElement("button");
-                    vn_button.setAttribute('id', element.id);
-                    vns_div.append(vn_button);
-                }
-                element.attrs.forEach(attr => {
-                    vn_button.setAttribute(attr.attr, attr.value)
-                })
-            });
-            const vn_caption = document.getElementById('virtual-networks-caption');
-            vn_caption.innerHTML = data.caption;
-            if (data.done)
-                this.button.dataset.state = 'done';
+
         })
         .catch(error => {
             console.log('handleMigrateAccessSwitchesClick - Error:', error);
-            srcButton.dataset.state="error";  
+            srcButton.dataset.state="error";
         });    
         this.button.dataset.state = 'loading';
     }
@@ -488,8 +437,59 @@ class CkIDB {
 
 
 
+const eventSource = new EventSource("/sse");
+console.log('eventSource', eventSource);
+
+eventSource.addEventListener('sse', (event) => {
+    console.log('sse EventListener', event)
+    console.log('sse EventListener', event.data);        // document.getElementById("server-time").innerHTML = event.data;
+});
+
+eventSource.addEventListener('data-state', (event) => {
+    const data = JSON.parse(event.data);
+    // console.log('sse data-state', data)
+    const target = document.getElementById(data.id);
+    // console.log('sse data-state', target)
+    target.dataset.state = data.state;
+});
+
+eventSource.onmessage = (event) => {
+    console.log('eventSource', event)
+    console.log('eventSource.onmessage', event.data);        // document.getElementById("server-time").innerHTML = event.data;
+};  
+
+eventSource.addEventListener('update-vn', (event) => {
+    const data = JSON.parse(event.data);
+    // id: id of the button
+    // attrs: [ { attr: , value: } ]
+    // value: button text
+    const vns_div = document.getElementById('virtual-networks');
+    let vn_button = document.getElementById(data.id);
+    if ( vn_button == null ) {
+        vn_button = document.createElement("button");
+        vn_button.setAttribute('id', data.id);
+        vn_button.appendChild(document.createTextNode(data.value));
+        vns_div.append(vn_button);
+    }
+    data.attrs.forEach(attr => {
+        vn_button.setAttribute(attr.attr, attr.value)
+    })
+    vn_button.innerHTML = data.value;
+    window.scrollTo(0, document.body.scrollHeight);
+});        
+
+eventSource.addEventListener('update-caption', (event) => {
+    const data = JSON.parse(event.data);
+    // id: id of the caption
+    // value: caption text
+    const the_caption = document.getElementById(data.id);
+    the_caption.innerHTML = data.value;
+});        
+
+
 window.addEventListener("load", (event) => {
     console.log("page is fully loaded");
+
     const uploadFileButton = new UploadFileButton();
     const connectButton = new ConnectButton();
     const trashButton = new TrashButton();

@@ -1,13 +1,16 @@
 import logging
 import dotenv
+import asyncio
+import uvicorn
+import json
 from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-import uvicorn
+from sse_starlette.sse import EventSourceResponse
 import os
 from pydantic import BaseModel
 
-from .ck_global import ServerItem, BlueprintItem, global_store
+from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum
 from .generic_systems import GenericSystems
 from .access_switches import access_switches
 from .virtual_networks import VirtualNetworks
@@ -96,7 +99,7 @@ async def update_generic_systems_table():
 @app.get("/update-virtual-networks-data")
 async def update_virtual_networks_data():
     logging.warning(f"/update_virtual_networks_data begin")
-    data = access_switches.update_virtual_networks_data()
+    data = await access_switches.update_virtual_networks_data()
     logging.warning(f"/update_virtual_networks_data end")
     return data
 
@@ -133,10 +136,23 @@ async def migrate_generic_system(system_label: SystemLabel):
 @app.post("/migrate-virtual-networks")
 async def migrate_virtual_networks():
     logging.warning(f"/migrate_virtual_networks begin")
-    data = access_switches.migrate_virtual_networks()
+    data = await access_switches.migrate_virtual_networks()
     logging.warning(f"/migrate_virtual_networks end")
-    return data
+    return {}
 
+
+@app.get('/sse')
+async def sse(request: Request):
+    async def event_generator():
+        while True:
+            if await request.is_disconnected():
+                break
+            item = await sse_queue.get()
+            yield item
+            sse_queue.task_done()
+            # logging.warning(f"event_generator yield")            
+            # await asyncio.sleep(1)
+    return EventSourceResponse(event_generator())
 
 
 def main():

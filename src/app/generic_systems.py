@@ -5,15 +5,10 @@ from enum import Enum, StrEnum, auto
 import time
 
 from ck_apstra_api.apstra_blueprint import CkEnum
+from .ck_global import DataStateEnum, sse_queue
 # TODO: consolidate
 # TODO: catch AE creation delay
 # TODO: generic systems done update
-class DataStateEnum(StrEnum):
-    LOADED = 'done'
-    INIT = 'init'
-    DONE = 'done'
-    ERROR = 'error'
-    DATA_STATE = 'data-state'
 
 
 class _Memberlink(BaseModel):

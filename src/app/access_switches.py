@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 import time
 import json
 
-from .ck_global import global_store, DataStateEnum
+from .ck_global import global_store, DataStateEnum, sse_queue
 
 from .generic_systems import GenericSystems, LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
@@ -174,15 +174,15 @@ class AccessSwitches(BaseModel):
     # 
     # virtual networks
     # 
-    def update_virtual_networks_data(self):
+    async def update_virtual_networks_data(self):
         if self.virtual_networks is None:
             self.virtual_networks = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.this_bound_to)
-        data = self.virtual_networks.update_virtual_networks_data()
+        data = await self.virtual_networks.update_virtual_networks_data()
         return data
 
 
-    def migrate_virtual_networks(self):
-        data = self.virtual_networks.migrate_virtual_networks()
+    async def migrate_virtual_networks(self):
+        data = await self.virtual_networks.migrate_virtual_networks()
         return data
 
 

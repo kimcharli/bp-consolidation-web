@@ -3,8 +3,10 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import logging
 import time
+import asyncio
 
-from .access_switches import DataStateEnum
+from .ck_global import sse_queue, DataStateEnum
+# from .access_switches import DataStateEnum
 
 # TODO: minimize _VirtualNetwork content with csv_bulk line
 class _BoundTo(BaseModel):
@@ -30,7 +32,7 @@ class _VirtualNetwork(BaseModel):
     @property
     def button_vn_id(self):
         return f"vn-{self.vn_id}"
-
+        
     def html_element(self, this_bound_to):
         content = _VirtualNetworkResponse(id=self.button_vn_id, value=str(self.vn_id))
         # content.attrs.append(_Attribute(attr='id', value=self.vn_id))
@@ -94,7 +96,45 @@ class VirtualNetworks(BaseModel):
             response.done = True
         return response
 
-    def update_virtual_networks_data(self):
+    async def queue_render(self):
+        import json
+        for vn_id, vn in self.vns.items():
+            the_data = vn.html_element(self.this_bound_to).dict()
+            # self.logger.warning(f"queue_render {the_data=}")
+            sse_message = {
+                'event': 'update-vn',
+                'data': json.dumps(the_data),
+            }
+            # self.logger.warning(f"queue_render {sse_message=}")
+            await sse_queue.put(sse_message)
+
+        vn_caption = {
+            'id': 'virtual-networks-caption',
+            'value': f'Virtual Networks ({len(self.vns)})'
+        }
+        await sse_queue.put({
+            'event': 'update-caption',
+            'data': json.dumps(vn_caption),
+            })
+        # response = _VirtualNetworksResponse()
+        # response.values = [v.html_element(self.this_bound_to) for k, v in self.vns.items()]
+        # response.caption = f"Virtual Networks ({len(self.vns)})"
+        command_button_state = {
+            'id': 'migrate-virtual-networks',
+            'state': str(DataStateEnum.DONE),
+        }
+        not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]
+        if len(not_done_list) == 0:
+            await sse_queue.put({
+                'event': 'data-state',
+                'data': json.dumps(command_button_state),
+                })
+        #     response.done = True
+        # return response
+        return
+
+
+    async def update_virtual_networks_data(self):
         # cls['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]        
         for vn_node in self.tor_bp.query("node('virtual_network', name='vn')"):
             vn_id = vn_node['vn']['vn_id']
@@ -121,7 +161,8 @@ class VirtualNetworks(BaseModel):
                 if k not in self.bound_to:
                     self.bound_to[k] = v
 
-        return self.render_all()
+        await self.queue_render()
+        # return self.render_all()
 
     def csv_headers(self) -> str:
         cols = ["vn_node_id", "vn_name", "rz_name", "vn_type", "vn_id", "reserved_vlan_id", "dhcp_service",
@@ -132,9 +173,11 @@ class VirtualNetworks(BaseModel):
         cols.append(self.this_bound_to)
         return ','.join(cols)
 
-    def migrate_virtual_networks(self):
+    async def migrate_virtual_networks(self):
         """
         """
+        import json
+
         exported_csv = self.main_bp.get_item("virtual-networks-csv-bulk")
         exported_data = [ [y for y in x.split(',')] for x in exported_csv['csv_bulk'].split('\n')]
 
@@ -174,7 +217,7 @@ class VirtualNetworks(BaseModel):
                 if task_state['status'] != 'in_progress':
                     break
                 self.logger.warning(f"Waiting for the task to finish {i}/{max_wait}")
-                time.sleep(3)
+                time.sleep(3)  # should block and wait. should NOT use asyncio.sleep
             self.logger.warning(f"task succeeded")
         else:
             self.logger.warning("no change")
@@ -198,4 +241,16 @@ class VirtualNetworks(BaseModel):
                 if k not in self.bound_to:
                     self.bound_to[k] = v
 
-        return self.render_all()
+        await self.queue_render()
+
+        set_done = {
+            'event': 'data-state',
+            'data': json.dumps({
+                'id': 'migrate-virtual-networks',
+                'state': str(DataStateEnum.DONE),
+                }),
+            'id': 'migrate-virtual-networks'
+        }
+        await sse_queue.put(set_done)
+
+        return {}
