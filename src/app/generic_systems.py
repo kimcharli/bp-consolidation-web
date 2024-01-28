@@ -25,7 +25,7 @@ class _Memberlink(BaseModel):
 
     def is_not_done(self) -> bool:
         if not self.new_switch_intf_id or self.old_tags != self.new_tags or self.server_intf != self.new_server_intf:
-            logging.warning(f"_Memberlink is_not_done ##################### {self=}")
+            # logging.warning(f"_Memberlink is_not_done ##################### {self=}")
             return True
         return False
      
@@ -128,8 +128,8 @@ class _GroupLink(BaseModel):
     # from main_bp
     new_ae_name: str = ''  # the ae in the main blueprint
     new_ae_id: str = None  # the id of the ae link
-    new_tagged_vlans: Dict[int, CtData] = {}
-    new_untagged_vlan: Dict[int, CtData] = {}  # one entry at most
+    # new_tagged_vlans: Dict[int, CtData] = {}
+    # new_untagged_vlan: Dict[int, CtData] = {}  # one entry at most
     # new_cts: Optional[List[int]] = []  # the connectivity templates in main blueprint  
     new_speed: str = None
 
@@ -151,15 +151,15 @@ class _GroupLink(BaseModel):
 
     @property
     def count_of_new_cts(self) -> int:
-        return len(self.new_tagged_vlans) + len(self.new_untagged_vlan)
+        tagged_cts = [x for k, x in self.old_tagged_vlans.items() if x.new_ct_id]
+        untagged_cts = [x for k, x in self.old_untagged_vlan.items() if x.new_ct_id]
+        return len(tagged_cts) + len(untagged_cts)
 
     @property
     def is_ct_done(self) -> bool:
-        old_tagged_vlans_list = [ct.vn_id for _, ct in self.old_tagged_vlans.items()]
-        old_untagged_vlan = [ct.vn_id for _, ct in self.old_untagged_vlan.items()]
-        new_tagged_vlans_list = [ct.vn_id for _, ct in self.new_tagged_vlans.items()]
-        new_untagged_vlan = [ct.vn_id for _, ct in self.new_untagged_vlan.items()]
-        return sorted(old_tagged_vlans_list) == sorted(new_tagged_vlans_list) and old_untagged_vlan == new_untagged_vlan
+        tagged_cts_not_done = [x for k, x in self.old_tagged_vlans.items() if not x.new_ct_id]
+        untagged_cts_not_done = [x for k, x in self.old_untagged_vlan.items() if not x.new_ct_id]
+        return len(tagged_cts_not_done) == 0 and len(untagged_cts_not_done) == 0
 
     def cts(self, is_leaf_gs):
         if is_leaf_gs:
@@ -174,11 +174,11 @@ class _GroupLink(BaseModel):
 
     def is_not_done(self) -> bool:
         if self.speed != self.new_speed:
-            logging.warning(f"_GroupLink is_not_done ##################### {self.new_ae_id=} {self.speed=} {self.new_speed=}")
+            # logging.warning(f"_GroupLink is_not_done ##################### {self.new_ae_id=} {self.speed=} {self.new_speed=}")
             return True
         for _, link in self.links.items():
             if link.is_not_done():
-                logging.warning(f"_GroupLink is_not_done ##################### {link=}")
+                # logging.warning(f"_GroupLink is_not_done ##################### {link=}")
                 return True
         return False
 
@@ -186,9 +186,13 @@ class _GroupLink(BaseModel):
         self.new_ae_name = None
         self.new_ae_id = None
         self.new_speed = None
+        for _, ct_data in self.old_tagged_vlans.items():
+            ct_data.new_ct_id = None
+        self.old_tagged_vlan.new_ct_id = None
+        # self.old_tagged_vlans
         # self.new_cts = []
-        self.new_tagged_vlans = {}
-        self.new_untagged_vlan = {}
+        # self.new_tagged_vlans = {}
+        # self.new_untagged_vlan = {}
         for _, link in self.links.items():
             link.reset_to_tor_data()
 
@@ -280,11 +284,11 @@ class _GenericSystem(BaseModel):
         if self.is_leaf_gs:
             return False
         if not self.new_gs_id:
-            self.logger.warning(f"is_not_done {self.new_label=} {self.new_gs_id=}")
+            # self.logger.warning(f"is_not_done {self.new_label=} {self.new_gs_id=}")
             return True
         for _, ae in self.group_links.items():
             if ae.is_not_done():
-                self.logger.warning(f"is_not_done {self.new_label=}")
+                # self.logger.warning(f"is_not_done {self.new_label=}")
                 return True
         return False
 

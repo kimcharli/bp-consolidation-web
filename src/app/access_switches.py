@@ -4,12 +4,12 @@ from typing import Optional, List, Dict, Any
 import time
 import json
 
-from .ck_global import global_store, DataStateEnum, sse_queue
+from .ck_global import global_store, DataStateEnum, sse_queue, CtEnum
 
 from .generic_systems import GenericSystems, LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
 from .virtual_networks import VirtualNetworks
-from .vlan_cts import pull_interface_vlan_table
+from .vlan_cts import pull_interface_vlan_table, refresh_ct_table
 
 
 class _AccessSwitchResponseItem(BaseModel):
@@ -193,6 +193,8 @@ class AccessSwitches(BaseModel):
     async def update_connectivity_template_data(self):
         data = pull_interface_vlan_table(global_store.bp['tor_bp'], self.generic_systems, self.access_switch_pair)
         # await self.generic_systems.update_generic_systems_table()
+        refresh_ct_table(global_store.bp['main_bp'], self.generic_systems, self.access_switch_pair)
+
         for tbody_id, gs in self.generic_systems.generic_systems.items():
             for ae_id, ae_data in gs.group_links.items():
                 if gs.is_leaf_gs or (ae_data.speed and ae_data.is_old_cts_absent):
@@ -217,52 +219,85 @@ class AccessSwitches(BaseModel):
 
 
     async def migrate_connectivity_templates(self):
+        main_bp = global_store.bp['main_bp']
+
+        ct_vlan_query = f"""node('ep_endpoint_policy', name='{CtEnum.CT_NODE}')
+            .out('ep_subpolicy').node('ep_endpoint_policy', policy_type_name='pipeline')
+            .out('ep_first_subpolicy').node('ep_endpoint_policy', policy_type_name='AttachSingleVLAN', name='{CtEnum.SINGLE_VLAN_NODE}')
+            .out().node('virtual_network', name='{CtEnum.VN_NODE}')"""
+        ct_vlan_nodes = main_bp.query(ct_vlan_query)
+
         # interate generic systems and fix the connectivity templates
         for tbody_id, gs in self.generic_systems.generic_systems.items():
+            if gs.is_leaf_gs:
+                continue
             for old_ae_id, ae_data in gs.group_links.items():
-                tagged_vlans_to_add = [ x for vn_id, x in ae_data.old_tagged_vlans.items() if vn_id not in ae_data.new_tagged_vlans]
-                untagged_vlans_to_add = [ x for vn_id, x in ae_data.old_untagged_vlan.items() if vn_id not in ae_data.new_untagged_vlan]
-                # TODO: implement remove 
-                tagged_vlans_to_remove = [ x for vn_id, x in ae_data.new_tagged_vlans.items() if vn_id not in ae_data.old_tagged_vlans]
-                untagged_vlans_to_remove = [ x for vn_id, x in ae_data.new_untagged_vlan.items() if vn_id not in ae_data.old_untagged_vlan]
+                # ct attachment per group_link
+                if ae_data.is_ct_done:
+                    continue
 
-        # get main_bp data and compare
-        data = pull_interface_vlan_table(global_store.bp['main_bp'], self.generic_systems, self.access_switch_pair)
-        for tbody_id, gs in self.generic_systems.generic_systems.items():
-            for ae_id, ae_data in gs.group_links.items():
-                ct_count_in_tor = len(ae_data.old_tagged_vlans) + len(ae_data.old_untagged_vlan)
-                self.logger.warning(f"migrate_connectivity_templates {tbody_id=} {ae_id=} {ct_count_in_tor=} {ae_data.old_tagged_vlans=} {ae_data.old_untagged_vlan=}")
-                if gs.is_leaf_gs or (ae_data.speed and len(ae_data.old_tagged_vlans) == 0 and len(ae_data.old_untagged_vlan) == 0):
-                    # state_attribute = f'class="cts"'
-                    class_items = 'cts'
-                    data_state = DataStateEnum.NONE
-                else:
-                    class_items = f'cts {DataStateEnum.DATA_STATE}'
-                    tagged_vlans = [ct.vn_id for _, ct in ae_data.old_tagged_vlans.items()]
-                    untagged_vlans = [ct.vn_id for _, ct in ae_data.old_untagged_vlan.items()]
-                    if (tagged_vlans + untagged_vlans) == ct_count_in_tor:
-                        data_state = DataStateEnum.DONE
-                        # state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}"'
-                    else:
-                        data_state = DataStateEnum.INIT
-                        # state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}"'
-                # return f'<td rowspan={self.rowspan} data-cell="cts" {state_attribute}>0/{ct_count_in_tor}</td>'
-                # data_state = DataStateEnum.INIT
-                # class_items = 'cts'
-                sse_data = {
-                    'event': 'ct-update',
-                    'data': json.dumps({
-                        'id': tbody_id,
-                        # 'class': 'cts',
-                        'rowspan': ae_data.rowspan,
-                        'attrs': [
-                            {'attr': 'class', 'value': class_items},
-                            {'attr': DataStateEnum.DATA_STATE, 'value': data_state},
-                        ],
-                        'value': f"0/{ct_count_in_tor}",
-                    })
-                }
-                await sse_queue.put(sse_data)
+                ct_data_queue = []
+                # add tagged vlan cts
+                # TODO: use new_ct_id instead of new_tagged_vlans
+                for vn_id, ct_data in ae_data.old_tagged_vlans.items():
+                    if ct_data.new_ct_id:
+                        # it is already migrated
+                        continue
+                    tagged_ct_nodes = [x for x in ct_vlan_nodes if x[CtEnum.VN_NODE]['vn_id'] == str(vn_id) and 'vlan_tagged' in x[CtEnum.SINGLE_VLAN_NODE]['attributes']]
+                    if len(tagged_ct_nodes) == 0:
+                        self.logger.warning(f"migrate_connectivity_templates: no tagged vlan ct for {vn_id=} ####")
+                        continue
+                    ct_id = tagged_ct_nodes[0][CtEnum.CT_NODE]['id']
+                    ct_data.new_ct_id = ct_id
+                    ct_data_queue.append(ct_data)
+                for vn_id, ct_data in ae_data.old_untagged_vlan.items():
+                    if ct_data.new_ct_id:
+                        continue
+                    untagged_ct_nodes = [x for x in ct_vlan_nodes if x[CtEnum.VN_NODE]['vn_id'] == str(vn_id) and 'untagged' in x[CtEnum.SINGLE_VLAN_NODE]['attributes']]
+                    if len(untagged_ct_nodes) == 0:
+                        self.logger.warning(f"migrate_connectivity_templates: no untagged vlan ct for {vn_id=} ####")
+                        break
+                    ct_id = untagged_ct_nodes[0][CtEnum.CT_NODE]['id']
+                    ct_data.new_ct_id = ct_id
+                    ct_data_queue.append(ct_data)
+                total_cts = len(ct_data_queue)
+                while len(ct_data_queue) > 0:
+                    throttle_number = 50
+                    cts_chunk = ct_data_queue[:throttle_number]
+                    batch_ct_spec = {
+                        "operations": [
+                            {
+                                "path": "/obj-policy-batch-apply",
+                                "method": "PATCH",
+                                "payload": {
+                                    "application_points": [
+                                        {
+                                            "id": ae_data.new_ae_id,
+                                            "policies": [ {"policy": x.new_ct_id, "used": True} for x in cts_chunk]
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                    batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
+                    self.logger.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {len(cts_chunk)=} {total_cts=} {batch_result=} {batch_result.content=}")
+                    if not ae_data.new_ae_id:
+                        self.logger.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {ae_data=}")
+                    # for ct_data in cts_chunk:
+                    #     ae_data.new_tagged_vlans[vn_id] = ae_data.old_tagged_vlans[vn_id]
+                    del ct_data_queue[:throttle_number]
+                    cell_state = DataStateEnum.DONE if ae_data.is_ct_done else DataStateEnum.INIT
+
+                    sse_data = {
+                        'event': 'data-state',
+                        'data': json.dumps({
+                            'id': ae_data.cts_cell_id,
+                            'state': cell_state,
+                            'value': f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}',
+                        })
+                    }
+                    await sse_queue.put(sse_data)
 
         return {}
 

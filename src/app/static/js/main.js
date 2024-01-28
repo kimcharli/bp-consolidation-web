@@ -182,7 +182,6 @@ class SyncStateButton {
         .then(response => response.json())
         .then(data => {
             console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
-            this.button.dataset.state = 'done';
 
             this.updateConnectivityTemplateTable();
         })
@@ -204,6 +203,9 @@ class SyncStateButton {
                 ]
             */
             console.log('handleSyncStateClick, /update-connectivity-template-data, data=', data);
+
+            this.button.dataset.state = 'done';
+
         })
         .catch(error => console.error('updateConnectivityTemplateTable - Error:', error, error.name, error.message));
     }    
@@ -328,6 +330,7 @@ class MigrateCTsButton {
         .then(response => response.json())
         .then(data => {
             console.log('/migrate-cts data=', data)
+            this.button.dataset.state = 'done';
         })
         .catch(error => {
             console.log('handleMigrateCTs - Error:', error);
@@ -512,6 +515,7 @@ window.addEventListener("load", (event) => {
     const migrateAccessSwitchesButton = new MigrateAccessSwitchesButton();
     const migrateGenericSystemsButton = new MigrateGenericSystemsButton();
     const migrateVirtualNetworksButtion = new MigrateVirtualNetworksButton();
+    const migrateCTsButton = new MigrateCTsButton();
     CkIDB.openDB(connectButton);
 
 });

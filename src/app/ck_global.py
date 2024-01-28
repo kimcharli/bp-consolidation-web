@@ -22,6 +22,13 @@ class DataStateEnum(StrEnum):
     NONE = 'none'
     DATA_STATE = 'data-state'
 
+class CtEnum(StrEnum):
+    INTERFACE_NODE = 'interface'
+    CT_NODE = 'batch'
+    SINGLE_VLAN_NODE = 'AttachSingleVLAN'
+    VN_NODE = 'virtual_network'
+    EPAE_NODE = 'ep_application_instance'
+
 
 class ServerItem(BaseModel):
     id: Optional[int] = None
