@@ -150,6 +150,10 @@ class _GroupLink(BaseModel):
         return len(self.old_tagged_vlans) + len(self.old_untagged_vlan)
 
     @property
+    def count_of_new_cts(self) -> int:
+        return len(self.new_tagged_vlans) + len(self.new_untagged_vlan)
+
+    @property
     def is_ct_done(self) -> bool:
         old_tagged_vlans_list = [ct.vn_id for _, ct in self.old_tagged_vlans.items()]
         old_untagged_vlan = [ct.vn_id for _, ct in self.old_untagged_vlan.items()]
@@ -166,7 +170,7 @@ class _GroupLink(BaseModel):
             state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}"'
         else:
             state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}"'
-        return f'<td rowspan={self.rowspan} id="{self.cts_cell_id}" data-cell="cts" {state_attribute}>0/{self.count_of_old_cts}</td>'
+        return f'<td rowspan={self.rowspan} id="{self.cts_cell_id}" data-cell="cts" {state_attribute}>{self.count_of_new_cts}/{self.count_of_old_cts}</td>'
 
     def is_not_done(self) -> bool:
         if self.speed != self.new_speed:
@@ -648,6 +652,7 @@ class GenericSystems(BaseModel):
             tbody_id = f"gs-{server_label}"
             server_links_dict.setdefault(tbody_id, []).append(server_link)            
         for tbody_id, links in server_links_dict.items():
+            # breakpoint()
             self.generic_systems[tbody_id].refresh(self.main_bp, links)
 
         return

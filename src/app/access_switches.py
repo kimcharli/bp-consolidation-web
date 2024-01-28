@@ -153,6 +153,7 @@ class AccessSwitches(BaseModel):
     def generic_systems(self):
         if self.generic_systems_data is None:
             self.generic_systems_data = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, access_switches=self.access_switches, tor_gs_label=self.tor_gs.label)
+            self.logger.warning(f"generic_systems {self.generic_systems_data=}")
         return self.generic_systems_data
 
     @classmethod
@@ -206,7 +207,7 @@ class AccessSwitches(BaseModel):
                     'data': json.dumps({
                         'id': ae_data.cts_cell_id,
                         'state': data_state,
-                        'value': f'0/{ae_data.count_of_old_cts}',
+                        'value': f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}',
                     })
                 }
                 # self.logger.warning(f"update_connectivity_template_data {sse_data=}")

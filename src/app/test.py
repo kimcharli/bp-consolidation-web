@@ -25,24 +25,30 @@ server = ServerItem(
     main_bp_label=env_data.main_bp_label,
     tor_bp_label=env_data.tor_bp_label)
 
-main_bp = BlueprintItem(label=env_data.main_bp_label, role='main_bp')
-tor_bp = BlueprintItem(label=env_data.tor_bp_label, role='tor_bp')
+async def main():
+    main_bp = BlueprintItem(label=env_data.main_bp_label, role='main_bp')
+    tor_bp = BlueprintItem(label=env_data.tor_bp_label, role='tor_bp')
 
-# global_store.update_env_ini(EnvData())
-global_store.replace_env_ini(env_data)
-version = global_store.login_server(server)
-id = global_store.login_blueprint(main_bp)
-id = global_store.login_blueprint(tor_bp)
-# data = GlobalStore.pull_tor_bp_data()
-as_data = access_switches.update_access_switches_table()
-# logging.warning(f"AccessSwitches {as_data=}")
-## gs_data = access_switches.generic_systems.update_generic_systems_table()
-# logging.warning(f"GenericSystems {gs_data=}")
-## vn_data = access_switches.update_virtual_networks_data()
-# logging.warning(f"VirtualNetworks {vn_data=}")
-# breakpoint()
-# gs_new = access_switches.migrate_generic_system('gs-az1kvm1004-az1kvm1028-atl1-LACP')
+    # global_store.update_env_ini(EnvData())
+    global_store.replace_env_ini(env_data)
+    version = global_store.login_server(server)
+    id = global_store.login_blueprint(main_bp)
+    id = global_store.login_blueprint(tor_bp)
+    # data = GlobalStore.pull_tor_bp_data()
+    as_data = access_switches.update_access_switches_table()
+    # logging.warning(f"AccessSwitches {as_data=}")
+    ## gs_data = access_switches.generic_systems.update_generic_systems_table()
+    # logging.warning(f"GenericSystems {gs_data=}")
+    ## vn_data = access_switches.update_virtual_networks_data()
+    # logging.warning(f"VirtualNetworks {vn_data=}")
+    # breakpoint()
+    # gs_new = access_switches.migrate_generic_system('gs-az1kvm1004-az1kvm1028-atl1-LACP')
 
-## vn_mig = access_switches.migrate_virtual_networks()
+    ## vn_mig = access_switches.migrate_virtual_networks()
 
-ct_data = access_switches.update_connectivity_template_data()
+    ct_data = await access_switches.update_connectivity_template_data()
+
+if __name__ == '__main__':
+    import asyncio
+    logging.basicConfig(level=logging.WARNING)
+    asyncio.run(main())

@@ -116,6 +116,7 @@ class SyncStateButton {
 
     handleSyncState(event) {
         const srcButton = event.srcElement || event.target;
+
         fetch('/update-access-switches-table', {
             method: 'GET',
         })
@@ -134,11 +135,13 @@ class SyncStateButton {
             // srcButton.dataset.state = 'done';
             document.getElementById("migrate-access-switches").dataset.state = data.button_state;
             // this.buttonMigrateAccessSwitches.dataset.state = data.button_state;
+            this.updateGenericSystemsTable();
         })
         .catch(error => console.error('handleSyncStateClick - Error:', error, error.name, error.message));
         srcButton.dataset.state="loading";
+    }
 
-
+    updateGenericSystemsTable() {
         fetch('/update-generic-systems-table', {
             method: 'GET',
         })
@@ -165,9 +168,14 @@ class SyncStateButton {
             });
             the_table.caption.innerHTML = data.caption;
             if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
-        })
-        // .catch(error => console.error('handleSyncStateClick - Error:', error));
 
+            this.updateVirtualNetworksTable();
+        })
+        .catch(error => console.error('updateGenericSystemsTable - Error:', error, error.name, error.message));
+
+    }
+
+    updateVirtualNetworksTable() {
         fetch('/update-virtual-networks-data', {
             method: 'GET',
         })
@@ -175,10 +183,15 @@ class SyncStateButton {
         .then(data => {
             console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
             this.button.dataset.state = 'done';
+
+            this.updateConnectivityTemplateTable();
         })
+        .catch(error => console.error('updateVirtualNetworksTable - Error:', error, error.name, error.message));
         this.button.dataset.state = 'loading';
+    }
 
 
+    updateConnectivityTemplateTable() {
         fetch('/update-connectivity-template-data', {
             method: 'GET',
         })
@@ -191,33 +204,10 @@ class SyncStateButton {
                 ]
             */
             console.log('handleSyncStateClick, /update-connectivity-template-data, data=', data);
-            // // const vns_div = document.getElementById('virtual-networks');
-            // // window.scrollTo(0, document.body.scrollHeight);
-            // data.values.forEach(element => {
-            //     // console.log('tbody=', document.getElementById(element.id));
-            //     let vn_button = document.getElementById(element.id);
-            //     if ( vn_button == null ) {
-            //         vn_button = document.createElement("button");
-            //         vn_button.setAttribute('id', element.id);
-            //         vn_button.appendChild(document.createTextNode(element.value));
-            //         vns_div.append(vn_button);
-            //     }
-            //     element.attrs.forEach(attr => {
-            //         vn_button.setAttribute(attr.attr, attr.value)
-            //     })
-            // });
-            // const vn_caption = document.getElementById('virtual-networks-caption');
-            // vn_caption.innerHTML = data.caption;
-            // if (data.done)
-            //     this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'done';
-            // else
-            //     this.vn_command_button = document.getElementById('migrate-virtual-networks').dataset.state = 'init';
-            // this.button.dataset.state = 'done'
         })
-
-    }
-
-};
+        .catch(error => console.error('updateConnectivityTemplateTable - Error:', error, error.name, error.message));
+    }    
+}
 
 
 class MigrateAccessSwitchesButton {
