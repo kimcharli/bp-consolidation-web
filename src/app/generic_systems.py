@@ -12,19 +12,19 @@ from .ck_global import DataStateEnum, sse_queue
 
 
 class _Memberlink(BaseModel):
-    tags: List[str] = []
+    old_tags: List[str] = []
     switch: str
     switch_intf: str
     server_intf: str = ''  # DO NOT USE None
     # from main_bp
     new_tags: List[str] = []
     new_server_intf: str = ''  # DO NOT USE NONE
-    new_id: Optional[str] = None   # main_id
-    switch_intf_id: str = ''
-    server_intf_id: str = ''
+    new_link_id: Optional[str] = None   # main_id
+    new_switch_intf_id: str = ''
+    new_server_intf_id: str = ''
 
     def is_not_done(self) -> bool:
-        if not self.switch_intf_id or self.tags != self.new_tags or self.server_intf != self.new_server_intf:
+        if not self.new_switch_intf_id or self.old_tags != self.new_tags or self.server_intf != self.new_server_intf:
             logging.warning(f"_Memberlink is_not_done ##################### {self=}")
             return True
         return False
@@ -32,7 +32,7 @@ class _Memberlink(BaseModel):
     def reset_to_tor_data(self):
         self.new_tags = []
         self.new_server_intf = ''
-        self.new_id = None
+        self.new_link_id = None
 
     def interface_name_spec(self, access_switches) -> dict:
         """
@@ -40,17 +40,17 @@ class _Memberlink(BaseModel):
         """
         if self.new_server_intf != self.server_intf:
             return {
-                'id': self.new_id,
+                'id': self.new_link_id,
                 'endpoints': [
                     {
                         'interface': {
-                            'id': self.server_intf_id,
+                            'id': self.new_server_intf_id,
                             'if_name': self.server_intf
                         }
                     },
                     {
                         'interface': {
-                            'id': self.switch_intf_id
+                            'id': self.new_switch_intf_id
                         }
                     }
                 ]
@@ -59,27 +59,28 @@ class _Memberlink(BaseModel):
 
     def tr(self, is_leaf_gs) -> str:
         trs = []
+        # The above code is not doing anything. It only contains the word "tags" and "
         tags_buttons_list = []        
-        for i in self.tags:
+        for i in self.old_tags:
             if i in self.new_tags:
                 tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{i}</button>')
             else:
                 tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{i}</button>')
         for i in self.new_tags:
-            if i not in self.tags:
+            if i not in self.old_tags:
                 tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.ERROR}">{i}</button>')
         tags_buttons = ''.join(tags_buttons_list)
         trs.append(f'<td data-cell="tags">{tags_buttons}</td>')
         if is_leaf_gs:
             trs.append(f'<td data-cell="server_intf" >{self.server_intf}</td>')
-        elif self.new_id and self.server_intf == self.new_server_intf:
+        elif self.new_link_id and self.server_intf == self.new_server_intf:
             trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.server_intf}</td>')
         else:
             trs.append(f'<td data-cell="server_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.server_intf}</td>')
         if is_leaf_gs:
             trs.append(f'<td data-cell="switch" >{self.switch}</td>')
             trs.append(f'<td data-cell="switch_intf" >{self.switch_intf}</td>')
-        elif self.new_id:
+        elif self.new_link_id:
             trs.append(f'<td data-cell="switch" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.switch}</td>')
             trs.append(f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.switch_intf}</td>')
         else:
@@ -87,8 +88,8 @@ class _Memberlink(BaseModel):
             trs.append(f'<td data-cell="switch_intf" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.switch_intf}</td>')
         return ''.join(trs)
 
-    def add_tag(self, tag):
-        if tag  not in self.tags:
+    def add_old_tag(self, tag):
+        if tag  not in self.old_tags:
             self.tags.append(tag)
 
     def add_new_tag(self, tag):
@@ -99,9 +100,9 @@ class _Memberlink(BaseModel):
         """
         Do tagging. Retrun True if changed
         """
-        if sorted(self.tags) != sorted(self.new_tags):
+        if sorted(self.old_tags) != sorted(self.new_tags):
             main_bp.post_tagging( 
-                [self.new_id], 
+                [self.new_link_id], 
                 tags_to_add = [x for x in self.tags if x not in self.new_tags],
                 tags_to_remove = [x for x in self.new_tags if x not in self.tags]
                 )
@@ -112,42 +113,64 @@ class _Memberlink(BaseModel):
 class CtData(BaseModel):
     # multiple per link
     vn_id: int
-    ct_id: str = None  # to capture the ct_id from main_bp
+    is_tagged: bool = True
+    new_ct_id: str = None  # to capture the ct_id from main_bp
 
 
 class _GroupLink(BaseModel):
-    ae_name: str = '' # the ae in the tor blueprint
+    old_ae_id: str  # to use for ct_id
+    old_ae_name: str = '' # the ae in the tor blueprint
     speed: str
     # cts: List[CtData] = []
-    tagged_vlans: Dict[int, CtData] = {}
-    untagged_vlan: Dict[int, CtData] = {}  # one entry at most
+    old_tagged_vlans: Dict[int, CtData] = {}
+    old_untagged_vlan: Dict[int, CtData] = {}  # one entry at most
     links: Dict[str, _Memberlink] = {}  # <member interface id from tor>: _Memberlink
     # from main_bp
     new_ae_name: str = ''  # the ae in the main blueprint
-    new_id: str = None  # the id of the ae link
-    new_cts: Optional[List[int]] = []  # the connectivity templates in main blueprint  
+    new_ae_id: str = None  # the id of the ae link
+    new_tagged_vlans: Dict[int, CtData] = {}
+    new_untagged_vlan: Dict[int, CtData] = {}  # one entry at most
+    # new_cts: Optional[List[int]] = []  # the connectivity templates in main blueprint  
     new_speed: str = None
 
     @property
-    def rowspan(self):
+    def rowspan(self) -> int:
         return len(self.links)
 
+    @property
+    def cts_cell_id(self) -> str:
+        return f"ct-{self.old_ae_id}"
+
+    @property
+    def is_old_cts_absent(self) -> bool:
+        return len(self.old_tagged_vlans) == 0 and len(self.old_untagged_vlan) == 0
+
+    @property
+    def count_of_old_cts(self) -> int:
+        return len(self.old_tagged_vlans) + len(self.old_untagged_vlan)
+
+    @property
+    def is_ct_done(self) -> bool:
+        old_tagged_vlans_list = [ct.vn_id for _, ct in self.old_tagged_vlans.items()]
+        old_untagged_vlan = [ct.vn_id for _, ct in self.old_untagged_vlan.items()]
+        new_tagged_vlans_list = [ct.vn_id for _, ct in self.new_tagged_vlans.items()]
+        new_untagged_vlan = [ct.vn_id for _, ct in self.new_untagged_vlan.items()]
+        return sorted(old_tagged_vlans_list) == sorted(new_tagged_vlans_list) and old_untagged_vlan == new_untagged_vlan
+
     def cts(self, is_leaf_gs):
-        ct_count_in_tor = len(self.tagged_vlans) + len(self.untagged_vlan)
-        if is_leaf_gs or (self.speed and len(self.tagged_vlans) == 0 and len(self.untagged_vlan) == 0):
+        if is_leaf_gs:
             state_attribute = f'class="cts"'
+        elif self.is_old_cts_absent:
+            state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.NONE}"'
+        elif self.is_ct_done:
+            state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}"'
         else:
-            tagged_vlans = [ct.vn_id for _, ct in self.tagged_vlans.items()]
-            untagged_vlans = [ct.vn_id for _, ct in self.untagged_vlan.items()]
-            if (tagged_vlans + untagged_vlans) == ct_count_in_tor:
-                state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}"'
-            else:
-                state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}"'
-        return f'<td rowspan={self.rowspan} data-cell="cts" {state_attribute}>0/{ct_count_in_tor}</td>'
+            state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}"'
+        return f'<td rowspan={self.rowspan} id="{self.cts_cell_id}" data-cell="cts" {state_attribute}>0/{self.count_of_old_cts}</td>'
 
     def is_not_done(self) -> bool:
         if self.speed != self.new_speed:
-            logging.warning(f"_GroupLink is_not_done ##################### {self.new_id=} {self.speed=} {self.new_speed=}")
+            logging.warning(f"_GroupLink is_not_done ##################### {self.new_ae_id=} {self.speed=} {self.new_speed=}")
             return True
         for _, link in self.links.items():
             if link.is_not_done():
@@ -157,23 +180,25 @@ class _GroupLink(BaseModel):
 
     def reset_to_tor_data(self):
         self.new_ae_name = None
-        self.new_id = None
+        self.new_ae_id = None
         self.new_speed = None
-        self.new_cts = []
+        # self.new_cts = []
+        self.new_tagged_vlans = {}
+        self.new_untagged_vlan = {}
         for _, link in self.links.items():
             link.reset_to_tor_data()
 
     def build_lag_spec(self):
         """
-        Build LAG spec for each link if new_id is absent
+        Build LAG spec for each link if new_ae_id is absent
         """
         lag_spec = {}
-        if self.ae_name != '' and not self.new_id:
-            lag_spec = {x.new_id: {
-                'group_label': self.ae_name,
+        if self.old_ae_name != '' and not self.new_ae_id:
+            lag_spec = {x.new_ae_id: {
+                'group_label': self.old_ae_name,
                 'lag_mode': 'lacp_active'
             } for k, x in self.links.items()}
-            self.new_ae_name = self.ae_name
+            self.new_ae_name = self.old_ae_name
         return lag_spec        
 
     def add_tags(self, main_bp):
@@ -190,11 +215,11 @@ class _GroupLink(BaseModel):
     def tr(self, is_leaf_gs) -> list:
         row0_head_list = []
         if is_leaf_gs:
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="ae">{self.ae_name}</td>')
-        elif self.ae_name == self.new_ae_name:
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.ae_name}</td>')
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="ae">{self.old_ae_name}</td>')
+        elif self.old_ae_name == self.new_ae_name:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.old_ae_name}</td>')
         else:
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.ae_name}</td>')
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}">{self.old_ae_name}</td>')
         row0_head_list.append(self.cts(is_leaf_gs))
         if is_leaf_gs:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="speed" class="speed">{self.speed}</td>')
@@ -221,7 +246,7 @@ class _GenericSystem(BaseModel):
     group_links: Dict[str, _GroupLink] = {}  # <evpn/member interface id from tor>: _GroupLink    
     # set by main_bp
     message: str = None  # creation message
-    new_id: str = None  # the generic system id on main blueprint
+    new_gs_id: str = None  # the generic system id on main blueprint
 
     logger: Any = logging.getLogger('_GenericSystem')
 
@@ -235,14 +260,14 @@ class _GenericSystem(BaseModel):
 
     @property
     def port_channel_id_min(self) -> int:
-        ae_names = [x.ae_name[2:] for k, x in self.group_links.items() if x.ae_name.startswith('ae')]
+        ae_names = [x.old_ae_name[2:] for k, x in self.group_links.items() if x.old_ae_name.startswith('ae')]
         if len(ae_names):
             return int(min(ae_names))
         return 0
 
     @property
     def port_channel_id_max(self) -> int:
-        ae_names = [x.ae_name[2:] for k, x in self.group_links.items() if x.ae_name.startswith('ae')]
+        ae_names = [x.old_ae_name[2:] for k, x in self.group_links.items() if x.old_ae_name.startswith('ae')]
         if len(ae_names):
             return int(max(ae_names))
         return 0
@@ -250,8 +275,8 @@ class _GenericSystem(BaseModel):
     def is_not_done(self) -> bool:
         if self.is_leaf_gs:
             return False
-        if not self.new_id:
-            self.logger.warning(f"is_not_done {self.new_label=} {self.new_id=}")
+        if not self.new_gs_id:
+            self.logger.warning(f"is_not_done {self.new_label=} {self.new_gs_id=}")
             return True
         for _, ae in self.group_links.items():
             if ae.is_not_done():
@@ -260,7 +285,7 @@ class _GenericSystem(BaseModel):
         return False
 
     def reset_to_tor_data(self):
-        self.new_id = None
+        self.new_gs_id = None
         for _, ae_link in self.group_links.items():
             ae_link.reset_to_tor_data()
 
@@ -318,10 +343,12 @@ class _GenericSystem(BaseModel):
 
     def refresh(self, main_bp, server_links = None):
         """
-        Refresh new data from main blueprint
+        Refresh new data from main blueprint given by server_links
         """
         # get server_links from main_bp
         if server_links is None:
+            # TODO: check task instead of sleep
+            # may be too early. wait for 3 x 10
             self.reset_to_tor_data()
 
             server_links = {}
@@ -340,29 +367,29 @@ class _GenericSystem(BaseModel):
             new_server_id = server_link[CkEnum.GENERIC_SYSTEM]['id']
             new_link_id = server_link[CkEnum.LINK]['id']
             new_ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
-            new_ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else None
             new_speed = server_link[CkEnum.LINK]['speed']
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
-            switch_intf_id = server_link[CkEnum.MEMBER_INTERFACE]['id']
+            new_switch_intf_id = server_link[CkEnum.MEMBER_INTERFACE]['id']
+            new_ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else new_switch_intf_id
             new_server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or ''
-            server_intf_id = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['id']
+            new_server_intf_id = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['id']
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
 
-            self.new_id = new_server_id
+            self.new_gs_id = new_server_id
             for _, ae_data in self.group_links.items():
                 for _, link_data in ae_data.links.items():
                     if link_data.switch == switch and link_data.switch_intf == switch_intf:
                         # found the matching link
                         if tag:
                             link_data.add_new_tag(tag)
-                        link_data.new_id = new_link_id
+                        link_data.new_link_id = new_link_id
                         ae_data.new_ae_name = new_ae_name
                         ae_data.new_speed = new_speed
-                        ae_data.new_id = new_ae_id
+                        ae_data.new_ae_id = new_ae_id
                         link_data.new_server_intf = new_server_intf
-                        link_data.switch_intf_id = switch_intf_id
-                        link_data.server_intf_id = server_intf_id
+                        link_data.new_switch_intf_id = new_switch_intf_id
+                        link_data.new_server_intf_id = new_server_intf_id
 
 
     def create_generic_system(self, main_bp, access_switches):
@@ -465,7 +492,7 @@ class _GenericSystem(BaseModel):
     def migrate(self, main_bp, access_switches) -> dict:
         """
         Return:
-            new_id: new_id
+            new_id: new_gs_id
             value: get_tbody()
             caption: caption
         """
@@ -481,7 +508,7 @@ class _GenericSystem(BaseModel):
         self.add_tags(main_bp)
 
         return {
-            'new_id': self.new_id,  # TODO: no need?
+            'new_id': self.new_gs_id,  # TODO: no need?
             'value': self.get_tbody(),
             # 'caption': None # TODO: later
         }
@@ -534,7 +561,7 @@ class GenericSystems(BaseModel):
         for tbody_id, server_data in self.generic_systems.items():
             server_label = server_data.label
             for ae_link_id, group_link in server_data.group_links.items():
-                if group_link.ae_name:
+                if group_link.old_ae_name:
                     for member_id, member_link in group_link.links.items():
                         # breakpoint()
                         if member_link.switch_intf in ['et-0/0/48', 'et-0/0/49']:
@@ -594,9 +621,9 @@ class GenericSystems(BaseModel):
             new_label = self.set_new_generic_system_label(server_label)
             tbody_id = f"gs-{new_label}"
             # link_id = server_link[CkEnum.LINK]['id']
-            member_intf_id = server_link[CkEnum.MEMBER_INTERFACE]['id']
-            ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
-            ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else member_intf_id
+            old_switch_intf_id = server_link[CkEnum.MEMBER_INTERFACE]['id']
+            old_ae_name = server_link[CkEnum.AE_INTERFACE]['if_name'] if server_link[CkEnum.AE_INTERFACE] else ''
+            old_ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else old_switch_intf_id
             speed = server_link[CkEnum.LINK]['speed']
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
@@ -606,10 +633,10 @@ class GenericSystems(BaseModel):
             server_data = generic_systems.setdefault(tbody_id, _GenericSystem(label=server_label, new_label=self.set_new_generic_system_label(server_label)))
             if switch_intf == 'et-0/0/48':
                 server_data.is_leaf_gs = True
-            ae_data = server_data.group_links.setdefault(ae_id, _GroupLink(ae_name=ae_name, speed=speed))
-            link_data = ae_data.links.setdefault(member_intf_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
+            ae_data = server_data.group_links.setdefault(old_ae_id, _GroupLink(old_ae_name=old_ae_name, old_ae_id=old_ae_id, speed=speed))
+            link_data = ae_data.links.setdefault(old_switch_intf_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
             if tag:
-                link_data.add_tag(tag)
+                link_data.add_tags(tag)
         for index, (k, v) in enumerate(generic_systems.items()):
             v.index = index + 1
         self.generic_systems = generic_systems

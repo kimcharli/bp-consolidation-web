@@ -72,8 +72,8 @@ def pull_interface_vlan_table(the_bp, generic_systems, switch_label_pair: list) 
         # logging.warning(f"{the_ae=}")
         # breakpoint()
         if tagged:
-            the_ae.tagged_vlans[vn_id] = CtData(vn_id=vn_id)
+            the_ae.old_tagged_vlans[vn_id] = CtData(vn_id=vn_id)
         else:
-            the_ae.untagged_vlan[vn_id] = CtData(vn_id=vn_id)
+            the_ae.old_untagged_vlan[vn_id] = CtData(vn_id=vn_id)
 
     return interface_vlan_table

@@ -101,9 +101,9 @@ class ConnectButton {
                 document.getElementById(element).dataset.state = 'done';
     
                 // auto continue to sync
-                document.getElementById('sync-state').click();
             })
-        )
+        );
+        document.getElementById('sync-state').click();
     }
     
 };
@@ -298,21 +298,7 @@ class MigrateVirtualNetworksButton {
     constructor() {
         this.button = document.getElementById('migrate-virtual-networks');
         this.button.addEventListener('click', this.handleMigrateVirtualNetworks.bind(this));
-
-        // eventSource.addEventListener('update-vn', (event) => {
-        //     const data = JSON.parse(event.data);
-        //     // id: id of the button
-        //     // attrs: [ { attr: , value: } ]
-        //     // value: button text
-        //     // console.log('sse update-vn', data)
-        //     const target = document.getElementById(data.id);
-        //     // console.log('sse update-vn', target)
-        //     data.attrs.forEach(attr => {
-        //         target.setAttribute(attr.attr, attr.value)
-        //     })
-        //     target.innerHTML = data.value;
-        // });        
-    }
+   }
 
     handleMigrateVirtualNetworks(event) {
         const srcButton = event.srcElement || event.target;
@@ -324,10 +310,7 @@ class MigrateVirtualNetworksButton {
         })
         .then(response => response.json())
         .then(data => {
-            // const vns_div = document.getElementById('virtual-networks');
-            // window.scrollTo(0, document.body.scrollHeight);
             console.log('migrate-virtual-networks data=', data)
-
         })
         .catch(error => {
             console.log('handleMigrateAccessSwitchesClick - Error:', error);
@@ -336,6 +319,34 @@ class MigrateVirtualNetworksButton {
         this.button.dataset.state = 'loading';
     }
 }
+
+
+class MigrateCTsButton {
+    constructor() {
+        this.button = document.getElementById('migrate-cts');
+        this.button.addEventListener('click', this.handleMigrateCTs.bind(this));
+   }
+
+    handleMigrateCTs(event) {
+        const srcButton = event.srcElement || event.target;
+        fetch('/migrate-cts', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('/migrate-cts data=', data)
+        })
+        .catch(error => {
+            console.log('handleMigrateCTs - Error:', error);
+            srcButton.dataset.state="error";
+        });    
+        this.button.dataset.state = 'loading';
+    }
+}
+
 
 class CkIDB {
     static db = null;
@@ -365,6 +376,7 @@ class CkIDB {
                 .catch(error => {
                     console.log(`error`, error)
                 })
+                console.log('openDB: invoke TriggerFetchEnvIni()')
                 this.TriggerFetchEnvIni(data);
             }
         })
@@ -386,6 +398,7 @@ class CkIDB {
         if (this.isServerValid(data)) {
             console.log('addServerStore() - isServerValid')
             this.db.apstra_server.put(data)
+            console.log('addServerStore() - invoke TriggerFetchEnvIni')
             this.TriggerFetchEnvIni(data);    
         } else {
             console.log('addServerStore() - invalid input')
@@ -408,6 +421,7 @@ class CkIDB {
 
         document.getElementById('load-env-div').dataset.state = 'done';
 
+        console.log('TriggerFetchEnvIni() - invoke connectButton.click()')
         this.connectButton.button.click();
     }
 
@@ -444,6 +458,7 @@ eventSource.addEventListener('data-state', (event) => {
     const target = document.getElementById(data.id);
     // console.log('sse data-state', target)
     target.dataset.state = data.state;
+    if (data.value !== undefined) target.innerHTML = data.value;
 });
 
 eventSource.onmessage = (event) => {
@@ -501,7 +516,9 @@ window.addEventListener("load", (event) => {
     const uploadFileButton = new UploadFileButton();
     const connectButton = new ConnectButton();
     const trashButton = new TrashButton();
+    console.log('added trashButton')
     const syncStateButton = new SyncStateButton();
+    console.log('added syncStateButton')
     const migrateAccessSwitchesButton = new MigrateAccessSwitchesButton();
     const migrateGenericSystemsButton = new MigrateGenericSystemsButton();
     const migrateVirtualNetworksButtion = new MigrateVirtualNetworksButton();

@@ -194,16 +194,51 @@ class AccessSwitches(BaseModel):
         # await self.generic_systems.update_generic_systems_table()
         for tbody_id, gs in self.generic_systems.generic_systems.items():
             for ae_id, ae_data in gs.group_links.items():
-                ct_count_in_tor = len(ae_data.tagged_vlans) + len(ae_data.untagged_vlan)
-                self.logger.warning(f"update_connectivity_template_data {tbody_id=} {ae_id=} {ct_count_in_tor=} {ae_data.tagged_vlans=} {ae_data.untagged_vlan=}")
-                if gs.is_leaf_gs or (ae_data.speed and len(ae_data.tagged_vlans) == 0 and len(ae_data.untagged_vlan) == 0):
+                if gs.is_leaf_gs or (ae_data.speed and ae_data.is_old_cts_absent):
+                    data_state = DataStateEnum.NONE
+                else:
+                    if ae_data.is_ct_done:
+                        data_state = DataStateEnum.DONE
+                    else:
+                        data_state = DataStateEnum.INIT
+                sse_data = {
+                    'event': 'data-state',
+                    'data': json.dumps({
+                        'id': ae_data.cts_cell_id,
+                        'state': data_state,
+                        'value': f'0/{ae_data.count_of_old_cts}',
+                    })
+                }
+                # self.logger.warning(f"update_connectivity_template_data {sse_data=}")
+                await sse_queue.put(sse_data)
+
+        return {}
+
+
+    async def migrate_connectivity_templates(self):
+        # interate generic systems and fix the connectivity templates
+        for tbody_id, gs in self.generic_systems.generic_systems.items():
+            for old_ae_id, ae_data in gs.group_links.items():
+                tagged_vlans_to_add = [ x for vn_id, x in ae_data.old_tagged_vlans.items() if vn_id not in ae_data.new_tagged_vlans]
+                untagged_vlans_to_add = [ x for vn_id, x in ae_data.old_untagged_vlan.items() if vn_id not in ae_data.new_untagged_vlan]
+                # TODO: implement remove 
+                tagged_vlans_to_remove = [ x for vn_id, x in ae_data.new_tagged_vlans.items() if vn_id not in ae_data.old_tagged_vlans]
+                untagged_vlans_to_remove = [ x for vn_id, x in ae_data.new_untagged_vlan.items() if vn_id not in ae_data.old_untagged_vlan]
+
+        # get main_bp data and compare
+        data = pull_interface_vlan_table(global_store.bp['main_bp'], self.generic_systems, self.access_switch_pair)
+        for tbody_id, gs in self.generic_systems.generic_systems.items():
+            for ae_id, ae_data in gs.group_links.items():
+                ct_count_in_tor = len(ae_data.old_tagged_vlans) + len(ae_data.old_untagged_vlan)
+                self.logger.warning(f"migrate_connectivity_templates {tbody_id=} {ae_id=} {ct_count_in_tor=} {ae_data.old_tagged_vlans=} {ae_data.old_untagged_vlan=}")
+                if gs.is_leaf_gs or (ae_data.speed and len(ae_data.old_tagged_vlans) == 0 and len(ae_data.old_untagged_vlan) == 0):
                     # state_attribute = f'class="cts"'
                     class_items = 'cts'
                     data_state = DataStateEnum.NONE
                 else:
                     class_items = f'cts {DataStateEnum.DATA_STATE}'
-                    tagged_vlans = [ct.vn_id for _, ct in ae_data.tagged_vlans.items()]
-                    untagged_vlans = [ct.vn_id for _, ct in ae_data.untagged_vlan.items()]
+                    tagged_vlans = [ct.vn_id for _, ct in ae_data.old_tagged_vlans.items()]
+                    untagged_vlans = [ct.vn_id for _, ct in ae_data.old_untagged_vlan.items()]
                     if (tagged_vlans + untagged_vlans) == ct_count_in_tor:
                         data_state = DataStateEnum.DONE
                         # state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}"'
@@ -229,6 +264,7 @@ class AccessSwitches(BaseModel):
                 await sse_queue.put(sse_data)
 
         return {}
+
 
 
     # the 1st action: called by main.py from SyncState

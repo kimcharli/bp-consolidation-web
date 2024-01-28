@@ -140,6 +140,13 @@ async def migrate_virtual_networks():
     logging.warning(f"/migrate_virtual_networks end")
     return {}
 
+@app.post("/migrate-cts")
+async def migrate_cts():
+    logging.warning(f"/migrate_cts begin")
+    data = await access_switches.migrate_connectivity_templates()
+    logging.warning(f"/migrate_cts end")
+    return {}
+
 
 @app.get('/sse')
 async def sse(request: Request):
