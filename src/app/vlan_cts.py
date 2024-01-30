@@ -1,10 +1,21 @@
 import logging
 from enum import StrEnum
+from pydantic import BaseModel
 
 from ck_apstra_api.apstra_blueprint import CkEnum
 
-from .generic_systems import CtData
+# from .generic_systems import CtData
 from .ck_global import CtEnum, DataStateEnum, SseEvent, SseEventEnum, SseEventData
+
+
+class CtData(BaseModel):
+    # multiple per link
+    vn_id: int
+    is_tagged: bool = True
+    new_ct_id: str = None  # to capture the ct_id from main_bp
+
+    def reset(self):
+        self.new_ct_id = None
 
 interface_vlan_query = f"""match(
     node('ep_endpoint_policy', policy_type_name='batch', name='{CtEnum.CT_NODE}')
@@ -47,6 +58,9 @@ def pull_main_ct_data(the_bp, generic_systems, switch_label_pair: list):
     """
     # get the data from main blueprint
     interface_vlan_nodes = the_bp.query(interface_vlan_query)
+    if len(interface_vlan_nodes) == 0:
+        logging.warning(f"pull_main_ct_data: no data for {the_bp.label=} {switch_label_pair=}")
+        return {}
 
     for nodes in interface_vlan_nodes:
         # logging.warning(f"{nodes=}")
@@ -164,15 +178,6 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
                         state=cell_state, 
                         value=f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}')).send()
 
-                # sse_data = {
-                #     'event': 'data-state',
-                #     'data': json.dumps({
-                #         'id': ae_data.cts_cell_id,
-                #         'state': cell_state,
-                #         'value': f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}',
-                #     })
-                # }
-                # await sse_queue.put(sse_data)
     if generic_systems.is_ct_done:
         await SseEvent(
             event=SseEventEnum.DATA_STATE, 

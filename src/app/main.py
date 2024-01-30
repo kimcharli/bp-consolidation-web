@@ -92,12 +92,12 @@ async def update_access_switches_table():
 @app.get("/update-generic-systems-table")
 async def update_generic_systems_table():
     logging.warning(f"/update_generic_systems_table begin")
-    data = access_switches.update_generic_systems_table()
+    data = await access_switches.update_generic_systems_table()
     logging.warning(f"/update_generic_systems_table end")
-    return data
+#     return data
 
-@app.get("/update-virtual-networks-data")
-async def update_virtual_networks_data():
+# @app.get("/update-virtual-networks-data")
+# async def update_virtual_networks_data():
     logging.warning(f"/update_virtual_networks_data begin")
     data = await access_switches.update_virtual_networks_data()
     logging.warning(f"/update_virtual_networks_data end")

@@ -31,11 +31,14 @@ class CtEnum(StrEnum):
 
 
 class SseEventEnum(StrEnum):
-    DATA_STATE = 'data-state'
+    DATA_STATE = 'data-state'  # generic system data state
+    TBODY_GS = 'tbody-gs'  # create generic system as tbody
     BUTTION_DISABLE = 'disable-button'
     BUTTON_SYNC_STATE = 'sync-state'
+    BUTTON_MIGRATE_GS = 'migrate-generic-systems'
     BUTTON_MIGRATE_CT = 'migrate-cts'
     BUTTON_MIGRATE_VN = 'migrate-virtual-networks'
+    CAPTION_GS = 'generic-system-table-caption'
     CAPTION_VN = 'virtual-networks-caption'
 
 

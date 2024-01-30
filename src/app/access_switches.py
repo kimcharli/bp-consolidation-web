@@ -163,8 +163,10 @@ class AccessSwitches(BaseModel):
     # 
     # generic systems
     # 
-    def update_generic_systems_table(self):
-        data = self.generic_systems.pull_tor_generic_systems_table()
+    async def update_generic_systems_table(self):
+        self.logger.warning(f"update_generic_systems_table begin...")
+        data = await self.generic_systems.pull_tor_generic_systems_table()
+        self.logger.warning(f"update_generic_systems_table end...")
         return data
 
     def migrate_generic_system(self, tbody_id):

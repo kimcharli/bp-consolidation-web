@@ -155,60 +155,41 @@ class SyncStateButton {
                 caption: the caption of the table
             */
             console.log('handleSyncStateClick, /update-generic-systems-table, data=', data);
-            const the_table = document.getElementById('generic-systems-table');
-            data.values.forEach(element => {
-                // console.log('tbody=', document.getElementById(element.id));
-                let tbody = document.getElementById(element.id);
-                if ( tbody == null ) {
-                    tbody = the_table.createTBody();
-                    tbody.setAttribute('id', element.id);
-                }
-                tbody.dataset.newId = element.newId;
-                tbody.innerHTML = element.value;
-            });
-            the_table.caption.innerHTML = data.caption;
-            if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
+            // const the_table = document.getElementById('generic-systems-table');
+            // data.values.forEach(element => {
+            //     // console.log('tbody=', document.getElementById(element.id));
+            //     let tbody = document.getElementById(element.id);
+            //     if ( tbody == null ) {
+            //         tbody = the_table.createTBody();
+            //         tbody.setAttribute('id', element.id);
+            //     }
+            //     tbody.dataset.newId = element.newId;
+            //     tbody.innerHTML = element.value;
+            // });
+            // the_table.caption.innerHTML = data.caption;
+            // if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
 
-            this.updateVirtualNetworksTable();
+            // this.updateVirtualNetworksTable();
         })
         .catch(error => console.error('updateGenericSystemsTable - Error:', error, error.name, error.message));
-
-    }
-
-    updateVirtualNetworksTable() {
-        fetch('/update-virtual-networks-data', {
-            method: 'GET',
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
-
-            // this.updateConnectivityTemplateTable();
-        })
-        .catch(error => console.error('updateVirtualNetworksTable - Error:', error, error.name, error.message));
         this.button.dataset.state = 'loading';
     }
 
-
-    // updateConnectivityTemplateTable() {
-    //     fetch('/update-connectivity-template-data', {
+    // updateVirtualNetworksTable() {
+    //     fetch('/update-virtual-networks-data', {
     //         method: 'GET',
     //     })
     //     .then(response => response.json())
     //     .then(data => {
-    //         /*
-    //             values: [
-    //                 attrs: [ { name:, value } ]
-    //                 value: button text
-    //             ]
-    //         */
-    //         console.log('handleSyncStateClick, /update-connectivity-template-data, data=', data);
+    //         console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
 
-    //         this.button.dataset.state = 'done';
-
+    //         // this.updateConnectivityTemplateTable();
     //     })
-    //     .catch(error => console.error('updateConnectivityTemplateTable - Error:', error, error.name, error.message));
-    // }    
+    //     .catch(error => console.error('updateVirtualNetworksTable - Error:', error, error.name, error.message));
+    //     this.button.dataset.state = 'loading';
+    // }
+
+
 }
 
 
@@ -454,6 +435,18 @@ eventSource.addEventListener('data-state', (event) => {
     // null check undefined too
     if (data.value !== null) target.innerHTML = data.value;
 });
+
+eventSource.addEventListener('tbody-gs', (event) => {
+    const data = JSON.parse(event.data);
+    const the_table = document.getElementById('generic-systems-table');
+    let tbody = document.getElementById(data.id);
+    if ( tbody == null ) {
+        tbody = the_table.createTBody();
+        tbody.setAttribute('id', data.id);
+    }
+    if (data.value !== null) tbody.innerHTML = data.value;
+});
+
 
 eventSource.addEventListener('disable-button', (event) => {
     const data = JSON.parse(event.data);

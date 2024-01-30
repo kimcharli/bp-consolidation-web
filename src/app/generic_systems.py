@@ -5,7 +5,8 @@ from enum import Enum, StrEnum, auto
 import time
 
 from ck_apstra_api.apstra_blueprint import CkEnum
-from .ck_global import DataStateEnum, sse_queue
+from .ck_global import DataStateEnum, sse_queue, SseEvent, SseEventEnum, SseEventData
+from .vlan_cts import CtData
 # TODO: consolidate
 # TODO: catch AE creation delay
 # TODO: generic systems done update
@@ -112,14 +113,6 @@ class _Memberlink(BaseModel):
         return False
 
 
-class CtData(BaseModel):
-    # multiple per link
-    vn_id: int
-    is_tagged: bool = True
-    new_ct_id: str = None  # to capture the ct_id from main_bp
-
-    def reset(self):
-        self.new_ct_id = None
 
 
 class _GroupLink(BaseModel):
@@ -190,7 +183,7 @@ class _GroupLink(BaseModel):
         return False
 
     def reset_to_tor_data(self):
-        self.new_ae_name = None
+        self.new_ae_name = ''
         self.new_ae_id = None
         self.new_speed = None
         for _, ct_data in self.old_tagged_vlans.items():
@@ -210,7 +203,7 @@ class _GroupLink(BaseModel):
         Build LAG spec for each link if new_ae_id is absent
         """
         lag_spec = {}
-        if self.old_ae_name != '' and not self.new_ae_id:
+        if self.old_ae_name is '' and not self.new_ae_id:
             lag_spec = {x.new_ae_id: {
                 'group_label': self.old_ae_name,
                 'lag_mode': 'lacp_active'
@@ -231,8 +224,8 @@ class _GroupLink(BaseModel):
 
     def tr(self, is_leaf_gs) -> list:
         row0_head_list = []
-        if is_leaf_gs:
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="ae">{self.old_ae_name}</td>')
+        if is_leaf_gs or (self.old_ae_name == '' and self.new_ae_name == ''):
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.NONE}>{self.old_ae_name}</td>')
         elif self.old_ae_name == self.new_ae_name:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.old_ae_name}</td>')
         else:
@@ -326,9 +319,9 @@ class _GenericSystem(BaseModel):
             self.refresh(main_bp)
         return
 
-    def get_tbody(self) -> str:
+    async def sse_tbody(self):
         """
-        Return the tbody innerHTML
+        render the tbody by SSE
         """
         message_attr = f' data-message="{self.message}" ' if self.message else ''
         row0_head_list = []
@@ -349,7 +342,11 @@ class _GenericSystem(BaseModel):
                     tbody_lines.append(f'<tr>{links}</tr>')
                 else:                    
                     tbody_lines.append(f'<tr>{row0_head}{links}</tr>')
-        return ''.join(tbody_lines)
+        await SseEvent(
+            event=SseEventEnum.TBODY_GS,
+            data=SseEventData(
+                id=self.tbody_id,
+                value=''.join(tbody_lines))).send()  
 
     def form_lag(self, main_bp):
         """
@@ -514,7 +511,7 @@ class _GenericSystem(BaseModel):
         return
 
 
-    def migrate(self, main_bp, access_switches) -> dict:
+    def migrate(self, main_bp, access_switches):
         """
         Return:
             new_id: new_gs_id
@@ -523,20 +520,17 @@ class _GenericSystem(BaseModel):
         """
         # skip if this is leaf_gs
         if self.is_leaf_gs:
-            return {
-                'value': self.get_tbody(),
-            }
-        # self.logger.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
+            return
+        
         self.create_generic_system(main_bp, access_switches)
+
         self.form_lag(main_bp)
+
         self.update_interface_names(main_bp, access_switches)
+
         self.add_tags(main_bp)
 
-        return {
-            'new_id': self.new_gs_id,  # TODO: no need?
-            'value': self.get_tbody(),
-            # 'caption': None # TODO: later
-        }
+        self.sse_tbody()
 
 class _GenericSystemResponseItem(BaseModel):
     id: str
@@ -608,28 +602,48 @@ class GenericSystems(BaseModel):
         ct_not_done_list = [ tbody_id for tbody_id, gs in self.generic_systems.items() if not gs.is_ct_done]
         return len(ct_not_done_list) == 0
 
-    def pull_tor_generic_systems_table(self) -> dict:
+    async def pull_tor_generic_systems_table(self) -> dict:
         """
         Called by main.py from SyncState
         Build generic_systems from tor_blueprint and return the data 
         """
-        response = _GenericSystemResponse()
+        self.logger.warning(f"pull_tor_generic_systems_table begin")
+        # response = _GenericSystemResponse()
         gs_count = len(self.generic_systems)
+        # render each generic system
         for tbody_id, server_data in self.generic_systems.items():
-            response.values.append(_GenericSystemResponseItem(
-                id=tbody_id,
-                newId='',
-                value=server_data.get_tbody()
-                ))
-        response.caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
-        response.done = True
+            await server_data.sse_tbody()
+            # response.values.append(_GenericSystemResponseItem(
+            #     id=tbody_id,
+            #     newId='',
+            #     value=server_data.get_tbody()
+            #     ))
+        # update caption
+        caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
+        await SseEvent(
+            event=SseEventEnum.DATA_STATE,
+            data=SseEventData(
+                id=SseEventEnum.CAPTION_GS,
+                value=caption)).send()
+
+        # update buttion state
         for _, gs in self.generic_systems.items():
             if gs.is_not_done():
                 # breakpoint()
-                response.done = False
-                break
- 
-        return response
+                await SseEvent(
+                    event=SseEventEnum.DATA_STATE,
+                    data=SseEventData(
+                        id=SseEventEnum.BUTTON_MIGRATE_GS,
+                        state=DataStateEnum.INIT)).send()
+                return
+        # no init - done
+        await SseEvent(
+            event=SseEventEnum.DATA_STATE,
+            data=SseEventData(
+                id=SseEventEnum.BUTTON_MIGRATE_GS,
+                state=DataStateEnum.DONE)).send()
+        self.logger.warning(f"pull_tor_generic_systems_table end")
+        return
 
     def migrate_generic_system(self, tbody_id) -> dict:
         """
