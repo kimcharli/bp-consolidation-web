@@ -169,9 +169,9 @@ class AccessSwitches(BaseModel):
         self.logger.warning(f"update_generic_systems_table end...")
         return data
 
-    def migrate_generic_system(self, tbody_id):
+    async def migrate_generic_system(self, tbody_id):
         self.generic_systems.access_switches = self.access_switches
-        data = self.generic_systems.migrate_generic_system(tbody_id)
+        data = await self.generic_systems.migrate_generic_system(tbody_id)
         return data
 
     # 

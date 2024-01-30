@@ -37,12 +37,12 @@ async def main():
     # data = GlobalStore.pull_tor_bp_data()
     as_data = access_switches.update_access_switches_table()
     # logging.warning(f"AccessSwitches {as_data=}")
-    gs_data = access_switches.generic_systems.update_generic_systems_table()
+    gs_data = await access_switches.update_generic_systems_table()
     # logging.warning(f"GenericSystems {gs_data=}")
     ## vn_data = access_switches.update_virtual_networks_data()
     # logging.warning(f"VirtualNetworks {vn_data=}")
     # breakpoint()
-    # gs_new = access_switches.migrate_generic_system('gs-az1kvm1004-az1kvm1028-atl1-LACP')
+    gs_new = await access_switches.migrate_generic_system('gs-az1kvm1004-az1kvm1028-atl1-LACP')
 
     ## vn_mig = access_switches.migrate_virtual_networks()
 

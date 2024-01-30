@@ -248,20 +248,20 @@ class MigrateGenericSystemsButton {
                     caption: the caption of the table
                 */
                 console.log('migrate generic system data for', tbody_id, '=', data)
-                tbody.innerHTML = data.value;
-                if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
+                // tbody.innerHTML = data.value;
+                // if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
             })
             .catch(error => {
                 console.log('handleMigrateAccessSwitchesClick - Error:', error);
                 srcButton.dataset.state="error";  
             });
             const new_label_element = tbody.getElementsByClassName('new_label')[0];
-            console.log(new_label_element)
+            // console.log(new_label_element)
             new_label_element.dataset.state="loading";
         })
         // TODO: 
-        this.button.dataset.state = 'done';
-            if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
+        // this.button.dataset.state = 'done';
+        //     if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
         
     }
 }
@@ -431,9 +431,13 @@ eventSource.addEventListener('data-state', (event) => {
     // console.log('sse data-state', data)
     const target = document.getElementById(data.id);
     // console.log('sse data-state', target)
-    if (data.state != null) target.dataset.state = data.state;
-    // null check undefined too
-    if (data.value !== null) target.innerHTML = data.value;
+    try {
+        if (data.state !== undefined && data.state != null) target.dataset.state = data.state;
+        // null check undefined too
+        if (data.value !== null) target.innerHTML = data.value;
+    } catch (error) {
+        console.log('sse data-state error', error, 'for data', data)
+    }
 });
 
 eventSource.addEventListener('tbody-gs', (event) => {

@@ -176,6 +176,8 @@ class _GroupLink(BaseModel):
         if self.speed != self.new_speed:
             # logging.warning(f"_GroupLink is_not_done ##################### {self.new_ae_id=} {self.speed=} {self.new_speed=}")
             return True
+        if self.new_ae_name != self.old_ae_name:
+            return True
         for _, link in self.links.items():
             if link.is_not_done():
                 # logging.warning(f"_GroupLink is_not_done ##################### {link=}")
@@ -203,12 +205,13 @@ class _GroupLink(BaseModel):
         Build LAG spec for each link if new_ae_id is absent
         """
         lag_spec = {}
-        if self.old_ae_name is '' and not self.new_ae_id:
-            lag_spec = {x.new_ae_id: {
+        if self.old_ae_name != '' and not self.new_ae_id:
+            lag_spec = {link.new_link_id: {
                 'group_label': self.old_ae_name,
                 'lag_mode': 'lacp_active'
-            } for k, x in self.links.items()}
+            } for _, link in self.links.items()}
             self.new_ae_name = self.old_ae_name
+        # breakpoint()
         return lag_spec        
 
     def add_tags(self, main_bp):
@@ -225,7 +228,7 @@ class _GroupLink(BaseModel):
     def tr(self, is_leaf_gs) -> list:
         row0_head_list = []
         if is_leaf_gs or (self.old_ae_name == '' and self.new_ae_name == ''):
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.NONE}>{self.old_ae_name}</td>')
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.NONE}">{self.old_ae_name}</td>')
         elif self.old_ae_name == self.new_ae_name:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="ae" class="{DataStateEnum.DATA_STATE} ae" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}">{self.old_ae_name}</td>')
         else:
@@ -352,16 +355,19 @@ class _GenericSystem(BaseModel):
         """
         Build LAG on each LAG links
         """
+        # logging.warning(f"form_lag begin {self.new_label=}")
         lag_spec = {
             'links': {}
         }
         for _, ae_link in self.group_links.items():
             for link, link_spec in ae_link.build_lag_spec().items():
                 lag_spec['links'][link] = link_spec
+        # logging.warning(f"form_lag {self.new_label=} {lag_spec=}")
         if len(lag_spec['links']):
             lag_updated = main_bp.patch_leaf_server_link_labels(lag_spec)
-            self.logger.warning(f"{lag_updated=} for {self.new_label=}")
+            # self.logger.warning(f"form_lag {lag_updated=} for {self.new_label=}")
             self.refresh(main_bp)
+
 
     def refresh(self, main_bp, server_links = None):
         """
@@ -393,7 +399,7 @@ class _GenericSystem(BaseModel):
             switch = server_link[CkEnum.MEMBER_SWITCH]['label']
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
             new_switch_intf_id = server_link[CkEnum.MEMBER_INTERFACE]['id']
-            new_ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else new_switch_intf_id
+            new_ae_id = server_link[CkEnum.EVPN_INTERFACE]['id'] if server_link[CkEnum.EVPN_INTERFACE] else None
             new_server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or ''
             new_server_intf_id = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['id']
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
@@ -486,6 +492,7 @@ class _GenericSystem(BaseModel):
         }
         generic_system_spec['new_systems'].append(new_system)
         # TODO: catch error message
+        # it returns the link id(s)
         generic_system_created = main_bp.add_generic_system(generic_system_spec)
         self.message = generic_system_created
         self.logger.warning(f"migrate() {generic_system_created=}")
@@ -511,7 +518,7 @@ class _GenericSystem(BaseModel):
         return
 
 
-    def migrate(self, main_bp, access_switches):
+    async def migrate(self, main_bp, access_switches):
         """
         Return:
             new_id: new_gs_id
@@ -530,7 +537,7 @@ class _GenericSystem(BaseModel):
 
         self.add_tags(main_bp)
 
-        self.sse_tbody()
+        await self.sse_tbody()
 
 class _GenericSystemResponseItem(BaseModel):
     id: str
@@ -645,11 +652,11 @@ class GenericSystems(BaseModel):
         self.logger.warning(f"pull_tor_generic_systems_table end")
         return
 
-    def migrate_generic_system(self, tbody_id) -> dict:
+    async def migrate_generic_system(self, tbody_id) -> dict:
         """
         """
         self.logger.warning(f"migrate_generic_system {tbody_id=}")
-        data = self.generic_systems[tbody_id].migrate(self.main_bp, self.access_switches)
+        data = await self.generic_systems[tbody_id].migrate(self.main_bp, self.access_switches)
         return data
 
     def pull_tor_generic_systems(self):
