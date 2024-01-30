@@ -129,7 +129,7 @@ class AccessSwitches(BaseModel):
     generic_systems_data: Any = None
     leaf_switches: Dict[str, LeafSwitch] = None
     logger: Any = logging.getLogger("AccessSwitches") 
-    virtual_networks: Any = None
+    virtual_networks_data: Any = None
     # TODO:
     this_bound_to: str = 'atl1tor-r5r15-pair'  # to be updated
 
@@ -156,6 +156,12 @@ class AccessSwitches(BaseModel):
             self.logger.warning(f"generic_systems {self.generic_systems_data=}")
         return self.generic_systems_data
 
+    @property
+    def virtual_networks(self):
+        if self.virtual_networks_data is None:
+            self.virtual_networks_data = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.this_bound_to)
+        return self.virtual_networks_data
+
     @classmethod
     def load_id_element(cls, id, value):
         return _AccessSwitchResponseItem(id=id, value=value, state=DataStateEnum.LOADED, fill='red')
@@ -178,8 +184,6 @@ class AccessSwitches(BaseModel):
     # virtual networks
     # 
     async def update_virtual_networks_data(self):
-        if self.virtual_networks is None:
-            self.virtual_networks = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.this_bound_to)
         data = await self.virtual_networks.update_virtual_networks_data()
         return data
 
@@ -222,7 +226,7 @@ class AccessSwitches(BaseModel):
         return {}
 
     async def migrate_connectivity_templates(self):
-        await migrate_connectivity_templates(global_store.bp['main_bp'], self.generic_systems.generic_systems)
+        await migrate_connectivity_templates(global_store.bp['main_bp'], self.generic_systems)
 
 
     # the 1st action: called by main.py from SyncState
@@ -231,9 +235,6 @@ class AccessSwitches(BaseModel):
         # build self.access_switches from peer link data of tor_bp
         # TODO: remove peer_link
         #
-        if self.virtual_networks is None:
-            self.virtual_networks = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.this_bound_to)
-
         class PeerLink(BaseModel):
             speed: str
             system: Dict[str, PeerSystem] = {}

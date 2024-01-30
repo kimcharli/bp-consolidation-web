@@ -110,7 +110,7 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
     ct_vlan_nodes = main_bp.query(ct_vlan_query)
 
     # interate generic systems and fix the connectivity templates
-    for tbody_id, gs in generic_systems.items():
+    for tbody_id, gs in generic_systems.generic_systems.items():
         if gs.is_leaf_gs:
             continue
         for old_ae_id, ae_data in gs.group_links.items():
@@ -163,7 +163,7 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
                     ]
                 }
                 batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
-                logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {len(cts_chunk)=} {total_cts=} {batch_result=} {batch_result.content=}")
+                # logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {len(cts_chunk)=} {total_cts=} {batch_result=} {batch_result.content=}")
                 if not ae_data.new_ae_id:
                     logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {ae_data=}")
                 # for ct_data in cts_chunk:
