@@ -37,7 +37,7 @@ async def main():
     # data = GlobalStore.pull_tor_bp_data()
     as_data = access_switches.update_access_switches_table()
     # logging.warning(f"AccessSwitches {as_data=}")
-    ## gs_data = access_switches.generic_systems.update_generic_systems_table()
+    gs_data = access_switches.generic_systems.update_generic_systems_table()
     # logging.warning(f"GenericSystems {gs_data=}")
     ## vn_data = access_switches.update_virtual_networks_data()
     # logging.warning(f"VirtualNetworks {vn_data=}")
@@ -47,7 +47,7 @@ async def main():
     ## vn_mig = access_switches.migrate_virtual_networks()
 
     ct_data = await access_switches.update_connectivity_template_data()
-    ct_m_data = await access_switches.migrate_connectivity_templates()
+    # ct_m_data = await access_switches.migrate_connectivity_templates()
 
 if __name__ == '__main__':
     import asyncio

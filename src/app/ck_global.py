@@ -30,6 +30,30 @@ class CtEnum(StrEnum):
     EPAE_NODE = 'ep_application_instance'
 
 
+class SseEventEnum(StrEnum):
+    DATA_STATE = 'data-state'
+    BUTTION_DISABLE = 'disable-button'
+    BUTTON_SYNC_STATE = 'sync-state'
+    BUTTON_MIGRATE_CT = 'migrate-cts'
+    BUTTON_MIGRATE_VN = 'migrate-virtual-networks'
+    CAPTION_VN = 'virtual-networks-caption'
+
+
+class SseEventData(BaseModel):
+    id: str
+    state: Optional[str] = None
+    value: Optional[str] = None
+    disabled: Optional[bool] = True  # for disable button
+class SseEvent(BaseModel):
+    event: str
+    data: SseEventData
+
+    async def send(self):
+        sse_dict = {'event': self.event, 'data': json.dumps(dict(self.data))}
+        # logging.warning(f"SseEvent.send() {self.event=} {self.data=} {sse_dict=}")
+        await sse_queue.put(sse_dict)
+
+
 class ServerItem(BaseModel):
     id: Optional[int] = None
     host: str

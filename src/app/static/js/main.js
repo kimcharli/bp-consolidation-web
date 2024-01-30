@@ -183,32 +183,32 @@ class SyncStateButton {
         .then(data => {
             console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
 
-            this.updateConnectivityTemplateTable();
+            // this.updateConnectivityTemplateTable();
         })
         .catch(error => console.error('updateVirtualNetworksTable - Error:', error, error.name, error.message));
         this.button.dataset.state = 'loading';
     }
 
 
-    updateConnectivityTemplateTable() {
-        fetch('/update-connectivity-template-data', {
-            method: 'GET',
-        })
-        .then(response => response.json())
-        .then(data => {
-            /*
-                values: [
-                    attrs: [ { name:, value } ]
-                    value: button text
-                ]
-            */
-            console.log('handleSyncStateClick, /update-connectivity-template-data, data=', data);
+    // updateConnectivityTemplateTable() {
+    //     fetch('/update-connectivity-template-data', {
+    //         method: 'GET',
+    //     })
+    //     .then(response => response.json())
+    //     .then(data => {
+    //         /*
+    //             values: [
+    //                 attrs: [ { name:, value } ]
+    //                 value: button text
+    //             ]
+    //         */
+    //         console.log('handleSyncStateClick, /update-connectivity-template-data, data=', data);
 
-            this.button.dataset.state = 'done';
+    //         this.button.dataset.state = 'done';
 
-        })
-        .catch(error => console.error('updateConnectivityTemplateTable - Error:', error, error.name, error.message));
-    }    
+    //     })
+    //     .catch(error => console.error('updateConnectivityTemplateTable - Error:', error, error.name, error.message));
+    // }    
 }
 
 
@@ -330,7 +330,7 @@ class MigrateCTsButton {
         .then(response => response.json())
         .then(data => {
             console.log('/migrate-cts data=', data)
-            this.button.dataset.state = 'done';
+            // this.button.dataset.state = 'done';
         })
         .catch(error => {
             console.log('handleMigrateCTs - Error:', error);
@@ -450,8 +450,16 @@ eventSource.addEventListener('data-state', (event) => {
     // console.log('sse data-state', data)
     const target = document.getElementById(data.id);
     // console.log('sse data-state', target)
-    target.dataset.state = data.state;
-    if (data.value !== undefined) target.innerHTML = data.value;
+    if (data.state != null) target.dataset.state = data.state;
+    // null check undefined too
+    if (data.value !== null) target.innerHTML = data.value;
+});
+
+eventSource.addEventListener('disable-button', (event) => {
+    const data = JSON.parse(event.data);
+    // console.log('sse data-state', data)
+    const target = document.getElementById(data.id);
+    target.disabled = data.disabled;
 });
 
 eventSource.onmessage = (event) => {

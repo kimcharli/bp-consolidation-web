@@ -71,6 +71,7 @@ class _Memberlink(BaseModel):
                 tags_buttons_list.append(f'<button type="button" class="{DataStateEnum.DATA_STATE}" {DataStateEnum.DATA_STATE}="{DataStateEnum.ERROR}">{i}</button>')
         tags_buttons = ''.join(tags_buttons_list)
         trs.append(f'<td data-cell="tags">{tags_buttons}</td>')
+        # breakpoint()
         if is_leaf_gs:
             trs.append(f'<td data-cell="server_intf" >{self.server_intf}</td>')
         elif self.new_link_id and self.server_intf == self.new_server_intf:
@@ -89,8 +90,9 @@ class _Memberlink(BaseModel):
         return ''.join(trs)
 
     def add_old_tag(self, tag):
+        # breakpoint()
         if tag  not in self.old_tags:
-            self.tags.append(tag)
+            self.old_tags.append(tag)
 
     def add_new_tag(self, tag):
         if tag not in self.new_tags:
@@ -99,12 +101,12 @@ class _Memberlink(BaseModel):
     def add_tags(self, main_bp) -> bool:
         """
         Do tagging. Retrun True if changed
-        """
+        """        
         if sorted(self.old_tags) != sorted(self.new_tags):
             main_bp.post_tagging( 
                 [self.new_link_id], 
-                tags_to_add = [x for x in self.tags if x not in self.new_tags],
-                tags_to_remove = [x for x in self.new_tags if x not in self.tags]
+                tags_to_add = [x for x in self.old_tags if x not in self.new_tags],
+                tags_to_remove = [x for x in self.new_tags if x not in self.old_tags]
                 )
             return True
         return False
@@ -115,6 +117,9 @@ class CtData(BaseModel):
     vn_id: int
     is_tagged: bool = True
     new_ct_id: str = None  # to capture the ct_id from main_bp
+
+    def reset(self):
+        self.new_ct_id = None
 
 
 class _GroupLink(BaseModel):
@@ -151,15 +156,17 @@ class _GroupLink(BaseModel):
 
     @property
     def count_of_new_cts(self) -> int:
-        tagged_cts = [x for k, x in self.old_tagged_vlans.items() if x.new_ct_id]
-        untagged_cts = [x for k, x in self.old_untagged_vlan.items() if x.new_ct_id]
+        tagged_cts = [vn_id for vn_id, ct_data in self.old_tagged_vlans.items() if ct_data.new_ct_id is not None]
+        untagged_cts = [vn_id for vn_id, ct_data in self.old_untagged_vlan.items() if ct_data.new_ct_id is not None]
         return len(tagged_cts) + len(untagged_cts)
 
     @property
     def is_ct_done(self) -> bool:
-        tagged_cts_not_done = [x for k, x in self.old_tagged_vlans.items() if not x.new_ct_id]
-        untagged_cts_not_done = [x for k, x in self.old_untagged_vlan.items() if not x.new_ct_id]
-        return len(tagged_cts_not_done) == 0 and len(untagged_cts_not_done) == 0
+        tagged_cts_not_done = [vn_id for vn_id, ct_data in self.old_tagged_vlans.items() if ct_data.new_ct_id is None]
+        untagged_cts_not_done = [vn_id for vn_id, ct_data in self.old_untagged_vlan.items() if ct_data.new_ct_id is None]
+        is_is_ct_done =len(tagged_cts_not_done) == 0 and len(untagged_cts_not_done) == 0
+        # logging.warning(f"is_ct_done {self.old_ae_id=} {is_is_ct_done=} {tagged_cts_not_done=} {untagged_cts_not_done=}")
+        return is_is_ct_done
 
     def cts(self, is_leaf_gs):
         if is_leaf_gs:
@@ -187,8 +194,10 @@ class _GroupLink(BaseModel):
         self.new_ae_id = None
         self.new_speed = None
         for _, ct_data in self.old_tagged_vlans.items():
-            ct_data.new_ct_id = None
-        self.old_tagged_vlan.new_ct_id = None
+            ct_data.reset()
+        for _, ct_data in self.old_untagged_vlan.items():
+            ct_data.reset()
+        # self.old_untagged_vlan = {}
         # self.old_tagged_vlans
         # self.new_cts = []
         # self.new_tagged_vlans = {}
@@ -249,7 +258,7 @@ class _GroupLink(BaseModel):
 class _GenericSystem(BaseModel):
     index: int = 0
     label: str  # the generic system label in the tor blueprint
-    new_label: str = None  # the generic system label in the main blueprint (renamed)
+    new_label: str  # the generic system label in the main blueprint (renamed)
     is_leaf_gs: bool = False
     group_links: Dict[str, _GroupLink] = {}  # <evpn/member interface id from tor>: _GroupLink    
     # set by main_bp
@@ -279,6 +288,14 @@ class _GenericSystem(BaseModel):
         if len(ae_names):
             return int(max(ae_names))
         return 0
+
+    @property
+    def is_ct_done(self) -> bool:
+        if self.is_leaf_gs:
+            return True
+        ct_not_done_list = [ ae_id for ae_id, ae_data in self.group_links.items() if not ae_data.is_ct_done]
+        # breakpoint()
+        return len(ct_not_done_list) == 0
 
     def is_not_done(self) -> bool:
         if self.is_leaf_gs:
@@ -509,7 +526,7 @@ class _GenericSystem(BaseModel):
             return {
                 'value': self.get_tbody(),
             }
-        self.logger.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
+        # self.logger.warning(f"_GenericSystem::migrate({main_bp=},{access_switches=}) {self=}")
         self.create_generic_system(main_bp, access_switches)
         self.form_lag(main_bp)
         self.update_interface_names(main_bp, access_switches)
@@ -586,7 +603,12 @@ class GenericSystems(BaseModel):
                                     the_data.b_49 = 'et-' + member_link.server_intf.split('-')[1]
         return the_data
 
-    def update_generic_systems_table(self) -> dict:
+    @property
+    def is_ct_done(self) -> bool:
+        ct_not_done_list = [ tbody_id for tbody_id, gs in self.generic_systems.items() if not gs.is_ct_done]
+        return len(ct_not_done_list) == 0
+
+    def pull_tor_generic_systems_table(self) -> dict:
         """
         Called by main.py from SyncState
         Build generic_systems from tor_blueprint and return the data 
@@ -616,7 +638,7 @@ class GenericSystems(BaseModel):
         data = self.generic_systems[tbody_id].migrate(self.main_bp, self.access_switches)
         return data
 
-    def pull_generic_systems(self):
+    def pull_tor_generic_systems(self):
         """
         the 1st call
         Pull the generic systems data and rebuild generic_systems
@@ -644,7 +666,9 @@ class GenericSystems(BaseModel):
             ae_data = server_data.group_links.setdefault(old_ae_id, _GroupLink(old_ae_name=old_ae_name, old_ae_id=old_ae_id, speed=speed))
             link_data = ae_data.links.setdefault(old_switch_intf_id, _Memberlink(switch=switch, switch_intf=switch_intf, server_intf=server_intf))
             if tag:
-                link_data.add_tags(tag)
+                link_data.add_old_tag(tag)
+                # breakpoint()
+                self.logger.warning(f"pull_tor_generic_systems {tag=} {server_label=} {tbody_id=}")            
         for index, (k, v) in enumerate(generic_systems.items()):
             v.index = index + 1
         self.generic_systems = generic_systems

@@ -5,7 +5,7 @@ import logging
 import time
 import asyncio
 
-from .ck_global import sse_queue, DataStateEnum
+from .ck_global import sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData
 # from .access_switches import DataStateEnum
 
 # TODO: minimize _VirtualNetwork content with csv_bulk line
@@ -97,6 +97,8 @@ class VirtualNetworks(BaseModel):
         return response
 
     async def queue_render(self):
+        await SseEvent(event=SseEventEnum.BUTTION_DISABLE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, disabled=True)).send()
+
         import json
         for vn_id, vn in self.vns.items():
             the_data = vn.html_element(self.this_bound_to).dict()
@@ -108,29 +110,19 @@ class VirtualNetworks(BaseModel):
             # self.logger.warning(f"queue_render {sse_message=}")
             await sse_queue.put(sse_message)
 
-        vn_caption = {
-            'id': 'virtual-networks-caption',
-            'value': f'Virtual Networks ({len(self.vns)})'
-        }
-        await sse_queue.put({
-            'event': 'update-caption',
-            'data': json.dumps(vn_caption),
-            })
-        # response = _VirtualNetworksResponse()
-        # response.values = [v.html_element(self.this_bound_to) for k, v in self.vns.items()]
-        # response.caption = f"Virtual Networks ({len(self.vns)})"
-        command_button_state = {
-            'id': 'migrate-virtual-networks',
-            'state': str(DataStateEnum.DONE),
-        }
+        await SseEvent(
+            event=SseEventEnum.DATA_STATE, 
+            data=SseEventData(
+                id=SseEventEnum.CAPTION_VN, 
+                value=f'Virtual Networks ({len(self.vns)})')).send()
         not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]
         if len(not_done_list) == 0:
-            await sse_queue.put({
-                'event': 'data-state',
-                'data': json.dumps(command_button_state),
-                })
-        #     response.done = True
-        # return response
+            await SseEvent(event=SseEventEnum.DATA_STATE, 
+                           data=SseEventData(
+                               id=SseEventEnum.BUTTON_MIGRATE_VN, 
+                               state=DataStateEnum.DONE)).send()
+            await SseEvent(event=SseEventEnum.BUTTION_DISABLE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, disabled=False)).send()
+
         return
 
 
@@ -176,7 +168,8 @@ class VirtualNetworks(BaseModel):
     async def migrate_virtual_networks(self):
         """
         """
-        import json
+
+        await SseEvent(event=SseEventEnum.BUTTION_DISABLE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, disabled=True)).send()
 
         exported_csv = self.main_bp.get_item("virtual-networks-csv-bulk")
         exported_data = [ [y for y in x.split(',')] for x in exported_csv['csv_bulk'].split('\n')]
@@ -243,14 +236,7 @@ class VirtualNetworks(BaseModel):
 
         await self.queue_render()
 
-        set_done = {
-            'event': 'data-state',
-            'data': json.dumps({
-                'id': 'migrate-virtual-networks',
-                'state': str(DataStateEnum.DONE),
-                }),
-            'id': 'migrate-virtual-networks'
-        }
-        await sse_queue.put(set_done)
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN, state=DataStateEnum.DONE)).send()
+        await SseEvent(event=SseEventEnum.BUTTION_DISABLE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, disabled=False)).send()
 
         return {}

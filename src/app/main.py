@@ -10,7 +10,7 @@ from sse_starlette.sse import EventSourceResponse
 import os
 from pydantic import BaseModel
 
-from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum
+from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData
 from .generic_systems import GenericSystems
 from .access_switches import access_switches
 from .virtual_networks import VirtualNetworks
@@ -101,14 +101,25 @@ async def update_virtual_networks_data():
     logging.warning(f"/update_virtual_networks_data begin")
     data = await access_switches.update_virtual_networks_data()
     logging.warning(f"/update_virtual_networks_data end")
-    return data
 
-@app.get("/update-connectivity-template-data")
-async def update_connectivity_template_data():
     logging.warning(f"/update-connectivity-template-data begin")
     await access_switches.update_connectivity_template_data()
     logging.warning(f"/update-connectivity-template-data end")
-    return {}
+
+    await SseEvent(
+        event=SseEventEnum.DATA_STATE, 
+        data=SseEventData(
+            id=SseEventEnum.BUTTON_SYNC_STATE,
+            state=DataStateEnum.DONE)).send()
+
+    return data
+
+# @app.get("/update-connectivity-template-data")
+# async def update_connectivity_template_data():
+#     logging.warning(f"/update-connectivity-template-data begin")
+#     await access_switches.update_connectivity_template_data()
+#     logging.warning(f"/update-connectivity-template-data end")
+#     return {}
 
 class SystemLabel(BaseModel):
     tbody_id: str

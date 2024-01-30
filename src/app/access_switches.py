@@ -4,12 +4,12 @@ from typing import Optional, List, Dict, Any
 import time
 import json
 
-from .ck_global import global_store, DataStateEnum, sse_queue, CtEnum
+from .ck_global import global_store, DataStateEnum, sse_queue, CtEnum, SseEventEnum, SseEvent, SseEventData
 
 from .generic_systems import GenericSystems, LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
 from .virtual_networks import VirtualNetworks
-from .vlan_cts import pull_interface_vlan_table, refresh_ct_table
+from .vlan_cts import pull_tor_ct_data, pull_main_ct_data, referesh_ct_table, migrate_connectivity_templates
 
 
 class _AccessSwitchResponseItem(BaseModel):
@@ -164,7 +164,7 @@ class AccessSwitches(BaseModel):
     # generic systems
     # 
     def update_generic_systems_table(self):
-        data = self.generic_systems.update_generic_systems_table()
+        data = self.generic_systems.pull_tor_generic_systems_table()
         return data
 
     def migrate_generic_system(self, tbody_id):
@@ -191,116 +191,36 @@ class AccessSwitches(BaseModel):
     # connectivity template
     #
     async def update_connectivity_template_data(self):
-        data = pull_interface_vlan_table(global_store.bp['tor_bp'], self.generic_systems, self.access_switch_pair)
-        # await self.generic_systems.update_generic_systems_table()
-        refresh_ct_table(global_store.bp['main_bp'], self.generic_systems, self.access_switch_pair)
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, state=DataStateEnum.LOADING)).send()
 
-        for tbody_id, gs in self.generic_systems.generic_systems.items():
-            for ae_id, ae_data in gs.group_links.items():
-                if gs.is_leaf_gs or (ae_data.speed and ae_data.is_old_cts_absent):
-                    data_state = DataStateEnum.NONE
-                else:
-                    if ae_data.is_ct_done:
-                        data_state = DataStateEnum.DONE
-                    else:
-                        data_state = DataStateEnum.INIT
-                sse_data = {
-                    'event': 'data-state',
-                    'data': json.dumps({
-                        'id': ae_data.cts_cell_id,
-                        'state': data_state,
-                        'value': f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}',
-                    })
-                }
-                # self.logger.warning(f"update_connectivity_template_data {sse_data=}")
-                await sse_queue.put(sse_data)
+        data = pull_tor_ct_data(global_store.bp['tor_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
+        pull_main_ct_data(global_store.bp['main_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
+
+        await referesh_ct_table(self.generic_systems.generic_systems)
+
+        if self.generic_systems.is_ct_done:
+            button_state = DataStateEnum.DONE
+        else:
+            button_state = DataStateEnum.INIT
+        # breakpoint()
+        self.logger.warning(f"update_connectivity_template_data {button_state=}")
+        await SseEvent(
+            event=SseEventEnum.DATA_STATE, 
+            data=SseEventData(
+                id=SseEventEnum.BUTTON_MIGRATE_CT, 
+                state=button_state)).send()
+        # if virtual network is not done, disable the migrate CT button
+        # if button_state != DataStateEnum.DONE:
+        #     await SseEvent(
+        #         event=SseEventEnum.DATA_STATE, 
+        #         data=SseEventData(
+        #             id=SseEventEnum.BUTTON_MIGRATE_CT, 
+        #             state=DataStateEnum.DONE)).send()
 
         return {}
-
 
     async def migrate_connectivity_templates(self):
-        main_bp = global_store.bp['main_bp']
-
-        ct_vlan_query = f"""node('ep_endpoint_policy', name='{CtEnum.CT_NODE}')
-            .out('ep_subpolicy').node('ep_endpoint_policy', policy_type_name='pipeline')
-            .out('ep_first_subpolicy').node('ep_endpoint_policy', policy_type_name='AttachSingleVLAN', name='{CtEnum.SINGLE_VLAN_NODE}')
-            .out().node('virtual_network', name='{CtEnum.VN_NODE}')"""
-        ct_vlan_nodes = main_bp.query(ct_vlan_query)
-
-        # interate generic systems and fix the connectivity templates
-        for tbody_id, gs in self.generic_systems.generic_systems.items():
-            if gs.is_leaf_gs:
-                continue
-            for old_ae_id, ae_data in gs.group_links.items():
-                # ct attachment per group_link
-                if ae_data.is_ct_done:
-                    continue
-
-                ct_data_queue = []
-                # add tagged vlan cts
-                # TODO: use new_ct_id instead of new_tagged_vlans
-                for vn_id, ct_data in ae_data.old_tagged_vlans.items():
-                    if ct_data.new_ct_id:
-                        # it is already migrated
-                        continue
-                    tagged_ct_nodes = [x for x in ct_vlan_nodes if x[CtEnum.VN_NODE]['vn_id'] == str(vn_id) and 'vlan_tagged' in x[CtEnum.SINGLE_VLAN_NODE]['attributes']]
-                    if len(tagged_ct_nodes) == 0:
-                        self.logger.warning(f"migrate_connectivity_templates: no tagged vlan ct for {vn_id=} ####")
-                        continue
-                    ct_id = tagged_ct_nodes[0][CtEnum.CT_NODE]['id']
-                    ct_data.new_ct_id = ct_id
-                    ct_data_queue.append(ct_data)
-                for vn_id, ct_data in ae_data.old_untagged_vlan.items():
-                    if ct_data.new_ct_id:
-                        continue
-                    untagged_ct_nodes = [x for x in ct_vlan_nodes if x[CtEnum.VN_NODE]['vn_id'] == str(vn_id) and 'untagged' in x[CtEnum.SINGLE_VLAN_NODE]['attributes']]
-                    if len(untagged_ct_nodes) == 0:
-                        self.logger.warning(f"migrate_connectivity_templates: no untagged vlan ct for {vn_id=} ####")
-                        break
-                    ct_id = untagged_ct_nodes[0][CtEnum.CT_NODE]['id']
-                    ct_data.new_ct_id = ct_id
-                    ct_data_queue.append(ct_data)
-                total_cts = len(ct_data_queue)
-                while len(ct_data_queue) > 0:
-                    throttle_number = 50
-                    cts_chunk = ct_data_queue[:throttle_number]
-                    batch_ct_spec = {
-                        "operations": [
-                            {
-                                "path": "/obj-policy-batch-apply",
-                                "method": "PATCH",
-                                "payload": {
-                                    "application_points": [
-                                        {
-                                            "id": ae_data.new_ae_id,
-                                            "policies": [ {"policy": x.new_ct_id, "used": True} for x in cts_chunk]
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
-                    }
-                    batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
-                    self.logger.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {len(cts_chunk)=} {total_cts=} {batch_result=} {batch_result.content=}")
-                    if not ae_data.new_ae_id:
-                        self.logger.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {ae_data=}")
-                    # for ct_data in cts_chunk:
-                    #     ae_data.new_tagged_vlans[vn_id] = ae_data.old_tagged_vlans[vn_id]
-                    del ct_data_queue[:throttle_number]
-                    cell_state = DataStateEnum.DONE if ae_data.is_ct_done else DataStateEnum.INIT
-
-                    sse_data = {
-                        'event': 'data-state',
-                        'data': json.dumps({
-                            'id': ae_data.cts_cell_id,
-                            'state': cell_state,
-                            'value': f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}',
-                        })
-                    }
-                    await sse_queue.put(sse_data)
-
-        return {}
-
+        await migrate_connectivity_templates(global_store.bp['main_bp'], self.generic_systems.generic_systems)
 
 
     # the 1st action: called by main.py from SyncState
@@ -353,7 +273,7 @@ class AccessSwitches(BaseModel):
         #
         # build generic systems
         # 
-        self.generic_systems.pull_generic_systems()
+        self.generic_systems.pull_tor_generic_systems()
 
         self.leaf_gs = self.generic_systems.leaf_gs
 
