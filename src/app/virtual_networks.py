@@ -83,6 +83,7 @@ class VirtualNetworks(BaseModel):
     tor_bp: Any
     bound_to: Dict[str, _BoundTo] = {}
     this_bound_to: str
+    is_all_done: bool = False
 
     logger: Any = logging.getLogger('VirtualNetworks')
 
@@ -122,6 +123,7 @@ class VirtualNetworks(BaseModel):
                                id=SseEventEnum.BUTTON_MIGRATE_VN, 
                                state=DataStateEnum.DONE)).send()
             await SseEvent(event=SseEventEnum.BUTTION_DISABLE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, disabled=False)).send()
+            self.is_all_done = True
 
         return
 

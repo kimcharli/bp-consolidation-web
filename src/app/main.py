@@ -80,19 +80,19 @@ async def pull_data():
     return data
 
 # from SyncStateButton
-@app.get("/update-access-switches-table")
-async def update_access_switches_table():
-    logging.warning(f"/update_access_switches_table begin")
-    data = access_switches.update_access_switches_table()
-    logging.warning(f"/update_access_switches_table end")
-    return data
+@app.get("/sync-access-switches")
+async def sync_access_switches():
+    logging.warning(f"/sync_access_switches begin")
+    data = await access_switches.sync_access_switches()
+    logging.warning(f"/sync_access_switches end")
+#     return data
 
 
-# from SyncStateButton
-@app.get("/update-generic-systems-table")
-async def update_generic_systems_table():
+# # from SyncStateButton
+# @app.get("/update-generic-systems-table")
+# async def update_generic_systems_table():
     logging.warning(f"/update_generic_systems_table begin")
-    data = await access_switches.update_generic_systems_table()
+    as_data = await access_switches.update_generic_systems_table()
     logging.warning(f"/update_generic_systems_table end")
 #     return data
 
@@ -112,7 +112,7 @@ async def update_generic_systems_table():
             id=SseEventEnum.BUTTON_SYNC_STATE,
             state=DataStateEnum.DONE)).send()
 
-    return data
+    return as_data
 
 # @app.get("/update-connectivity-template-data")
 # async def update_connectivity_template_data():

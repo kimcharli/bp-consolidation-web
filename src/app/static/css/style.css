@@ -178,6 +178,9 @@ aside button {
 .data-state[data-state="done"] {
     background-color: var(--global-ok-color);
 }
+.data-state[data-state="none"] {
+    background-color: gray;
+}
 .data-state[data-state="error"] {
     background-color: var(--global-error-color);
 }

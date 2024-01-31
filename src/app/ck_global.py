@@ -37,6 +37,7 @@ class SseEventEnum(StrEnum):
     BUTTON_SYNC_STATE = 'sync-state'
     BUTTON_MIGRATE_GS = 'migrate-generic-systems'
     BUTTON_MIGRATE_CT = 'migrate-cts'
+    BUTTON_MIGRATE_AS = 'migrate-access-switches'
     BUTTON_MIGRATE_VN = 'migrate-virtual-networks'
     CAPTION_GS = 'generic-system-table-caption'
     CAPTION_VN = 'virtual-networks-caption'
@@ -47,6 +48,23 @@ class SseEventData(BaseModel):
     state: Optional[str] = None
     value: Optional[str] = None
     disabled: Optional[bool] = True  # for disable button
+    visibility: Optional[bool] = None # for visable button
+
+    def visible(self):
+        self.visibility = True
+        return self
+    
+    def hidden(self):
+        self.visibility = False
+        return self
+    
+    def done(self):
+        self.state = DataStateEnum.DONE
+        return self
+
+    def not_done(self):
+        self.state = DataStateEnum.INIT
+        return self
 class SseEvent(BaseModel):
     event: str
     data: SseEventData

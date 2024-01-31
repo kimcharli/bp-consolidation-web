@@ -97,8 +97,6 @@ def build_switch_pair_spec(tor_interface_nodes_in_main, tor_label) -> dict:
     return switch_pair_spec
 
 
-class PeerSystem(BaseModel):
-    switch_intf: List[str] = []
 
 
 class LeafLink(BaseModel):
@@ -123,15 +121,23 @@ class TorGS(BaseModel):
 #     intfs: List[str] = []
 
 class AccessSwitches(BaseModel):
-    access_switches: Dict[str, AccessSwitch] = {}  # [('atl1tor-r5r15a', {'label': 'atl1tor-r5r15a'}), ('atl1tor-r5r15b', {'label': 'atl1tor-r5r15b'})]
-    tor_gs: TorGS = TorGS(label='')  # {'label': None, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
-    leaf_gs: LeafGS = None  # = {'intfs': [None] * 4}  #{'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
+    access_switches: Dict[str, AccessSwitch] = {}  # inited by sync_access_switches
+    tor_gs: TorGS = TorGS(label='')  # in main blueprint. inited by sync_access_switches {'label': None, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
+    leaf_gs: LeafGS = None  # in tor blueprint. copy from generic_systems. = {'intfs': [None] * 4}  #{'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
     generic_systems_data: Any = None
-    leaf_switches: Dict[str, LeafSwitch] = None
+    leaf_switches: Dict[str, LeafSwitch] = {}  # inited by sync_access_switches
+    switch_pair_spec: Any = None  # set by sync_tor_gs_in_main
+    tor_interface_nodes_in_main: Any = None  # set by sync_tor_gs_in_main
     logger: Any = logging.getLogger("AccessSwitches") 
     virtual_networks_data: Any = None
     # TODO:
-    this_bound_to: str = 'atl1tor-r5r15-pair'  # to be updated
+
+    @property
+    def bound_to(self):
+        """
+        For bulk_csv operation of virtual networks
+        """
+        return f"{self.tor_gs.label}-pair"
 
     @property
     def access_switch_pair(self):
@@ -159,7 +165,7 @@ class AccessSwitches(BaseModel):
     @property
     def virtual_networks(self):
         if self.virtual_networks_data is None:
-            self.virtual_networks_data = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.this_bound_to)
+            self.virtual_networks_data = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.bound_to)
         return self.virtual_networks_data
 
     @classmethod
@@ -177,6 +183,11 @@ class AccessSwitches(BaseModel):
 
     async def migrate_generic_system(self, tbody_id):
         self.generic_systems.access_switches = self.access_switches
+        access_switch_ids = [x.id for x in self.access_switches.values() if x.id != '']
+        self.logger.warning(f"migrate_generic_system: {access_switch_ids=}")
+        if len(access_switch_ids) != 2:
+            self.logger.warning(f"migrate_generic_system: access switches not ready {access_switch_ids=}")
+            return {}
         data = await self.generic_systems.migrate_generic_system(tbody_id)
         return data
 
@@ -197,6 +208,10 @@ class AccessSwitches(BaseModel):
     # connectivity template
     #
     async def update_connectivity_template_data(self):
+        if not self.virtual_networks.is_all_done:
+            self.logger.warning(f"update_connectivity_template_data: virtual networks not done")
+            return {}
+
         await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, state=DataStateEnum.LOADING)).send()
 
         data = pull_tor_ct_data(global_store.bp['tor_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
@@ -215,144 +230,186 @@ class AccessSwitches(BaseModel):
             data=SseEventData(
                 id=SseEventEnum.BUTTON_MIGRATE_CT, 
                 state=button_state)).send()
-        # if virtual network is not done, disable the migrate CT button
-        # if button_state != DataStateEnum.DONE:
-        #     await SseEvent(
-        #         event=SseEventEnum.DATA_STATE, 
-        #         data=SseEventData(
-        #             id=SseEventEnum.BUTTON_MIGRATE_CT, 
-        #             state=DataStateEnum.DONE)).send()
-
         return {}
 
     async def migrate_connectivity_templates(self):
         await migrate_connectivity_templates(global_store.bp['main_bp'], self.generic_systems)
 
 
-    # the 1st action: called by main.py from SyncState
-    def update_access_switches_table(self) -> dict:
-        #
-        # build self.access_switches from peer link data of tor_bp
-        # TODO: remove peer_link
-        #
-        class PeerLink(BaseModel):
-            speed: str
-            system: Dict[str, PeerSystem] = {}
+    #
+    # access switches
+    #
 
-        peer_link: Dict[str, PeerLink] = {}
-
-        peer_link_query = """
-            node('link',role='leaf_leaf',  name='link')
-                .in_('link').node('interface', name='intf')
-                .in_('hosted_interfaces').node('system', name='switch')
+    async def sync_access_switches(self) -> dict:
         """
-        peer_link_nodes = self.tor_bp.query(peer_link_query, multiline=True)
-        for link_nodes in peer_link_nodes:
-            switch_label = link_nodes['switch']['label']
-            switch_id = link_nodes['switch']['id']
-            link_id = link_nodes['link']['id']
-            link_data = peer_link.setdefault(link_id, PeerLink(speed=link_nodes['link']['speed']))
-            link_system = link_data.system.setdefault(switch_label, PeerSystem())
-            link_system.switch_intf.append(link_nodes['intf']['if_name'])
-            # breakpoint()
-            # create empty access switch
-            self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label))
-        
+        sync access switches from tor_bp
+        The first action for sync
+        """
 
-        self.logger.warning(f"update_access_switches_table {self.access_switches=}")
+        if self.access_switches == {}:                
+            #
+            # TODO: remove peer_link
+            #
+            class PeerSystem(BaseModel):
+                switch_intf: List[str] = []
+
+            class PeerLink(BaseModel):
+                speed: str
+                system: Dict[str, PeerSystem] = {}
+
+            peer_link: Dict[str, PeerLink] = {}
+
+            peer_link_query = """
+                node('link',role='leaf_leaf',  name='link')
+                    .in_('link').node('interface', name='intf')
+                    .in_('hosted_interfaces').node('system', name='switch')
+            """
+            peer_link_nodes = self.tor_bp.query(peer_link_query)
+            for link_nodes in peer_link_nodes:
+                switch_label = link_nodes['switch']['label']
+                self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label))
+                # switch_id = link_nodes['switch']['id']
+                # link_id = link_nodes['link']['id']
+                # link_data = peer_link.setdefault(link_id, PeerLink(speed=link_nodes['link']['speed']))
+                # link_system = link_data.system.setdefault(switch_label, PeerSystem())
+                # link_system.switch_intf.append(link_nodes['intf']['if_name'])
+            
+
+            self.logger.warning(f"sync_access_switches {self.access_switches=}")
+
+            #
+            #  setup tor_gs label from the name of access switches (came from tor_bp)
+            #
+            a_name = next(iter(self.access_switches))
+            if a_name.endswith(('a', 'b')):
+                self.tor_gs = TorGS(label=a_name[:-1])
+            elif a_name.endswith(('c', 'd')):
+                self.tor_gs = TorGS(label=f"{a_name[:-1]}cd")
+            else:
+                self.logger.critical(f"switch name {a_name} does not ends with 'a' - 'd'")
 
         #
-        #  setup tor_gs label from the name of access switches (came from tor_bp)
-        #
-        a_name = next(iter(self.access_switches))
-        # self.logger.warning(f"{a_name=}")
-        if a_name.endswith(('a', 'b')):
-            self.tor_gs = TorGS(label=a_name[:-1])
-        elif a_name.endswith(('c', 'd')):
-            self.tor_gs = TorGS(label=f"{a_name[:-1]}cd")
-        else:
-            self.logger.critical(f"switch name {a_name} does not ends with 'a' - 'd'")
-
-        #
-        # build generic systems
+        # build generic systems for tor blueprint and set leaf_gs
         # 
-        self.generic_systems.pull_tor_generic_systems()
+        self.generic_systems.sync_tor_generic_systems()
+
+        # self.generic_systems.sync_main_links()  # not sure of this
 
         self.leaf_gs = self.generic_systems.leaf_gs
 
+        # pull the information from main_bp
+        self.sync_tor_gs_in_main()
+
         # breakpoint()
-        # TODO: clarify
-        self.get_leaf_gs()
 
-        # for server_label, server_data in GenericSystems.generic_systems.items():
-        #     for group_link in server_data.group_links:
-        #         if group_link.ae_name:
-        #             for member_link in group_link.links:
-        #                 if member_link.switch_intf in ['et-0/0/48', 'et-0/0/49']:
-        #                     cls.leaf_gs['label'] = server_label
-        #                     if member_link.switch.endswith(('a', 'c')):  # left tor
-        #                         if member_link.switch_intf == 'et-0/0/48':
-        #                             cls.leaf_gs['intfs'][0] = 'et-' + member_link.server_intf.split('-')[1]
-        #                         else:
-        #                             cls.leaf_gs['intfs'][1] = 'et-' + member_link.server_intf.split('-')[1]
-        #                     else:
-        #                         if member_link.switch_intf == 'et-0/0/48':
-        #                             cls.leaf_gs['intfs'][2] = 'et-' + member_link.server_intf.split('-')[1]
-        #                         else:
-        #                             cls.leaf_gs['intfs'][3] = 'et-' + member_link.server_intf.split('-')[1]
+        logging.warning(f"update_access_switches_table ######### {self.access_switches=} {self.tor_gs=} {self.leaf_gs=} {self.leaf_switches}")
 
-
-        logging.warning(f"update_access_switches_table {self.access_switches=} {self.tor_gs=} {self.leaf_gs=}")
-
-        response = _AccessSwitchResponse()
+        # response = _AccessSwitchResponse()
         # breakpoint()
-        response.values.append(self.load_id_element('tor1-label', self.access_switches[self.access_switch_pair[0]].label)) 
-        response.values.append(_AccessSwitchResponseItem(id='tor1-box').loaded()) 
-        response.values.append(self.load_id_element('tor2-label', self.access_switches[self.access_switch_pair[1]].label)) 
-        response.values.append(_AccessSwitchResponseItem(id='tor2-box').loaded()) 
-        response.values.append(self.load_id_element('leaf-gs-label', self.leaf_gs.label)) 
-        response.values.append(_AccessSwitchResponseItem(id='leaf-gs-box').loaded()) 
-        response.values.append(self.load_id_element('leafgs1-intf1', self.leaf_gs.a_48)) 
-        response.values.append(self.load_id_element('leafgs1-intf2', self.leaf_gs.a_49)) 
-        response.values.append(self.load_id_element('leafgs2-intf1', self.leaf_gs.b_48)) 
-        response.values.append(self.load_id_element('leafgs2-intf2', self.leaf_gs.b_49)) 
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switches[self.access_switch_pair[0]].label).not_done()).send()
+        # response.values.append(self.load_id_element('tor1-label', self.access_switches[self.access_switch_pair[0]].label)) 
+        # response.values.append(_AccessSwitchResponseItem(id='tor1-box').loaded()) 
+        # response.values.append(self.load_id_element('tor2-label', self.access_switches[self.access_switch_pair[1]].label)) 
+        # response.values.append(_AccessSwitchResponseItem(id='tor2-box').loaded()) 
+        # response.values.append(self.load_id_element('leaf-gs-label', self.leaf_gs.label)) 
+        # response.values.append(_AccessSwitchResponseItem(id='leaf-gs-box').loaded()) 
+        # response.values.append(self.load_id_element('leafgs1-intf1', self.leaf_gs.a_48)) 
+        # response.values.append(self.load_id_element('leafgs1-intf2', self.leaf_gs.a_49)) 
+        # response.values.append(self.load_id_element('leafgs2-intf1', self.leaf_gs.b_48)) 
+        # response.values.append(self.load_id_element('leafgs2-intf2', self.leaf_gs.b_49)) 
 
-        response.values.append(self.load_id_element('leaf1-intf1', self.leaf_gs.a_48)) 
-        response.values.append(self.load_id_element('leaf1-intf2', self.leaf_gs.a_49)) 
-        response.values.append(self.load_id_element('leaf2-intf2', self.leaf_gs.b_48)) 
-        response.values.append(self.load_id_element('leaf2-intf2', self.leaf_gs.b_49)) 
+        # response.values.append(self.load_id_element('leaf1-intf1', self.leaf_gs.a_48)) 
+        # response.values.append(self.load_id_element('leaf1-intf2', self.leaf_gs.a_49)) 
+        # response.values.append(self.load_id_element('leaf2-intf2', self.leaf_gs.b_48)) 
+        # response.values.append(self.load_id_element('leaf2-intf2', self.leaf_gs.b_49)) 
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switches[self.access_switch_pair[0]].label).not_done()).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-label', value=self.access_switches[self.access_switch_pair[1]].label).not_done()).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-label', state=DataStateEnum.INIT, value=self.leaf_gs.label)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf1', state=DataStateEnum.INIT, value=self.leaf_gs.a_48)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf2', state=DataStateEnum.INIT, value=self.leaf_gs.a_49)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf1', state=DataStateEnum.INIT, value=self.leaf_gs.b_48)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf2', state=DataStateEnum.INIT, value=self.leaf_gs.b_49)).send()
+        
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-intf1', state=DataStateEnum.INIT, value=self.leaf_gs.a_48)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-intf2', state=DataStateEnum.INIT, value=self.leaf_gs.a_49)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-intf1', state=DataStateEnum.INIT, value=self.leaf_gs.b_48)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-intf2', state=DataStateEnum.INIT, value=self.leaf_gs.b_49)).send()
 
-        if self.tor_gs.id:
-            response.values.append(self.load_id_element('access-gs-label', self.tor_gs.label)) 
-            response.values.append(_AccessSwitchResponseItem(id='access-gs-box').loaded()) 
-            response.values.append(self.load_id_element('leaf1-label', self.leaf_switches[self.leaf_switch_pair[0]].label)) 
-            response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
-            response.values.append(self.load_id_element('leaf2-label', self.leaf_switches[self.leaf_switch_pair[1]].label)) 
-            response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
-        elif self.leaf_switches[self.leaf_switch_pair[0]].id and self.leaf_switches[self.leaf_switch_pair[0]].id:
-            response.values.append(self.load_id_element('leaf1-label', self.leaf_switches[self.leaf_switch_pair[0]].label)) 
-            response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
-            response.values.append(self.load_id_element('leaf2-label', self.leaf_switches[self.leaf_switch_pair[1]].label)) 
-            response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-box', state=DataStateEnum.DONE)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-box', state=DataStateEnum.DONE)).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-box', state=DataStateEnum.DONE)).send()
 
-            response.values.append(_AccessSwitchResponseItem(id='access-gs-box').hidden()) 
-            response.values.append(_AccessSwitchResponseItem(id='access-gs-label').hidden()) 
-            response.values.append(_AccessSwitchResponseItem(id='access1-box').visible().loaded()) 
-            response.values.append(_AccessSwitchResponseItem(id='access1-label').visible()) 
-            response.values.append(_AccessSwitchResponseItem(id='access2-box').visible().loaded()) 
-            response.values.append(_AccessSwitchResponseItem(id='access2-label').visible()) 
+        if len([x.id for x in self.access_switches.values() if x.id != '']) == 2:
+            # access switches are created
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-label', value=self.leaf_switch_pair[0]).not_done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-label', value=self.leaf_switch_pair[1]).not_done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-box').done()).send()
 
-            response.values.append(self.load_id_element('access1-label', self.access_switches[self.access_switch_pair[0]].label)) 
-            response.values.append(self.load_id_element('access2-label', self.access_switches[self.access_switch_pair[1]].label)) 
+            # response.values.append(self.load_id_element('leaf1-label', self.leaf_switches[self.leaf_switch_pair[0]].label)) 
+            # response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
+            # response.values.append(self.load_id_element('leaf2-label', self.leaf_switches[self.leaf_switch_pair[1]].label)) 
+            # response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
+
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box')).hidden().send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label')).hidden().send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-box')).visible().done().send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label')).visible().send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-box')).visible().done().send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label')).visible().send()
+
+            # # response.values.append(_AccessSwitchResponseItem(id='access-gs-box').hidden()) 
+            # # response.values.append(_AccessSwitchResponseItem(id='access-gs-label').hidden()) 
+            # # response.values.append(_AccessSwitchResponseItem(id='access1-box').visible().loaded()) 
+            # # response.values.append(_AccessSwitchResponseItem(id='access1-label').visible()) 
+            # response.values.append(_AccessSwitchResponseItem(id='access2-box').visible().loaded()) 
+            # response.values.append(_AccessSwitchResponseItem(id='access2-label').visible()) 
+
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label', value=self.access_switches[self.access_switch_pair[0]].label)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label', value=self.access_switches[self.access_switch_pair[1]].label)).send()
+
+            # response.values.append(self.load_id_element('access1-label', self.access_switches[self.access_switch_pair[0]].label)) 
+            # response.values.append(self.load_id_element('access2-label', self.access_switches[self.access_switch_pair[1]].label)) 
+
+
+        elif self.tor_gs.id:
+            # access switches are not created yet
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').not_done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label', value=self.tor_gs.label).done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-label', value=self.leaf_switches[self.leaf_switch_pair[1]].label).hidden()).send()
+
+            # response.values.append(self.load_id_element('access-gs-label', self.tor_gs.label)) 
+            # response.values.append(_AccessSwitchResponseItem(id='access-gs-box').loaded()) 
+            # response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
+            # response.values.append(self.load_id_element('leaf2-label', self.leaf_switches[self.leaf_switch_pair[1]].label)) 
+            # response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
+        # elif self.leaf_switches[self.leaf_switch_pair[0]].id and self.leaf_switches[self.leaf_switch_pair[0]].id:
+        #     response.values.append(self.load_id_element('leaf1-label', self.leaf_switches[self.leaf_switch_pair[0]].label)) 
+        #     response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
+        #     response.values.append(self.load_id_element('leaf2-label', self.leaf_switches[self.leaf_switch_pair[1]].label)) 
+        #     response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
+
+        #     response.values.append(_AccessSwitchResponseItem(id='access-gs-box').hidden()) 
+        #     response.values.append(_AccessSwitchResponseItem(id='access-gs-label').hidden()) 
+        #     response.values.append(_AccessSwitchResponseItem(id='access1-box').visible().loaded()) 
+        #     response.values.append(_AccessSwitchResponseItem(id='access1-label').visible()) 
+        #     response.values.append(_AccessSwitchResponseItem(id='access2-box').visible().loaded()) 
+        #     response.values.append(_AccessSwitchResponseItem(id='access2-label').visible()) 
+
+        #     response.values.append(self.load_id_element('access1-label', self.access_switches[self.access_switch_pair[0]].label)) 
+        #     response.values.append(self.load_id_element('access2-label', self.access_switches[self.access_switch_pair[1]].label)) 
 
         if self.access_switches[self.access_switch_pair[0]].id and self.access_switches[self.access_switch_pair[1]].id:
-            response.button_state = DataStateEnum.DONE
+            # response.button_state = DataStateEnum.DONE
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS)).done().send()
 
         logging.warning(f"update_access_switches_table end... {self.access_switches=} {self.leaf_gs=}")
-        return response
+        return self.leaf_switches
 
 
-    def get_leaf_gs(self):
+    def sync_tor_gs_in_main(self):
         #
         # update self.tor_gs
         #
@@ -363,7 +420,7 @@ class AccessSwitches(BaseModel):
             if len(tor_gs_node):
                 self.tor_gs.id = tor_gs_node[0]['tor']['id']
                 self.tor_gs.ae_id = tor_gs_node[0]['evpn']['id']
-            self.logger.warning(f"pull_tor_bp_data {self.tor_gs=}")
+            self.logger.warning(f"pull_tor_gs_data {self.tor_gs=}")
             # leaf_temp = {
             #     # 'label': { 'label': None, 'id': None, 'links': []},
             #     # 'label': { 'label': None, 'id': None, 'links': []},
@@ -373,6 +430,7 @@ class AccessSwitches(BaseModel):
                 leaf_id = member_intf_set[CkEnum.MEMBER_SWITCH]['id']
                 switch_intf = member_intf_set[CkEnum.MEMBER_INTERFACE]['if_name']
                 server_intf = member_intf_set[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name']
+                # breakpoint()
                 leaf_data = self.leaf_switches.setdefault(leaf_label, LeafSwitch(label=leaf_label, id=leaf_id))
                 # if leaf_label not in leaf_temp:
                 #     leaf_temp[leaf_label] = {
@@ -384,8 +442,8 @@ class AccessSwitches(BaseModel):
             # logging.warning(f"pull_tor_bp_data {leaf_temp=}")
             # cls.leaf_switches = sorted(leaf_temp.items(), key=lambda item: item[0])
 
-            cls.switch_pair_spec = build_switch_pair_spec(tor_interface_nodes_in_main, cls.tor_gs['label'])
-            cls.tor_interface_nodes_in_main = tor_interface_nodes_in_main
+            self.switch_pair_spec = build_switch_pair_spec(tor_interface_nodes_in_main, self.tor_gs.label)
+            self.tor_interface_nodes_in_main = tor_interface_nodes_in_main
 
         # TODO: get data when the access_switches are loaded in main_bp
         else:
@@ -426,8 +484,7 @@ class AccessSwitches(BaseModel):
             self.logger.warning(f"after access/leaf switches: {self.access_switches=} {self.leaf_switches=}")
 
 
-    @classmethod
-    def create_new_access_switch_pair(cls):
+    def create_new_access_switch_pair(self):
         ########
         # create new access system pair
         # olg logical device is not useful anymore
@@ -437,15 +494,15 @@ class AccessSwitches(BaseModel):
         # rack type _ATL-AS-5100-48T, _ATL-AS-5120-48T created and added
         # ATL-AS-LOOPBACK with 10.29.8.0/22
         
-        main_bp = cls.bp['main_bp']
-        tor_label = cls.tor_data['tor_gs']['label']
-        switch_pair_spec = cls.tor_data['switch_pair_spec']
+        main_bp = global_store.bp['main_bp']
+        tor_label = self.tor_data['tor_gs']['label']
+        switch_pair_spec = self.tor_data['switch_pair_spec']
 
         REDUNDANCY_GROUP = 'redundancy_group'
 
         # skip if the access switch pair already exists
-        tor_a = cls.tor_data['access_switches'][0][0]
-        tor_b = cls.tor_data['access_switches'][1][0]
+        tor_a = self.tor_data['access_switches'][0][0]
+        tor_b = self.tor_data['access_switches'][1][0]
         if main_bp.get_system_node_from_label(tor_a):
             logging.info(f"{tor_a} already exists in main blueprint")
             return
@@ -472,7 +529,7 @@ class AccessSwitches(BaseModel):
         # rename redundancy group with <tor_label>-pair
         main_bp.patch_node_single(
             new_systems[0][REDUNDANCY_GROUP]['id'], 
-            {"label": f"{tor_label}-pair" }
+            {"label": self.bound_to }  # redundancy group id to be used for virtual network association
             )
 
         # rename each access switch for the label and hostname

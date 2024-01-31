@@ -47,7 +47,6 @@ class ConnectButton {
     constructor() {
         this.button = document.getElementById('connect-button');
         this.button.addEventListener('click', this.handleConnectServer.bind(this));
-        // console.log('ConnectButton: constructor() this.button=', this.button);
     }
 
     handleConnectServer(event) {
@@ -117,25 +116,25 @@ class SyncStateButton {
     handleSyncState(event) {
         const srcButton = event.srcElement || event.target;
 
-        fetch('/update-access-switches-table', {
+        fetch('/sync-access-switches', {
             method: 'GET',
         })
         .then(response => response.json())
         .then(data => {
-            console.log('/update-access-switches-table', data)
-            // globalData.update(data);
-            data.values.forEach(element => {
-                // console.log('element=', element)
-                const the_element = document.getElementById(element.id);
-                if (element.value) the_element.innerHTML = element.value;
-                if (element.state) the_element.dataset.state = element.state;
-                if (element.fill) the_element.style.fill = element.fill;
-                if (element.visibility) the_element.style.visibility = element.visibility;
-            })
-            // srcButton.dataset.state = 'done';
-            document.getElementById("migrate-access-switches").dataset.state = data.button_state;
-            // this.buttonMigrateAccessSwitches.dataset.state = data.button_state;
-            this.updateGenericSystemsTable();
+            console.log('/sync-access-switches', data)
+            // // globalData.update(data);
+            // data.values.forEach(element => {
+            //     // console.log('element=', element)
+            //     const the_element = document.getElementById(element.id);
+            //     if (element.value) the_element.innerHTML = element.value;
+            //     if (element.state) the_element.dataset.state = element.state;
+            //     if (element.fill) the_element.style.fill = element.fill;
+            //     if (element.visibility) the_element.style.visibility = element.visibility;
+            // })
+            // // srcButton.dataset.state = 'done';
+            // document.getElementById("migrate-access-switches").dataset.state = data.button_state;
+            // // this.buttonMigrateAccessSwitches.dataset.state = data.button_state;
+            // this.updateGenericSystemsTable();
         })
         .catch(error => console.error('handleSyncStateClick - Error:', error, error.name, error.message));
         srcButton.dataset.state="loading";
@@ -435,6 +434,7 @@ eventSource.addEventListener('data-state', (event) => {
         if (data.state !== undefined && data.state != null) target.dataset.state = data.state;
         // null check undefined too
         if (data.value !== null) target.innerHTML = data.value;
+        if (data.visibility) target.style.visibility = data.visibility;
     } catch (error) {
         console.log('sse data-state error', error, 'for data', data)
     }
