@@ -416,6 +416,9 @@ class _GenericSystem(BaseModel):
                         link_data.new_switch_intf_id = new_switch_intf_id
                         link_data.new_server_intf_id = new_server_intf_id
 
+        logging.warning(f"GS refresh end {self.new_label=} {self=}")
+
+        return
 
     def create_generic_system(self, main_bp, access_switches):
         """
@@ -585,7 +588,7 @@ class GenericSystems(BaseModel):
 
     def sync_tor_generic_systems(self):
         """
-        Pull the generic systems data and rebuild generic_systems
+        Pull the generic systems data and rebuild generic_systems and leaf_gs
         the 1st call
         does not render the web page (TODO: may be render the page)
         """
@@ -629,28 +632,32 @@ class GenericSystems(BaseModel):
             link_data = ae_data.links.setdefault(old_switch_intf_id, _Memberlink(switch=switch, switch_intf=switch_intf, old_server_intf=old_server_intf))
             if tag:
                 link_data.add_old_tag(tag)
-                # breakpoint()
-                self.logger.warning(f"sync_tor_generic_systems {tag=} {server_label=} {tbody_id=}")            
+                # self.logger.warning(f"sync_tor_generic_systems {tag=} {server_label=} {tbody_id=}")            
         # set index number for each generic system
         for index, (k, v) in enumerate(self.generic_systems.items()):
             v.index = index + 1
 
+        self.logger.warning(f"sync_tor_generic_systems end {len(self.generic_systems)=} {self.leaf_gs=}")
+    
         return
 
 
     def sync_main_links(self):
         """
+        Pull the main_bp data for the access_switches and update generic_systems
         Not sure of this 
         """
         server_links_dict = {}
         # update generic_systems from main_bp
-        for server_link in self.main_bp.get_switch_interface_nodes(self.access_switch_pair):
+        server_links = self.main_bp.get_switch_interface_nodes(self.access_switch_pair)
+        self.logger.warning(f"sync_main_links {len(server_links)=}")
+        for server_link in server_links:
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             tbody_id = f"gs-{server_label}"
             server_links_dict.setdefault(tbody_id, []).append(server_link)            
         for tbody_id, links in server_links_dict.items():
             # breakpoint()
-            self.generic_systems[tbody_id].refresh(self.main_bp, links)
+            self.generic_systems[tbody_id].refresh(self.main_bp, server_links=links)
 
         return
 

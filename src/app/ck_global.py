@@ -51,11 +51,11 @@ class SseEventData(BaseModel):
     visibility: Optional[bool] = None # for visable button
 
     def visible(self):
-        self.visibility = True
+        self.visibility = 'visible'
         return self
     
     def hidden(self):
-        self.visibility = False
+        self.visibility = 'hidden'
         return self
     
     def done(self):
@@ -412,27 +412,27 @@ class GlobalStore(BaseModel):
     #     return data
 
     
-    @classmethod
-    def new_label(cls, tor_name, old_label) -> str:
-        """
-        return new label from old label
-        """
-        # the maximum length is 32. Prefix 'r5r14-'
-        old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
-        # get the prefix from tor_name
-        prefix = tor_name[len('atl1tor-'):]
-        for pattern in old_patterns:
-            if old_label.startswith(pattern):
-                # replace the string with the prefix
-                return f"{prefix}-{old_label[len(pattern):]}"
-        # it doesn't starts with the patterns. See if it is too long to prefix
-        max_len = 32
-        if ( len(old_label) + len(prefix) + 1 ) > max_len:
-            # TODO: potential of conflict
-            # logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
-            return old_label
-        # just prefix
-        return f"{prefix}-{old_label}"
+    # @classmethod
+    # def new_label(cls, tor_name, old_label) -> str:
+    #     """
+    #     return new label from old label
+    #     """
+    #     # the maximum length is 32. Prefix 'r5r14-'
+    #     old_patterns = ['_atl_rack_1_000_', '_atl_rack_1_001_', '_atl_rack_5120_001_']
+    #     # get the prefix from tor_name
+    #     prefix = tor_name[len('atl1tor-'):]
+    #     for pattern in old_patterns:
+    #         if old_label.startswith(pattern):
+    #             # replace the string with the prefix
+    #             return f"{prefix}-{old_label[len(pattern):]}"
+    #     # it doesn't starts with the patterns. See if it is too long to prefix
+    #     max_len = 32
+    #     if ( len(old_label) + len(prefix) + 1 ) > max_len:
+    #         # TODO: potential of conflict
+    #         # logging.warning(f"Generic system name {old_label=} is too long to prefix. Keeping original label.")
+    #         return old_label
+    #     # just prefix
+    #     return f"{prefix}-{old_label}"
 
 
     # @classmethod
@@ -497,196 +497,196 @@ class GlobalStore(BaseModel):
 
     #     return data
 
-    @classmethod
-    def remove_old_generic_system_from_main(cls):
-        """
-        Remove the old generic system from the main blueprint
-        remove the connectivity templates assigned to the generic system
-        remove the generic system (links)
-        """
-        logging.warning('remove_old_generic_system_from_main - begin')
-        tor_interface_nodes_in_main = cls.tor_data['tor_interface_nodes_in_main']
-        tor_ae_id_in_main = cls.tor_data['tor_gs']['ae_id']
-        main_bp = cls.bp['main_bp']
-        if tor_ae_id_in_main is None:
-            logging.warning(f"tor_ae_id_in_main is None")
-            return
+    # @classmethod
+    # def remove_old_generic_system_from_main(cls):
+    #     """
+    #     Remove the old generic system from the main blueprint
+    #     remove the connectivity templates assigned to the generic system
+    #     remove the generic system (links)
+    #     """
+    #     logging.warning('remove_old_generic_system_from_main - begin')
+    #     tor_interface_nodes_in_main = cls.tor_data['tor_interface_nodes_in_main']
+    #     tor_ae_id_in_main = cls.tor_data['tor_gs']['ae_id']
+    #     main_bp = cls.bp['main_bp']
+    #     if tor_ae_id_in_main is None:
+    #         logging.warning(f"tor_ae_id_in_main is None")
+    #         return
         
-        # remove the connectivity templates assigned to the generic system
-        cts_to_remove = main_bp.get_interface_cts(tor_ae_id_in_main)
-        logging.warning(f"remove_old_generic_system_from_main - {tor_ae_id_in_main=} {len(cts_to_remove)=}")
+    #     # remove the connectivity templates assigned to the generic system
+    #     cts_to_remove = main_bp.get_interface_cts(tor_ae_id_in_main)
+    #     logging.warning(f"remove_old_generic_system_from_main - {tor_ae_id_in_main=} {len(cts_to_remove)=}")
 
-        # damping CTs in chunks
-        while len(cts_to_remove) > 0:
-            throttle_number = 50
-            cts_chunk = cts_to_remove[:throttle_number]
-            logging.warning(f"Removing Connecitivity Templates on this links: {len(cts_chunk)=}")
-            batch_ct_spec = {
-                "operations": [
-                    {
-                        "path": "/obj-policy-batch-apply",
-                        "method": "PATCH",
-                        "payload": {
-                            "application_points": [
-                                {
-                                    "id": tor_ae_id_in_main,
-                                    "policies": [ {"policy": x, "used": False} for x in cts_chunk]
-                                }
-                            ]
-                        }
-                    }
-                ]
-            }
-            batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
-            del cts_to_remove[:throttle_number]
+    #     # damping CTs in chunks
+    #     while len(cts_to_remove) > 0:
+    #         throttle_number = 50
+    #         cts_chunk = cts_to_remove[:throttle_number]
+    #         logging.warning(f"Removing Connecitivity Templates on this links: {len(cts_chunk)=}")
+    #         batch_ct_spec = {
+    #             "operations": [
+    #                 {
+    #                     "path": "/obj-policy-batch-apply",
+    #                     "method": "PATCH",
+    #                     "payload": {
+    #                         "application_points": [
+    #                             {
+    #                                 "id": tor_ae_id_in_main,
+    #                                 "policies": [ {"policy": x, "used": False} for x in cts_chunk]
+    #                             }
+    #                         ]
+    #                     }
+    #                 }
+    #             ]
+    #         }
+    #         batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
+    #         del cts_to_remove[:throttle_number]
 
-        # remove the generic system (links)
-        link_remove_spec = {
-            "operations": [
-                {
-                    "path": "/delete-switch-system-links",
-                    "method": "POST",
-                    "payload": {
-                        "link_ids": [ x['link']['id'] for x in tor_interface_nodes_in_main ]
-                    }
-                }
-            ]
-        }
-        batch_result = main_bp.batch(link_remove_spec, params={"comment": "batch-api"})
-        logging.debug(f"{link_remove_spec=}")
-        while True:
-            if_generic_system_present = main_bp.query(f"node('system', label='{cls.tor_data['tor_gs']['label']}')")
-            if len(if_generic_system_present) == 0:
-                break
-            logging.info(f"{if_generic_system_present=}")
-            time.sleep(3)
-        # the generic system is gone.            
+    #     # remove the generic system (links)
+    #     link_remove_spec = {
+    #         "operations": [
+    #             {
+    #                 "path": "/delete-switch-system-links",
+    #                 "method": "POST",
+    #                 "payload": {
+    #                     "link_ids": [ x['link']['id'] for x in tor_interface_nodes_in_main ]
+    #                 }
+    #             }
+    #         ]
+    #     }
+    #     batch_result = main_bp.batch(link_remove_spec, params={"comment": "batch-api"})
+    #     logging.debug(f"{link_remove_spec=}")
+    #     while True:
+    #         if_generic_system_present = main_bp.query(f"node('system', label='{cls.tor_data['tor_gs']['label']}')")
+    #         if len(if_generic_system_present) == 0:
+    #             break
+    #         logging.info(f"{if_generic_system_present=}")
+    #         time.sleep(3)
+    #     # the generic system is gone.            
 
-        return
+    #     return
 
-    @classmethod
-    def create_new_access_switch_pair(cls):
-        ########
-        # create new access system pair
-        # olg logical device is not useful anymore
+    # @classmethod
+    # def create_new_access_switch_pair(cls):
+    #     ########
+    #     # create new access system pair
+    #     # olg logical device is not useful anymore
 
-        # LD _ATL-AS-Q5100-48T, _ATL-AS-5120-48T created
-        # IM _ATL-AS-Q5100-48T, _ATL-AS-5120-48T created
-        # rack type _ATL-AS-5100-48T, _ATL-AS-5120-48T created and added
-        # ATL-AS-LOOPBACK with 10.29.8.0/22
+    #     # LD _ATL-AS-Q5100-48T, _ATL-AS-5120-48T created
+    #     # IM _ATL-AS-Q5100-48T, _ATL-AS-5120-48T created
+    #     # rack type _ATL-AS-5100-48T, _ATL-AS-5120-48T created and added
+    #     # ATL-AS-LOOPBACK with 10.29.8.0/22
         
-        main_bp = cls.bp['main_bp']
-        tor_label = cls.tor_data['tor_gs']['label']
-        switch_pair_spec = cls.tor_data['switch_pair_spec']
+    #     main_bp = cls.bp['main_bp']
+    #     tor_label = cls.tor_data['tor_gs']['label']
+    #     switch_pair_spec = cls.tor_data['switch_pair_spec']
 
-        REDUNDANCY_GROUP = 'redundancy_group'
+    #     REDUNDANCY_GROUP = 'redundancy_group'
 
-        # skip if the access switch pair already exists
-        tor_a = cls.tor_data['access_switches'][0][0]
-        tor_b = cls.tor_data['access_switches'][1][0]
-        if main_bp.get_system_node_from_label(tor_a):
-            logging.info(f"{tor_a} already exists in main blueprint")
-            return
+    #     # skip if the access switch pair already exists
+    #     tor_a = cls.tor_data['access_switches'][0][0]
+    #     tor_b = cls.tor_data['access_switches'][1][0]
+    #     if main_bp.get_system_node_from_label(tor_a):
+    #         logging.info(f"{tor_a} already exists in main blueprint")
+    #         return
         
-        access_switch_pair_created = main_bp.add_generic_system(switch_pair_spec)
-        logging.warning(f"{access_switch_pair_created=}")
+    #     access_switch_pair_created = main_bp.add_generic_system(switch_pair_spec)
+    #     logging.warning(f"{access_switch_pair_created=}")
 
-        # wait for the new system to be created
-        while True:
-            new_systems = main_bp.query(f"""
-                node('link', label='{access_switch_pair_created[0]}', name='link')
-                .in_().node('interface')
-                .in_().node('system', name='leaf')
-                .out().node('redundancy_group', name='{REDUNDANCY_GROUP}'
-                )""", multiline=True)
-            # There should be 5 links (including the peer link)
-            if len(new_systems) == 2:
-                break
-            logging.info(f"Waiting for new systems to be created: {len(new_systems)=}")
-            time.sleep(3)
+    #     # wait for the new system to be created
+    #     while True:
+    #         new_systems = main_bp.query(f"""
+    #             node('link', label='{access_switch_pair_created[0]}', name='link')
+    #             .in_().node('interface')
+    #             .in_().node('system', name='leaf')
+    #             .out().node('redundancy_group', name='{REDUNDANCY_GROUP}'
+    #             )""", multiline=True)
+    #         # There should be 5 links (including the peer link)
+    #         if len(new_systems) == 2:
+    #             break
+    #         logging.info(f"Waiting for new systems to be created: {len(new_systems)=}")
+    #         time.sleep(3)
 
-        # The first entry is the peer link
+    #     # The first entry is the peer link
 
-        # rename redundancy group with <tor_label>-pair
-        main_bp.patch_node_single(
-            new_systems[0][REDUNDANCY_GROUP]['id'], 
-            {"label": f"{tor_label}-pair" }
-            )
+    #     # rename redundancy group with <tor_label>-pair
+    #     main_bp.patch_node_single(
+    #         new_systems[0][REDUNDANCY_GROUP]['id'], 
+    #         {"label": f"{tor_label}-pair" }
+    #         )
 
-        # rename each access switch for the label and hostname
-        for leaf in new_systems:
-            given_label = leaf['leaf']['label']
-            # when the label is <tor_label>1, rename it to <tor_label>a
-            if given_label[-1] == '1':
-                new_label = tor_a
-            # when the labe is <tor_label>2, rename it to <tor_label>b
-            elif given_label[-1] == '2':
-                new_label = tor_b
-            else:
-                logging.warning(f"skipp chaning name {given_label=}")
-                continue
-            main_bp.patch_node_single(
-                leaf['leaf']['id'], 
-                {"label": new_label, "hostname": new_label }
-                )
+    #     # rename each access switch for the label and hostname
+    #     for leaf in new_systems:
+    #         given_label = leaf['leaf']['label']
+    #         # when the label is <tor_label>1, rename it to <tor_label>a
+    #         if given_label[-1] == '1':
+    #             new_label = tor_a
+    #         # when the labe is <tor_label>2, rename it to <tor_label>b
+    #         elif given_label[-1] == '2':
+    #             new_label = tor_b
+    #         else:
+    #             logging.warning(f"skipp chaning name {given_label=}")
+    #             continue
+    #         main_bp.patch_node_single(
+    #             leaf['leaf']['id'], 
+    #             {"label": new_label, "hostname": new_label }
+    #             )
 
 
-def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
-    '''
-    Build each "links" data from tor_interface_nodes_in_main
-    It is assumed that the generic system interface names are in et-0/0/48-b format
-    '''
-    # logging.debug(f"{len(a_link_nodes)=}, {a_link_nodes=}")
+# def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
+#     '''
+#     Build each "links" data from tor_interface_nodes_in_main
+#     It is assumed that the generic system interface names are in et-0/0/48-b format
+#     '''
+#     # logging.debug(f"{len(a_link_nodes)=}, {a_link_nodes=}")
 
-    translation_table = {
-        "et-0/0/48-a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/48' },
-        "et-0/0/48-b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/48' },
-        "et-0/0/49-a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/49' },
-        "et-0/0/49-b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/49' },
+#     translation_table = {
+#         "et-0/0/48-a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/48' },
+#         "et-0/0/48-b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/48' },
+#         "et-0/0/49-a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/49' },
+#         "et-0/0/49-b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/49' },
 
-        "et-0/0/48a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/48' },
-        "et-0/0/48b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/48' },
-        "et-0/0/49a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/49' },
-        "et-0/0/49b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/49' },
-    }
+#         "et-0/0/48a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/48' },
+#         "et-0/0/48b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/48' },
+#         "et-0/0/49a": { 'system_peer': 'first', 'system_if_name': 'et-0/0/49' },
+#         "et-0/0/49b": { 'system_peer': 'second', 'system_if_name': 'et-0/0/49' },
+#     }
 
-    tor_intf_name = a_link_nodes[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name']
-    if tor_intf_name not in translation_table:
-        logging.warning(f"a_link_nodes[{CkEnum.GENERIC_SYSTEM_INTERFACE}]['if_name']: {tor_intf_name}, none of {[x for x in translation_table.keys()]}")
-        return None
-    link_candidate = {
-            "lag_mode": "lacp_active",
-            "system_peer": translation_table[tor_intf_name]['system_peer'],
-            "switch": {
-                "system_id": a_link_nodes[CkEnum.MEMBER_SWITCH]['id'],
-                "transformation_id": 2,
-                "if_name": a_link_nodes[CkEnum.MEMBER_INTERFACE]['if_name']
-            },
-            "system": {
-                "system_id": None,
-                "transformation_id": 1,
-                "if_name": translation_table[tor_intf_name]['system_if_name']
-            }
-        }
-    return link_candidate
+#     tor_intf_name = a_link_nodes[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name']
+#     if tor_intf_name not in translation_table:
+#         logging.warning(f"a_link_nodes[{CkEnum.GENERIC_SYSTEM_INTERFACE}]['if_name']: {tor_intf_name}, none of {[x for x in translation_table.keys()]}")
+#         return None
+#     link_candidate = {
+#             "lag_mode": "lacp_active",
+#             "system_peer": translation_table[tor_intf_name]['system_peer'],
+#             "switch": {
+#                 "system_id": a_link_nodes[CkEnum.MEMBER_SWITCH]['id'],
+#                 "transformation_id": 2,
+#                 "if_name": a_link_nodes[CkEnum.MEMBER_INTERFACE]['if_name']
+#             },
+#             "system": {
+#                 "system_id": None,
+#                 "transformation_id": 1,
+#                 "if_name": translation_table[tor_intf_name]['system_if_name']
+#             }
+#         }
+#     return link_candidate
 
-def build_switch_pair_spec(tor_interface_nodes_in_main, tor_label) -> dict:
-    '''
-    Build the switch pair spec from the links query
-    '''
-    switch_pair_spec = {
-        "links": [build_access_switch_fabric_links_dict(x) for x in tor_interface_nodes_in_main],
-        "new_systems": None
-    }
+# def build_switch_pair_spec(tor_interface_nodes_in_main, tor_label) -> dict:
+#     '''
+#     Build the switch pair spec from the links query
+#     '''
+#     switch_pair_spec = {
+#         "links": [build_access_switch_fabric_links_dict(x) for x in tor_interface_nodes_in_main],
+#         "new_systems": None
+#     }
 
-    # TODO: 
-    with open('./tests/fixtures/fixture-switch-system-links-5120.json', 'r') as file:
-        sample_data = json.load(file)
+#     # TODO: 
+#     with open('./tests/fixtures/fixture-switch-system-links-5120.json', 'r') as file:
+#         sample_data = json.load(file)
 
-    switch_pair_spec['new_systems'] = sample_data['new_systems']
-    switch_pair_spec['new_systems'][0]['label'] = tor_label
+#     switch_pair_spec['new_systems'] = sample_data['new_systems']
+#     switch_pair_spec['new_systems'][0]['label'] = tor_label
 
-    return switch_pair_spec
+#     return switch_pair_spec
 
 
 def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:

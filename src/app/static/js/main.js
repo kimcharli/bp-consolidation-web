@@ -116,78 +116,16 @@ class SyncStateButton {
     handleSyncState(event) {
         const srcButton = event.srcElement || event.target;
 
-        fetch('/sync-access-switches', {
+        fetch('/sync', {
             method: 'GET',
         })
         .then(response => response.json())
         .then(data => {
-            console.log('/sync-access-switches', data)
-            // // globalData.update(data);
-            // data.values.forEach(element => {
-            //     // console.log('element=', element)
-            //     const the_element = document.getElementById(element.id);
-            //     if (element.value) the_element.innerHTML = element.value;
-            //     if (element.state) the_element.dataset.state = element.state;
-            //     if (element.fill) the_element.style.fill = element.fill;
-            //     if (element.visibility) the_element.style.visibility = element.visibility;
-            // })
-            // // srcButton.dataset.state = 'done';
-            // document.getElementById("migrate-access-switches").dataset.state = data.button_state;
-            // // this.buttonMigrateAccessSwitches.dataset.state = data.button_state;
-            // this.updateGenericSystemsTable();
+            console.log('/sync', data)
         })
-        .catch(error => console.error('handleSyncStateClick - Error:', error, error.name, error.message));
-        srcButton.dataset.state="loading";
-    }
-
-    updateGenericSystemsTable() {
-        fetch('/update-generic-systems-table', {
-            method: 'GET',
-        })
-        .then(response => response.json())
-        .then(data => {
-            /*
-                values: [
-                    id: id to apply (tbody),
-                    value: html-string
-                ]
-                caption: the caption of the table
-            */
-            console.log('handleSyncStateClick, /update-generic-systems-table, data=', data);
-            // const the_table = document.getElementById('generic-systems-table');
-            // data.values.forEach(element => {
-            //     // console.log('tbody=', document.getElementById(element.id));
-            //     let tbody = document.getElementById(element.id);
-            //     if ( tbody == null ) {
-            //         tbody = the_table.createTBody();
-            //         tbody.setAttribute('id', element.id);
-            //     }
-            //     tbody.dataset.newId = element.newId;
-            //     tbody.innerHTML = element.value;
-            // });
-            // the_table.caption.innerHTML = data.caption;
-            // if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
-
-            // this.updateVirtualNetworksTable();
-        })
-        .catch(error => console.error('updateGenericSystemsTable - Error:', error, error.name, error.message));
+        .catch(error => console.error('handleSyncState - Error:', error, error.name, error.message));
         this.button.dataset.state = 'loading';
     }
-
-    // updateVirtualNetworksTable() {
-    //     fetch('/update-virtual-networks-data', {
-    //         method: 'GET',
-    //     })
-    //     .then(response => response.json())
-    //     .then(data => {
-    //         console.log('handleSyncStateClick, /update-virtual-networks-data, data=', data);
-
-    //         // this.updateConnectivityTemplateTable();
-    //     })
-    //     .catch(error => console.error('updateVirtualNetworksTable - Error:', error, error.name, error.message));
-    //     this.button.dataset.state = 'loading';
-    // }
-
 
 }
 
@@ -201,7 +139,7 @@ class MigrateAccessSwitchesButton {
     handleMigrateAccessSwitches(event) {
         const srcButton = event.srcElement || event.target;
         fetch('/migrate-access-switches', {
-            method: 'GET',
+            method: 'POST',
         })
         .then(response => response.json())
         .then(data => {
@@ -414,7 +352,6 @@ class CkIDB {
         // );
     }
 }
-
 
 
 const eventSource = new EventSource("/sse");

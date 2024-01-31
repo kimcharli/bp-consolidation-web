@@ -72,16 +72,9 @@ async def login_blueprint(blueprint: BlueprintItem):
     return id
 
 
-@app.get("/pull-data")
-async def pull_data():
-    logging.warning(f"/pull_data begin")
-    data = GlobalStore.pull_tor_bp_data()
-    logging.warning(f"/pull_data end")
-    return data
-
 # from SyncStateButton
-@app.get("/sync-access-switches")
-async def sync_access_switches():
+@app.get("/sync")
+async def sync():
     logging.warning(f"/sync_access_switches begin")
     is_access_switches_done = await access_switches.sync_access_switches()
     logging.warning(f"/sync_access_switches end")
@@ -101,6 +94,12 @@ async def sync_access_switches():
             data=SseEventData(
                 id=SseEventEnum.BUTTON_MIGRATE_CT,
                 state=DataStateEnum.INIT).disable()).send()
+    else:
+        await SseEvent(
+            event=SseEventEnum.BUTTION_DISABLE, 
+            data=SseEventData(
+                id=SseEventEnum.BUTTON_MIGRATE_GS,
+                state=DataStateEnum.INIT).enable()).send()
 
 # # from SyncStateButton
 # @app.get("/update-generic-systems-table")
@@ -128,13 +127,6 @@ async def sync_access_switches():
 
     return as_data
 
-# @app.get("/update-connectivity-template-data")
-# async def update_connectivity_template_data():
-#     logging.warning(f"/update-connectivity-template-data begin")
-#     await access_switches.update_connectivity_template_data()
-#     logging.warning(f"/update-connectivity-template-data end")
-#     return {}
-
 class SystemLabel(BaseModel):
     tbody_id: str
 
@@ -144,9 +136,16 @@ async def migrate_access_switches():
     Remove TOR generic system in main blueprint
     """
     logging.warning(f"/migrate_access_switches begin")
-    data = global_store.remove_old_generic_system_from_main()
-    data = global_store.create_new_access_switch_pair()
+    data = access_switches.remove_tor_gs_from_main()
+    is_access_switch_created = await access_switches.create_new_access_switch_pair()
     logging.warning(f"/migrate_access_switches end")
+    if is_access_switch_created:
+        await SseEvent(
+            event=SseEventEnum.BUTTION_DISABLE, 
+            data=SseEventData(
+                id=SseEventEnum.BUTTON_MIGRATE_GS,
+                state=DataStateEnum.INIT).enable()).send()
+        
     return data
 
 
