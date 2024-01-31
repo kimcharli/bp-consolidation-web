@@ -65,8 +65,16 @@ class SseEventData(BaseModel):
     def not_done(self):
         self.state = DataStateEnum.INIT
         return self
+    
+    def disable(self):
+        self.disabled = True
+        return self
+    
+    def enable(self):
+        self.disabled = False
+        return self
 class SseEvent(BaseModel):
-    event: str
+    event: str      # SseEventEnum.DATA_STATE, SseEventEnum.TBODY_GS, SseEventEnum.BUTTION_DISABLE
     data: SseEventData
 
     async def send(self):

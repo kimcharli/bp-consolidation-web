@@ -26,7 +26,6 @@ class _Memberlink(BaseModel):
 
     def is_not_done(self) -> bool:
         if not self.new_switch_intf_id or self.old_tags != self.new_tags or self.old_server_intf != self.new_server_intf:
-            # logging.warning(f"_Memberlink is_not_done ##################### {self=}")
             return True
         return False
      
@@ -174,13 +173,11 @@ class _GroupLink(BaseModel):
 
     def is_not_done(self) -> bool:
         if self.speed != self.new_speed:
-            # logging.warning(f"_GroupLink is_not_done ##################### {self.new_ae_id=} {self.speed=} {self.new_speed=}")
             return True
         if self.new_ae_name != self.old_ae_name:
             return True
         for _, link in self.links.items():
             if link.is_not_done():
-                # logging.warning(f"_GroupLink is_not_done ##################### {link=}")
                 return True
         return False
 
@@ -564,9 +561,9 @@ class LeafGS(BaseModel):
 
 class GenericSystems(BaseModel):
     generic_systems: Dict[str, _GenericSystem] = {}  # init by sys_tor_generic_systems. <tbody-id>: { GenericSystem }
+    leaf_gs: LeafGS = LeafGS()  # set from sync_tor_generic_systems 
     # main_servers = {}
     # tor_ae1 = None
-    leaf_gs: LeafGS = LeafGS()  # set from sync_tor_generic_systems {'label': None, 'intfs': ['']*4}
     # tor_gs = None  # {'label': <>, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
     access_switches: Any = {}  # <label>: _AccessSwitch
     logger: Any = logging.getLogger('GenericSystems')
@@ -579,31 +576,6 @@ class GenericSystems(BaseModel):
     def access_switch_pair(self):
         return sorted(self.access_switches)
 
-    # @property
-    # def leaf_gs(self) -> LeafGS:
-    #     #
-    #     # get leaf_gs (the generic system in TOR bp for the leaf)
-    #     #   to be used by AccessSwitch
-    #     #
-    #     the_data = LeafGS()
-    #     for tbody_id, server_data in self.generic_systems.items():
-    #         server_label = server_data.label
-    #         for ae_link_id, group_link in server_data.group_links.items():
-    #             if group_link.old_ae_name:
-    #                 for member_id, member_link in group_link.links.items():
-    #                     if member_link.switch_intf in ['et-0/0/48', 'et-0/0/49']:
-    #                         the_data.label = server_label                            
-    #                         if member_link.switch.endswith(('a', 'c')):  # left tor
-    #                             if member_link.switch_intf == 'et-0/0/48':
-    #                                 the_data.a_48 = 'et-' + member_link.old_server_intf.split('-')[1]
-    #                             else:
-    #                                 the_data.a_49 = 'et-' + member_link.old_server_intf.split('-')[1]
-    #                         else:
-    #                             if member_link.switch_intf == 'et-0/0/48':
-    #                                 the_data.b_48 = 'et-' + member_link.old_server_intf.split('-')[1]
-    #                             else:
-    #                                 the_data.b_49 = 'et-' + member_link.old_server_intf.split('-')[1]
-    #     return the_data
 
     @property
     def is_ct_done(self) -> bool:
@@ -636,9 +608,22 @@ class GenericSystems(BaseModel):
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
 
             server_data = self.generic_systems.setdefault(tbody_id, _GenericSystem(label=server_label, new_label=self.set_new_generic_system_label(server_label)))
-            if switch_intf == 'et-0/0/48':
+            # check if leaf_gs
+            if switch_intf in ['et-0/0/48', 'et-0/0/49']:
                 server_data.is_leaf_gs = True
                 server_data.new_label = server_label  # do not rename leaf_gs
+                self.leaf_gs.label = server_label
+                if switch.endswith(('a', 'c')):  # left tor
+                    if switch_intf == 'et-0/0/48':
+                        self.leaf_gs.a_48 = 'et-' + old_server_intf.split('-')[1]
+                    else:
+                        self.leaf_gs.a_49 = 'et-' + old_server_intf.split('-')[1]
+                else:
+                    if switch_intf == 'et-0/0/48':
+                        self.leaf_gs.b_48 = 'et-' + old_server_intf.split('-')[1]
+                    else:
+                        self.leaf_gs.b_49 = 'et-' + old_server_intf.split('-')[1]
+
             # breakpoint()
             ae_data = server_data.group_links.setdefault(old_ae_id, _GroupLink(old_ae_name=old_ae_name, old_ae_id=old_ae_id, speed=speed))
             link_data = ae_data.links.setdefault(old_switch_intf_id, _Memberlink(switch=switch, switch_intf=switch_intf, old_server_intf=old_server_intf))
@@ -650,27 +635,6 @@ class GenericSystems(BaseModel):
         for index, (k, v) in enumerate(self.generic_systems.items()):
             v.index = index + 1
 
-        # setup leaf_gs with deduced interface names for the leaf switches
-        the_data = self.leaf_gs
-        for tbody_id, server_data in self.generic_systems.items():
-            the_data.label = server_data.label
-            for ae_link_id, group_link in server_data.group_links.items():
-                if group_link.old_ae_name:
-                    for member_id, member_link in group_link.links.items():
-                        if member_link.switch_intf in ['et-0/0/48', 'et-0/0/49']:
-                            # breakpoint()
-                            if member_link.switch.endswith(('a', 'c')):  # left tor
-                                if member_link.switch_intf == 'et-0/0/48':
-                                    the_data.a_48 = 'et-' + member_link.old_server_intf.split('-')[1]
-                                else:
-                                    the_data.a_49 = 'et-' + member_link.old_server_intf.split('-')[1]
-                            else:
-                                if member_link.switch_intf == 'et-0/0/48':
-                                    the_data.b_48 = 'et-' + member_link.old_server_intf.split('-')[1]
-                                else:
-                                    the_data.b_49 = 'et-' + member_link.old_server_intf.split('-')[1]
-
-        # breakpoint()
         return
 
 

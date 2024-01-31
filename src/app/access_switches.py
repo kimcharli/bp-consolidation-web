@@ -130,6 +130,7 @@ class AccessSwitches(BaseModel):
     tor_interface_nodes_in_main: Any = None  # set by sync_tor_gs_in_main
     logger: Any = logging.getLogger("AccessSwitches") 
     virtual_networks_data: Any = None
+    is_access_switches_done: bool = False  # set if access switches are created
     # TODO:
 
     @property
@@ -240,10 +241,11 @@ class AccessSwitches(BaseModel):
     # access switches
     #
 
-    async def sync_access_switches(self) -> dict:
+    async def sync_access_switches(self) -> bool:
         """
         sync access switches from tor_bp
         The first action for sync
+        return True if access switches are created
         """
 
         if self.access_switches == {}:                
@@ -300,113 +302,58 @@ class AccessSwitches(BaseModel):
         # pull the information from main_bp
         self.sync_tor_gs_in_main()
 
-        # breakpoint()
+        if self.leaf_gs.label:
+            # tor blueprint is loaded
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-label', value=self.leaf_gs.label)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf1', value=self.leaf_gs.a_48)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf2', value=self.leaf_gs.a_49)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf1', value=self.leaf_gs.b_48)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf2', value=self.leaf_gs.b_49)).send()
 
-        logging.warning(f"update_access_switches_table ######### {self.access_switches=} {self.tor_gs=} {self.leaf_gs=} {self.leaf_switches}")
-
-        # response = _AccessSwitchResponse()
-        # breakpoint()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switches[self.access_switch_pair[0]].label).not_done()).send()
-        # response.values.append(self.load_id_element('tor1-label', self.access_switches[self.access_switch_pair[0]].label)) 
-        # response.values.append(_AccessSwitchResponseItem(id='tor1-box').loaded()) 
-        # response.values.append(self.load_id_element('tor2-label', self.access_switches[self.access_switch_pair[1]].label)) 
-        # response.values.append(_AccessSwitchResponseItem(id='tor2-box').loaded()) 
-        # response.values.append(self.load_id_element('leaf-gs-label', self.leaf_gs.label)) 
-        # response.values.append(_AccessSwitchResponseItem(id='leaf-gs-box').loaded()) 
-        # response.values.append(self.load_id_element('leafgs1-intf1', self.leaf_gs.a_48)) 
-        # response.values.append(self.load_id_element('leafgs1-intf2', self.leaf_gs.a_49)) 
-        # response.values.append(self.load_id_element('leafgs2-intf1', self.leaf_gs.b_48)) 
-        # response.values.append(self.load_id_element('leafgs2-intf2', self.leaf_gs.b_49)) 
-
-        # response.values.append(self.load_id_element('leaf1-intf1', self.leaf_gs.a_48)) 
-        # response.values.append(self.load_id_element('leaf1-intf2', self.leaf_gs.a_49)) 
-        # response.values.append(self.load_id_element('leaf2-intf2', self.leaf_gs.b_48)) 
-        # response.values.append(self.load_id_element('leaf2-intf2', self.leaf_gs.b_49)) 
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switches[self.access_switch_pair[0]].label).not_done()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-label', value=self.access_switches[self.access_switch_pair[1]].label).not_done()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-label', state=DataStateEnum.INIT, value=self.leaf_gs.label)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf1', state=DataStateEnum.INIT, value=self.leaf_gs.a_48)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf2', state=DataStateEnum.INIT, value=self.leaf_gs.a_49)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf1', state=DataStateEnum.INIT, value=self.leaf_gs.b_48)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf2', state=DataStateEnum.INIT, value=self.leaf_gs.b_49)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switches[self.access_switch_pair[0]].label)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-label', value=self.access_switches[self.access_switch_pair[1]].label)).send()
         
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-intf1', state=DataStateEnum.INIT, value=self.leaf_gs.a_48)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-intf2', state=DataStateEnum.INIT, value=self.leaf_gs.a_49)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-intf1', state=DataStateEnum.INIT, value=self.leaf_gs.b_48)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-intf2', state=DataStateEnum.INIT, value=self.leaf_gs.b_49)).send()
-
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-box', state=DataStateEnum.DONE)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-box', state=DataStateEnum.DONE)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-box', state=DataStateEnum.DONE)).send()
-
-        if len([x.id for x in self.access_switches.values() if x.id != '']) == 2:
-            # access switches are created
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-label', value=self.leaf_switch_pair[0]).not_done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-label', value=self.leaf_switch_pair[1]).not_done()).send()
+        if len(self.leaf_switches) == 2:
+            # leaf switches in main blueprint are loaded
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-box').done()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-label', value=self.leaf_switch_pair[0])).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-label', value=self.leaf_switch_pair[1])).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-intf1', value=self.leaf_gs.a_48)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-intf2', value=self.leaf_gs.a_49)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-intf1', value=self.leaf_gs.b_48)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-intf2', value=self.leaf_gs.b_49)).send()
 
-            # response.values.append(self.load_id_element('leaf1-label', self.leaf_switches[self.leaf_switch_pair[0]].label)) 
-            # response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
-            # response.values.append(self.load_id_element('leaf2-label', self.leaf_switches[self.leaf_switch_pair[1]].label)) 
-            # response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
 
+        if len([x.id for x in self.access_switches.values() if x.id != '']) == 2:            
+            # access switches are created
+            self.is_access_switches_done = True
+            # hide access-gs-box, and show access1-box, access2-box
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box')).hidden().send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label')).hidden().send()
+
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-box')).visible().done().send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label')).visible().send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label', value=self.access_switch_pair[0])).visible().send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-box')).visible().done().send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label')).visible().send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label', vlaue=self.access_switch_pair[1])).visible().send()
 
-            # # response.values.append(_AccessSwitchResponseItem(id='access-gs-box').hidden()) 
-            # # response.values.append(_AccessSwitchResponseItem(id='access-gs-label').hidden()) 
-            # # response.values.append(_AccessSwitchResponseItem(id='access1-box').visible().loaded()) 
-            # # response.values.append(_AccessSwitchResponseItem(id='access1-label').visible()) 
-            # response.values.append(_AccessSwitchResponseItem(id='access2-box').visible().loaded()) 
-            # response.values.append(_AccessSwitchResponseItem(id='access2-label').visible()) 
-
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label', value=self.access_switches[self.access_switch_pair[0]].label)).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label', value=self.access_switches[self.access_switch_pair[1]].label)).send()
-
-            # response.values.append(self.load_id_element('access1-label', self.access_switches[self.access_switch_pair[0]].label)) 
-            # response.values.append(self.load_id_element('access2-label', self.access_switches[self.access_switch_pair[1]].label)) 
-
-
-        elif self.tor_gs.id:
+        else:
             # access switches are not created yet
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').not_done()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label', value=self.tor_gs.label).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-box').done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-box').done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-label', value=self.leaf_switches[self.leaf_switch_pair[1]].label).hidden()).send()
+            # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-box').done()).send()
+            # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-box').done()).send()
+            # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-label', value=self.leaf_switch_pair[0]).hidden()).send()
+            # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-label', value=self.leaf_switches[self.leaf_switch_pair[1]].label).hidden()).send()
 
-            # response.values.append(self.load_id_element('access-gs-label', self.tor_gs.label)) 
-            # response.values.append(_AccessSwitchResponseItem(id='access-gs-box').loaded()) 
-            # response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
-            # response.values.append(self.load_id_element('leaf2-label', self.leaf_switches[self.leaf_switch_pair[1]].label)) 
-            # response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
-        # elif self.leaf_switches[self.leaf_switch_pair[0]].id and self.leaf_switches[self.leaf_switch_pair[0]].id:
-        #     response.values.append(self.load_id_element('leaf1-label', self.leaf_switches[self.leaf_switch_pair[0]].label)) 
-        #     response.values.append(_AccessSwitchResponseItem(id='leaf1-box').loaded()) 
-        #     response.values.append(self.load_id_element('leaf2-label', self.leaf_switches[self.leaf_switch_pair[1]].label)) 
-        #     response.values.append(_AccessSwitchResponseItem(id='leaf2-box').loaded()) 
-
-        #     response.values.append(_AccessSwitchResponseItem(id='access-gs-box').hidden()) 
-        #     response.values.append(_AccessSwitchResponseItem(id='access-gs-label').hidden()) 
-        #     response.values.append(_AccessSwitchResponseItem(id='access1-box').visible().loaded()) 
-        #     response.values.append(_AccessSwitchResponseItem(id='access1-label').visible()) 
-        #     response.values.append(_AccessSwitchResponseItem(id='access2-box').visible().loaded()) 
-        #     response.values.append(_AccessSwitchResponseItem(id='access2-label').visible()) 
-
-        #     response.values.append(self.load_id_element('access1-label', self.access_switches[self.access_switch_pair[0]].label)) 
-        #     response.values.append(self.load_id_element('access2-label', self.access_switches[self.access_switch_pair[1]].label)) 
-
-        if self.access_switches[self.access_switch_pair[0]].id and self.access_switches[self.access_switch_pair[1]].id:
-            # response.button_state = DataStateEnum.DONE
+        if self.is_access_switches_done:
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS)).done().send()
 
-        logging.warning(f"update_access_switches_table end... {self.access_switches=} {self.leaf_gs=}")
-        return self.leaf_switches
+        # logging.warning(f"update_access_switches_table end... {self.access_switches=} {self.leaf_gs=}")
+        return self.is_access_switches_done
 
 
     def sync_tor_gs_in_main(self):

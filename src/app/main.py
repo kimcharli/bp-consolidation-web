@@ -83,10 +83,24 @@ async def pull_data():
 @app.get("/sync-access-switches")
 async def sync_access_switches():
     logging.warning(f"/sync_access_switches begin")
-    data = await access_switches.sync_access_switches()
+    is_access_switches_done = await access_switches.sync_access_switches()
     logging.warning(f"/sync_access_switches end")
-#     return data
-
+    if not is_access_switches_done:
+        await SseEvent(
+            event=SseEventEnum.BUTTION_DISABLE, 
+            data=SseEventData(
+                id=SseEventEnum.BUTTON_MIGRATE_GS,
+                state=DataStateEnum.INIT).disable()).send()
+        await SseEvent(
+            event=SseEventEnum.BUTTION_DISABLE, 
+            data=SseEventData(
+                id=SseEventEnum.BUTTON_MIGRATE_VN,
+                state=DataStateEnum.INIT).disable()).send()
+        await SseEvent(
+            event=SseEventEnum.BUTTION_DISABLE, 
+            data=SseEventData(
+                id=SseEventEnum.BUTTON_MIGRATE_CT,
+                state=DataStateEnum.INIT).disable()).send()
 
 # # from SyncStateButton
 # @app.get("/update-generic-systems-table")
