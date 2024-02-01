@@ -94,6 +94,7 @@ async def sync():
             data=SseEventData(
                 id=SseEventEnum.BUTTON_MIGRATE_CT,
                 state=DataStateEnum.INIT).disable()).send()
+
     else:
         await SseEvent(
             event=SseEventEnum.BUTTION_DISABLE, 

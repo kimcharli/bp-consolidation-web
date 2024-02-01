@@ -227,18 +227,20 @@ class AccessSwitches(BaseModel):
     # 
     async def compare_config(self):
         switch_configs = { 'main': {}, 'tor': {} }
-        for index, (k, v) in enumerate(self.access_switches.items()):
-            main_confg = self.main_bp.get_item(f"nodes/{v.id}/config-rendering")['config']
+        for index, (k, switch) in enumerate(self.access_switches.items()):
+            main_confg = self.main_bp.get_item(f"nodes/{switch.id}/config-rendering")['config']
+            switch_main_url = f'<a href="{global_store.env_ini.url}/#/blueprints/{self.main_bp.id}/staged/physical/selection/node-preview/{switch.id}" target="_blank">main blueprint</a>'
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
                 id=f"main-config-text-{index}", value=main_confg)).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
-                id=f"main-config-caption-{index}", value=k)).send()
+                id=f"main-config-caption-{index}", value=switch_main_url)).send()
             
-            tor_confg = self.tor_bp.get_item(f"nodes/{v.tor_id}/config-rendering")['config']
+            switch_tor_url = f'<a href="{global_store.env_ini.url}/#/blueprints/{self.tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}" target="_blank">TOR blueprint</a>'
+            tor_confg = self.tor_bp.get_item(f"nodes/{switch.tor_id}/config-rendering")['config']
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
                 id=f"tor-config-text-{index}", value=tor_confg)).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
-                id=f"tor-config-caption-{index}", value=k)).send()
+                id=f"tor-config-caption-{index}", value=switch_tor_url)).send()
 
 
 
@@ -351,6 +353,11 @@ class AccessSwitches(BaseModel):
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label', vlaue=self.access_switch_pair[1]).visible()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='peer-link').visible()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='peer-link-name').visible()).send()
+
+
+            # update switch configuration section
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='switch-0', value=self.access_switch_pair[0])).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='switch-1', value=self.access_switch_pair[1])).send()
 
         else:
             # access switches are not created yet

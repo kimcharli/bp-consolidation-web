@@ -472,8 +472,10 @@ eventSource.addEventListener('ct-update', (event) => {
     target.innerHTML = data.value;
 });
 
+
 window.addEventListener("load", (event) => {
     console.log("page is fully loaded");
+
 
     const uploadFileButton = new UploadFileButton();
     const connectButton = new ConnectButton();

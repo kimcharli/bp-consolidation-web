@@ -40,7 +40,7 @@ class SseEventEnum(StrEnum):
     BUTTON_MIGRATE_VN = 'migrate-virtual-networks'
     BUTTON_MIGRATE_CT = 'migrate-cts'
     BUTTON_COMPARE_CONFIG = 'compare-config'
-    CAPTION_GS = 'generic-system-table-caption'
+    CAPTION_GS = 'generic-systems-caption'
     CAPTION_VN = 'virtual-networks-caption'
     TEXT_MAIN_CONFIG = 'main-config-text'
     TEXT_TOR_CONFIG = 'tor-config-text'

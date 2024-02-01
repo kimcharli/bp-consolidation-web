@@ -175,56 +175,69 @@
             </svg>
         </div>
 
-        <section class="generic-systems">
+        <details class="generic-systems">
 
+            <summary id="generic-systems-caption" class="section-header">Generic Systems (0/0) servers, (0/0) links, (0/0) interfaces</summary>
             <!-- generic-systems></generic-systems -->
-            <table id="generic-systems-table">
-                <caption id="generic-system-table-caption">Generic Systems (0/0) servers, (0/0) links, (0/0) interfaces</caption>
-                <thead>
-                    <tr>
-                        <th id="num_links">#</th>
-
-                        <th>LABEL</th>
-                        <th>New LABEL</th>
-
-                        <th>AE</th>
-                        <th>CTs</th>
-                        <th>speed</th>
-
-                        <th>tags</th>
-                        <th>server-intf</th>
-                        <th>switch</th>
-                        <th>switch-intf</th>
-                    </tr>                    
-                </thead>
-            </table>
-        </section>
+            <div>
+                <table id="generic-systems-table">
+                    <thead>
+                        <tr>
+                            <th id="num_links">#</th>
+    
+                            <th>LABEL</th>
+                            <th>New LABEL</th>
+    
+                            <th>AE</th>
+                            <th>CTs</th>
+                            <th>speed</th>
+    
+                            <th>tags</th>
+                            <th>server-intf</th>
+                            <th>switch</th>
+                            <th>switch-intf</th>
+                        </tr>                    
+                    </thead>
+                </table>
+            </div>
+        </details>
         
-        <section class="virtual-networks">
-            <div id="virtual-networks-caption" class="th" data-vns>Virtual Networks</div>
+        <details class="virtual-networks">
+            <summary id="virtual-networks-caption" class="th" data-vns>Virtual Networks</summary>
             <div id="virtual-networks"></div>    
-        </section>
+        </details>
 
-        <div class="device-configuration">
-            <section class="main-config-0">
-                <div id="main-config-caption-0" class="th main-config">as0</div>
-                <pre id="main-config-text-0"></pre>        
-            </section>
+        <details class="device-configuration-0">
+            <summary id="switch-0">switch A</summary>
+            <div class="row">
+                <section class="column">
+                    <div id="main-config-caption-0" class="th main-config">as0</div>
+                    <pre id="main-config-text-0"></pre>        
+                </section>
+    
+                <section class="column">
+                    <div id="tor-config-caption-0" class="th tor-config">tor-0</div>
+                    <pre id="tor-config-text-0"></pre>                        
+                </section>                    
+            </div>
 
-            <section class="main-config-1">
-                <div id="main-config-caption-1" class="th main-config">as1/div>
-                <pre id="main-config-text-1"></pre>                        
-            </section>
+        </details>
 
-            <section class="tor-config-0">
-                <div id="tor-config-caption-0" class="th tor-config">tor-0</div>
-                <pre id="tor-config-text-0"></pre>                        
-            </section>
-
-            <section class="tor-config-1">
-                <div id="tor-config-caption-1" class="th tor-config">tor-1</div>
-                <pre id="tor-config-text-1"></pre>                        
-            </section>
+        <details class="device-configuration-1">
+            <summary id="switch-1">switch B</summary>
+            <div class="row">
+                <section class="column">
+                    <div id="main-config-caption-1" class="th main-config">as1</div>
+                    <pre id="main-config-text-1"></pre>                        
+                </section>
+    
+                <section class="column">
+                    <div id="tor-config-caption-1" class="th tor-config">tor-1</div>
+                    <pre id="tor-config-text-1"></pre>                        
+                </section>
+            </div>
+    
+        </details>
 
         </div>
 
