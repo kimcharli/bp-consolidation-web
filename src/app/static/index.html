@@ -48,7 +48,7 @@
                 <button id="migrate-cts"  type="button" data-state="init" class="data-state">Migrate CTs</button>
             </div>
             <div>
-                <button type="button" data-state="init" class="data-state">Pull Configurations</button>
+                <button id="compare-config" type="button" data-state="init" class="data-state">Pull Configurations</button>
             </div>
             <div>
                 <button type="button" data-state="init" class="data-state">Move Devices</button>
@@ -204,6 +204,30 @@
             <div id="virtual-networks-caption" class="th" data-vns>Virtual Networks</div>
             <div id="virtual-networks"></div>    
         </section>
+
+        <div class="device-configuration">
+            <section class="main-config-0">
+                <div id="main-config-caption-0" class="th main-config">as0</div>
+                <pre id="main-config-text-0"></pre>        
+            </section>
+
+            <section class="main-config-1">
+                <div id="main-config-caption-1" class="th main-config">as1/div>
+                <pre id="main-config-text-1"></pre>                        
+            </section>
+
+            <section class="tor-config-0">
+                <div id="tor-config-caption-0" class="th tor-config">tor-0</div>
+                <pre id="tor-config-text-0"></pre>                        
+            </section>
+
+            <section class="tor-config-1">
+                <div id="tor-config-caption-1" class="th tor-config">tor-1</div>
+                <pre id="tor-config-text-1"></pre>                        
+            </section>
+
+        </div>
+
 
         <footer class="footer">
             ©️ Charlie Kim

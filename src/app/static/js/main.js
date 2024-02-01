@@ -258,6 +258,33 @@ class MigrateCTsButton {
     }
 }
 
+class CompareConfigsButton {
+    constructor() {
+        this.button = document.getElementById('compare-config');
+        this.button.addEventListener('click', this.handleCompareConfig.bind(this));
+   }
+
+    handleCompareConfig(event) {
+        const srcButton = event.srcElement || event.target;
+        fetch('/compare-config', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('/compare-config data=', data)
+            this.button.dataset.state = 'done';
+        })
+        .catch(error => {
+            console.log('/compare-config - Error:', error);
+            srcButton.dataset.state="error";
+        });    
+        this.button.dataset.state = 'loading';
+    }
+}
+
 
 class CkIDB {
     static db = null;
@@ -458,6 +485,7 @@ window.addEventListener("load", (event) => {
     const migrateGenericSystemsButton = new MigrateGenericSystemsButton();
     const migrateVirtualNetworksButtion = new MigrateVirtualNetworksButton();
     const migrateCTsButton = new MigrateCTsButton();
+    const compareConfigsButton = new CompareConfigsButton();
     CkIDB.openDB(connectButton);
 
 });

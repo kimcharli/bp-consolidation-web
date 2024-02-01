@@ -9,7 +9,7 @@ from .ck_global import global_store, DataStateEnum, sse_queue, CtEnum, SseEventE
 from .generic_systems import GenericSystems, LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
 from .virtual_networks import VirtualNetworks
-from .vlan_cts import pull_tor_ct_data, pull_main_ct_data, referesh_ct_table, migrate_connectivity_templates
+from .vlan_cts import sync_tor_ct, sync_main_ct, referesh_ct_table, migrate_connectivity_templates
 
 
 class _AccessSwitchResponseItem(BaseModel):
@@ -93,6 +93,7 @@ class LeafSwitch(BaseModel):
 class AccessSwitch(BaseModel):
     label: str
     id: str = ''
+    tor_id: str = ''
 
 class TorGS(BaseModel):
     label: str
@@ -172,8 +173,8 @@ class AccessSwitches(BaseModel):
         if len(access_switch_ids) != 2:
             self.logger.warning(f"migrate_generic_system: access switches not ready {access_switch_ids=}")
             return {}
-        data = await self.generic_systems.migrate_generic_system(tbody_id)
-        return data
+        is_migrated = await self.generic_systems.migrate_generic_system(tbody_id)
+        return is_migrated
 
     # 
     # virtual networks
@@ -191,15 +192,15 @@ class AccessSwitches(BaseModel):
     # 
     # connectivity template
     #
-    async def update_connectivity_template_data(self):
-        if not self.virtual_networks.is_all_done:
-            self.logger.warning(f"update_connectivity_template_data: virtual networks not done")
-            return {}
+    async def sync_connectivity_template(self):
+        # if not self.virtual_networks.is_all_done:
+        #     self.logger.warning(f"sync_connectivity_template: virtual networks not done")
+        #     return {}
 
         await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, state=DataStateEnum.LOADING)).send()
 
-        data = pull_tor_ct_data(global_store.bp['tor_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
-        pull_main_ct_data(global_store.bp['main_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
+        data = sync_tor_ct(global_store.bp['tor_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
+        sync_main_ct(global_store.bp['main_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
 
         await referesh_ct_table(self.generic_systems.generic_systems)
 
@@ -208,7 +209,7 @@ class AccessSwitches(BaseModel):
         else:
             button_state = DataStateEnum.INIT
         # breakpoint()
-        self.logger.warning(f"update_connectivity_template_data {button_state=}")
+        self.logger.warning(f"sync_connectivity_template {button_state=}")
         await SseEvent(
             event=SseEventEnum.DATA_STATE, 
             data=SseEventData(
@@ -216,8 +217,29 @@ class AccessSwitches(BaseModel):
                 state=button_state)).send()
         return {}
 
+
     async def migrate_connectivity_templates(self):
         await migrate_connectivity_templates(global_store.bp['main_bp'], self.generic_systems)
+
+
+    #
+    # compare configuration
+    # 
+    async def compare_config(self):
+        switch_configs = { 'main': {}, 'tor': {} }
+        for index, (k, v) in enumerate(self.access_switches.items()):
+            main_confg = self.main_bp.get_item(f"nodes/{v.id}/config-rendering")['config']
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
+                id=f"main-config-text-{index}", value=main_confg)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
+                id=f"main-config-caption-{index}", value=k)).send()
+            
+            tor_confg = self.tor_bp.get_item(f"nodes/{v.tor_id}/config-rendering")['config']
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
+                id=f"tor-config-text-{index}", value=tor_confg)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
+                id=f"tor-config-caption-{index}", value=k)).send()
+
 
 
     #
@@ -253,7 +275,8 @@ class AccessSwitches(BaseModel):
             peer_link_nodes = self.tor_bp.query(peer_link_query)
             for link_nodes in peer_link_nodes:
                 switch_label = link_nodes['switch']['label']
-                self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label))
+                tor_id = link_nodes['switch']['id']
+                self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label, tor_id=tor_id))
                 # switch_id = link_nodes['switch']['id']
                 # link_id = link_nodes['link']['id']
                 # link_data = peer_link.setdefault(link_id, PeerLink(speed=link_nodes['link']['speed']))
@@ -365,7 +388,7 @@ class AccessSwitches(BaseModel):
         Return True if sync is done
         """
         tor_interface_nodes_in_main = self.main_bp.get_server_interface_nodes(self.tor_gs.label)
-        self.logger.warning(f"tor_interface_nodes_in_main: begin {len(tor_interface_nodes_in_main)=}")
+        # self.logger.warning(f"tor_interface_nodes_in_main: begin {len(tor_interface_nodes_in_main)=}")
         if len(tor_interface_nodes_in_main) >= 4:
             # tor_gs present in main_bp - prep to remove it
 
@@ -413,9 +436,9 @@ class AccessSwitches(BaseModel):
                     )
                 )
             """
-            self.logger.warning(f"sync_tor_gs_in_main pre access/leaf switches: {self.access_switches=} {self.leaf_switches=}")
+            # self.logger.warning(f"sync_tor_gs_in_main pre access/leaf switches: {self.access_switches=} {self.leaf_switches=}")
             access_switch_nodes = self.main_bp.query(access_switch_query)
-            self.logger.warning(f"sync_tor_gs_in_main {len(access_switch_nodes)=} {access_switch_query=}")
+            # self.logger.warning(f"sync_tor_gs_in_main {len(access_switch_nodes)=} {access_switch_query=}")
             # access_switch_nodes = self.main_bp.get_switch_interface_nodes(self.access_switch_pair)
             for nodes in access_switch_nodes:
                 switch_label = nodes['ACCESS_SWITCH']['label']
@@ -424,7 +447,7 @@ class AccessSwitches(BaseModel):
                 leaf_id = nodes['LEAF']['id']
                 self.access_switches[switch_label].id = switch_id
                 a = self.leaf_switches.setdefault(leaf_label, LeafSwitch(label=leaf_label, id = leaf_id))
-                self.logger.warning(f"sync_tor_gs_in_main a node: {switch_label=} {switch_id=} {leaf_label=} {leaf_id=} {self.access_switches=} {self.leaf_switches}")
+                # self.logger.warning(f"sync_tor_gs_in_main a node: {switch_label=} {switch_id=} {leaf_label=} {leaf_id=} {self.access_switches=} {self.leaf_switches}")
 
                 # a = self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label, id=switch_id))
                 # l = self.leaf_switches.setdefault(leaf_label, LeafSwitch(label=leaf_label, id=leaf_id))
@@ -436,7 +459,7 @@ class AccessSwitches(BaseModel):
             #     x['LEAF']['label']: LeafSwitch(label=x['LEAF']['label'], id=x['LEAF']['id'])
             #     for x in access_switch_nodes
             # }
-            self.logger.warning(f"sync_tor_gs_in_main post access/leaf switches: {self.access_switches=} {self.leaf_switches=}")
+            # self.logger.warning(f"sync_tor_gs_in_main post access/leaf switches: {self.access_switches=} {self.leaf_switches=}")
 
 
     async def create_new_access_switch_pair(self) -> bool:

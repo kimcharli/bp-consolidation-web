@@ -101,22 +101,16 @@ async def sync():
                 id=SseEventEnum.BUTTON_MIGRATE_GS,
                 state=DataStateEnum.INIT).enable()).send()
 
-# # from SyncStateButton
-# @app.get("/update-generic-systems-table")
-# async def update_generic_systems_table():
     logging.warning(f"/update_generic_systems_table begin")
     as_data = await access_switches.update_generic_systems_table()
     logging.warning(f"/update_generic_systems_table end")
-#     return data
 
-# @app.get("/update-virtual-networks-data")
-# async def update_virtual_networks_data():
     logging.warning(f"/update_virtual_networks_data begin")
     data = await access_switches.update_virtual_networks_data()
     logging.warning(f"/update_virtual_networks_data end")
 
     logging.warning(f"/update-connectivity-template-data begin")
-    await access_switches.update_connectivity_template_data()
+    await access_switches.sync_connectivity_template()
     logging.warning(f"/update-connectivity-template-data end")
 
     await SseEvent(
@@ -152,9 +146,9 @@ async def migrate_access_switches():
 @app.post("/migrate-generic-system")
 async def migrate_generic_system(system_label: SystemLabel):
     logging.warning(f"/migrate_generic_system begin {system_label=}")
-    data = await access_switches.migrate_generic_system(system_label.tbody_id)
-    logging.warning(f"/migrate_generic_system end {data=}")
-    return data
+    is_migrated = await access_switches.migrate_generic_system(system_label.tbody_id)
+    logging.warning(f"/migrate_generic_system end {is_migrated=}")
+    return {'is_migrated': is_migrated }
 
 
 @app.post("/migrate-virtual-networks")
@@ -169,6 +163,13 @@ async def migrate_cts():
     logging.warning(f"/migrate_cts begin")
     data = await access_switches.migrate_connectivity_templates()
     logging.warning(f"/migrate_cts end")
+    return {}
+
+@app.post("/compare-config")
+async def compare_config():
+    logging.warning(f"/compare_config begin")
+    data = await access_switches.compare_config()
+    logging.warning(f"/compare_config end")
     return {}
 
 

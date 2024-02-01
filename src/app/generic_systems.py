@@ -416,7 +416,7 @@ class _GenericSystem(BaseModel):
                         link_data.new_switch_intf_id = new_switch_intf_id
                         link_data.new_server_intf_id = new_server_intf_id
 
-        logging.warning(f"GS refresh end {self.new_label=} {self=}")
+        # logging.warning(f"GS refresh end {self.new_label=} {self=}")
 
         return
 
@@ -442,7 +442,7 @@ class _GenericSystem(BaseModel):
                 switch_label = member_link.switch
                 switch_intf = member_link.switch_intf
                 trasnsformation_id = main_bp.get_transformation_id(switch_label, switch_intf , ae_link.speed)
-                logging.warning(f"create_generic_system() {trasnsformation_id=} {trasnsformation_id.content=}")
+                logging.warning(f"create_generic_system() {trasnsformation_id=}")
                 generic_system_spec['links'].append({
                     'lag_mode': None,
                     'system': {
@@ -520,16 +520,14 @@ class _GenericSystem(BaseModel):
         return
 
 
-    async def migrate(self, main_bp, access_switches):
+    async def migrate(self, main_bp, access_switches) -> bool:
         """
-        Return:
-            new_id: new_gs_id
-            value: get_tbody()
-            caption: caption
+        Migrate the generic system and its links
+        Return True if changed
         """
         # skip if this is leaf_gs
         if self.is_leaf_gs:
-            return
+            return False
         
         self.create_generic_system(main_bp, access_switches)
 
@@ -540,6 +538,9 @@ class _GenericSystem(BaseModel):
         self.add_tags(main_bp)
 
         await self.sse_tbody()
+
+        return True
+
 
 class _GenericSystemResponseItem(BaseModel):
     id: str
@@ -709,8 +710,8 @@ class GenericSystems(BaseModel):
         """
         """
         self.logger.warning(f"migrate_generic_system {tbody_id=}")
-        data = await self.generic_systems[tbody_id].migrate(self.main_bp, self.access_switches)
-        return data
+        is_migrated = await self.generic_systems[tbody_id].migrate(self.main_bp, self.access_switches)
+        return is_migrated
 
 
 

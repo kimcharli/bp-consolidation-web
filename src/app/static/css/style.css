@@ -20,6 +20,7 @@
         "main-access-switch tor-access-switch"
         "generic-systems generic-systems"
         "virtual-networks virtual-networks"
+        "device-configuration device-configuration"
         "footer footer";
     row-gap: 2px;
 }
@@ -67,6 +68,42 @@
 
 .virtual-networks {
     grid-area: virtual-networks;
+}
+
+.device-configuration {
+    grid-area: device-configuration;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    grid-template-areas: 
+        "main-config-0 tor-config-0"
+        "main-config-1 tor-config-1";
+    column-gap: 2px;
+    row-gap: 2px;
+}
+
+.main-config-0 {
+    grid-area: main-config-0;
+    border: solid 1px;
+}
+.main-config-1 {
+    grid-area: main-config-1;
+    border: solid 1px;
+}
+.main-config::before {
+    content: 'Main Blueprint ';
+}
+
+.tor-config-0 {
+    grid-area: tor-config-0;
+    border: solid 1px;
+}  
+.tor-config-1 {
+    grid-area: tor-config-1;
+    border: solid 1px;
+}  
+.tor-config::before {
+    content: 'TOR Blueprint ';
 }
 
 .footer {

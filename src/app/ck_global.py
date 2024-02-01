@@ -35,12 +35,15 @@ class SseEventEnum(StrEnum):
     TBODY_GS = 'tbody-gs'  # create generic system as tbody
     BUTTION_DISABLE = 'disable-button'
     BUTTON_SYNC_STATE = 'sync-state'
-    BUTTON_MIGRATE_GS = 'migrate-generic-systems'
-    BUTTON_MIGRATE_CT = 'migrate-cts'
     BUTTON_MIGRATE_AS = 'migrate-access-switches'
+    BUTTON_MIGRATE_GS = 'migrate-generic-systems'
     BUTTON_MIGRATE_VN = 'migrate-virtual-networks'
+    BUTTON_MIGRATE_CT = 'migrate-cts'
+    BUTTON_COMPARE_CONFIG = 'compare-config'
     CAPTION_GS = 'generic-system-table-caption'
     CAPTION_VN = 'virtual-networks-caption'
+    TEXT_MAIN_CONFIG = 'main-config-text'
+    TEXT_TOR_CONFIG = 'tor-config-text'
 
 
 class SseEventData(BaseModel):

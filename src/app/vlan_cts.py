@@ -27,14 +27,14 @@ interface_vlan_query = f"""match(
         .out('vn_to_attach').node('virtual_network', name='{CtEnum.VN_NODE}'),
 )"""
 
-def pull_tor_ct_data(the_bp, generic_systems, switch_label_pair: list) -> dict:
+def sync_tor_ct(the_bp, generic_systems, switch_label_pair: list) -> dict:
     """
     Pull the single vlan cts for the switch pair
     """
 
-    logging.warning(f"pull_tor_ct_data {the_bp.label=} {switch_label_pair=}")
+    logging.warning(f"sync_tor_ct begin {the_bp.label=} {switch_label_pair=}")
     interface_vlan_nodes = the_bp.query(interface_vlan_query)
-    logging.debug(f"BP:{the_bp.label} {len(interface_vlan_nodes)=}")
+    logging.warning(f"sync_tor_ct BP:{the_bp.label} {len(interface_vlan_nodes)=}")
     # why so many (3172) entries?
 
     for nodes in interface_vlan_nodes:
@@ -52,14 +52,14 @@ def pull_tor_ct_data(the_bp, generic_systems, switch_label_pair: list) -> dict:
 
     return {}
 
-def pull_main_ct_data(the_bp, generic_systems, switch_label_pair: list):
+def sync_main_ct(the_bp, generic_systems, switch_label_pair: list):
     """
     Refresh the single vlan cts for the switch pair
     """
     # get the data from main blueprint
     interface_vlan_nodes = the_bp.query(interface_vlan_query)
     if len(interface_vlan_nodes) == 0:
-        logging.warning(f"pull_main_ct_data: no data for {the_bp.label=} {switch_label_pair=}")
+        logging.warning(f"sync_main_ct: no data for {the_bp.label=} {switch_label_pair=}")
         return {}
 
     for nodes in interface_vlan_nodes:
@@ -163,7 +163,7 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
                     ]
                 }
                 batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
-                # logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {len(cts_chunk)=} {total_cts=} {batch_result=} {batch_result.content=}")
+                logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {len(cts_chunk)=} {total_cts=} {batch_result=} {batch_result.content=}")
                 if not ae_data.new_ae_id:
                     logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {ae_data=}")
                 # for ct_data in cts_chunk:

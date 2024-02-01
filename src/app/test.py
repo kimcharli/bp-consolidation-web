@@ -46,7 +46,7 @@ async def main():
 
     ## vn_mig = access_switches.migrate_virtual_networks()
 
-    ct_data = await access_switches.update_connectivity_template_data()
+    ct_data = await access_switches.sync_connectivity_template()
     # ct_m_data = await access_switches.migrate_connectivity_templates()
 
 if __name__ == '__main__':
