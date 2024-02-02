@@ -288,19 +288,20 @@ class AccessSwitches(BaseModel):
         # pull the information from main_bp
         self.sync_tor_gs_in_main()  # sync tor_gs in main, or access_switches in main
 
-        if self.leaf_gs.label:
-            # tor blueprint is loaded
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-box').done()).send()
+        # breakpoint()
+        if len([x.tor_id for x in self.access_switches.values() if x.tor_id != '']) == 2:
+            # tor switches are pulled from tor_bp
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-box').done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switch_pair[0])).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-label', value=self.access_switch_pair[1])).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-label', value=self.leaf_gs.label)).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf1', value=self.leaf_gs.a_48)).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf2', value=self.leaf_gs.a_49)).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf1', value=self.leaf_gs.b_48)).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf2', value=self.leaf_gs.b_49)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-box').done()).send()
 
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-box').done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-box').done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switch_pair[0])).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-label', value=self.access_switch_pair[1])).send()
         
         if len(self.leaf_switches) == 2:
             # leaf switches in main blueprint are loaded

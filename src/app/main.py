@@ -22,7 +22,6 @@ app.mount("/static", StaticFiles(directory="src/app/static"), name="static")
 app.mount("/js", StaticFiles(directory="src/app/static/js"), name="js")
 app.mount("/css", StaticFiles(directory="src/app/static/css"), name="css")
 app.mount("/images", StaticFiles(directory="src/app/static/images"), name="images")
-# app.mount("/component", StaticFiles(directory="src/app/component"), name="component")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index_html(request: Request):
