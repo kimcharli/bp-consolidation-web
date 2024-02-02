@@ -52,6 +52,8 @@ class SseEventData(BaseModel):
     value: Optional[str] = None
     disabled: Optional[bool] = True  # for disable button
     visibility: Optional[bool] = None # for visable button
+    href: Optional[str] = None
+    target: Optional[str] = None
 
     def visible(self):
         self.visibility = 'visible'
@@ -76,6 +78,15 @@ class SseEventData(BaseModel):
     def enable(self):
         self.disabled = False
         return self
+    
+    def set_href(self, href):
+        self.href = href
+        return self
+    
+    def set_target(self, target='_blank'):
+        self.target = target
+        return self
+
 class SseEvent(BaseModel):
     event: str      # SseEventEnum.DATA_STATE, SseEventEnum.TBODY_GS, SseEventEnum.BUTTION_DISABLE
     data: SseEventData

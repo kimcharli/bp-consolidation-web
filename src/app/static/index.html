@@ -175,11 +175,11 @@
             </svg>
         </div>
 
-        <details class="generic-systems">
+        <details class="generic-systems" open>
 
             <summary id="generic-systems-caption" class="section-header">Generic Systems (0/0) servers, (0/0) links, (0/0) interfaces</summary>
             <!-- generic-systems></generic-systems -->
-            <div>
+            <div class="row">
                 <table id="generic-systems-table">
                     <thead>
                         <tr>
@@ -202,37 +202,37 @@
             </div>
         </details>
         
-        <details class="virtual-networks">
+        <details class="virtual-networks" open>
             <summary id="virtual-networks-caption" class="th" data-vns>Virtual Networks</summary>
             <div id="virtual-networks"></div>    
         </details>
 
-        <details class="device-configuration-0">
+        <details class="device-configuration-0" open>
             <summary id="switch-0">switch A</summary>
             <div class="row">
                 <section class="column">
-                    <div id="main-config-caption-0" class="th main-config">as0</div>
+                    <a id="main-config-caption-0">device in main blueprint</a>
                     <pre id="main-config-text-0"></pre>        
                 </section>
     
                 <section class="column">
-                    <div id="tor-config-caption-0" class="th tor-config">tor-0</div>
+                    <a id="tor-config-caption-0"">device in TOR blueprint</a>
                     <pre id="tor-config-text-0"></pre>                        
                 </section>                    
             </div>
 
         </details>
 
-        <details class="device-configuration-1">
+        <details class="device-configuration-1" open>
             <summary id="switch-1">switch B</summary>
             <div class="row">
                 <section class="column">
-                    <div id="main-config-caption-1" class="th main-config">as1</div>
+                    <a id="main-config-caption-1">device in main blueprint</a>
                     <pre id="main-config-text-1"></pre>                        
                 </section>
     
                 <section class="column">
-                    <div id="tor-config-caption-1" class="th tor-config">tor-1</div>
+                    <a id="tor-config-caption-1">device in TOR blueprint</a>
                     <pre id="tor-config-text-1"></pre>                        
                 </section>
             </div>

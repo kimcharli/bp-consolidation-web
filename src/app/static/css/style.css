@@ -75,14 +75,15 @@
     grid-area: device-configuration-0;
 }
 
-
 .device-configuration-1 {
     grid-area: device-configuration-1;
 }
 
 .row {
     width: 100%;
-    display: flex
+    display: flex;
+    overflow-y: auto;
+    max-height: 800px;
 }
 
 .column {
@@ -205,6 +206,12 @@ th, td {
 th, .th, caption {
     background-color: var(--global-th-color);
     text-align: left;
+}
+
+.column a {
+    background-color: var(--global-th-color);
+    display: block;
+    margin: 1px;
 }
 
 /* sidebar */

@@ -399,6 +399,8 @@ eventSource.addEventListener('data-state', (event) => {
         // null check undefined too
         if (data.value !== null) target.innerHTML = data.value;
         if (data.visibility) target.style.visibility = data.visibility;
+        if (data.href) target.href = data.href;
+        if (data.target) target.target = data.target;
     } catch (error) {
         console.log('sse data-state error', error, 'for data', data)
     }

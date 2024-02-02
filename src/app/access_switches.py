@@ -229,18 +229,18 @@ class AccessSwitches(BaseModel):
         switch_configs = { 'main': {}, 'tor': {} }
         for index, (k, switch) in enumerate(self.access_switches.items()):
             main_confg = self.main_bp.get_item(f"nodes/{switch.id}/config-rendering")['config']
-            switch_main_url = f'<a href="{global_store.env_ini.url}/#/blueprints/{self.main_bp.id}/staged/physical/selection/node-preview/{switch.id}" target="_blank">main blueprint</a>'
+            switch_main_href = f"{global_store.env_ini.url}/#/blueprints/{self.main_bp.id}/staged/physical/selection/node-preview/{switch.id}"
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
                 id=f"main-config-text-{index}", value=main_confg)).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
-                id=f"main-config-caption-{index}", value=switch_main_url)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, 
+                           data=SseEventData(id=f"main-config-caption-{index}").set_href(switch_main_href)).send()
             
-            switch_tor_url = f'<a href="{global_store.env_ini.url}/#/blueprints/{self.tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}" target="_blank">TOR blueprint</a>'
+            switch_tor_href = f"{global_store.env_ini.url}/#/blueprints/{self.tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}"
             tor_confg = self.tor_bp.get_item(f"nodes/{switch.tor_id}/config-rendering")['config']
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
                 id=f"tor-config-text-{index}", value=tor_confg)).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
-                id=f"tor-config-caption-{index}", value=switch_tor_url)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, 
+                           data=SseEventData(id=f"tor-config-caption-{index}").set_href(switch_tor_href).set_target()).send()
 
 
 
