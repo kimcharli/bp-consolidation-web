@@ -94,6 +94,7 @@ class AccessSwitch(BaseModel):
     label: str
     id: str = ''
     tor_id: str = ''
+    asn: str = ''  # this is not used in 4.1.2
 
 class TorGS(BaseModel):
     label: str
@@ -273,17 +274,14 @@ class AccessSwitches(BaseModel):
                 node('link',role='leaf_leaf',  name='link')
                     .in_('link').node('interface', name='intf')
                     .in_('hosted_interfaces').node('system', name='switch')
+                    .in_('composed_of_systems').node('domain', name='domain')
             """
             peer_link_nodes = self.tor_bp.query(peer_link_query)
             for link_nodes in peer_link_nodes:
                 switch_label = link_nodes['switch']['label']
                 tor_id = link_nodes['switch']['id']
-                self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label, tor_id=tor_id))
-                # switch_id = link_nodes['switch']['id']
-                # link_id = link_nodes['link']['id']
-                # link_data = peer_link.setdefault(link_id, PeerLink(speed=link_nodes['link']['speed']))
-                # link_system = link_data.system.setdefault(switch_label, PeerSystem())
-                # link_system.switch_intf.append(link_nodes['intf']['if_name'])
+                asn = link_nodes['domain']['domain_id']
+                self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label, tor_id=tor_id, asn=asn))
             
 
             self.logger.warning(f"sync_access_switches created {self.access_switches=}")
@@ -397,19 +395,6 @@ class AccessSwitches(BaseModel):
         tor_interface_nodes_in_main = self.main_bp.get_server_interface_nodes(self.tor_gs.label)
         # self.logger.warning(f"tor_interface_nodes_in_main: begin {len(tor_interface_nodes_in_main)=}")
         if len(tor_interface_nodes_in_main) >= 4:
-            # tor_gs present in main_bp - prep to remove it
-
-            # if len(tor_interface_nodes_in_main):
-            #     # tor_gs present in main_bp - prep to remove it
-            #     tor_gs_query = f"""
-            #         node('system', label='atl1tor-r5r15', name='tor')
-            #             .out().node('interface', name='intf')
-            #             .out('link').node('link', name='link')
-            #     """
-            #     tor_gs_node = self.main_bp.query(tor_gs_query)
-            #     # tor_gs_node = self.main_bp.query(f"node('system', label='{self.tor_gs.label}', name='tor').out().node('interface', name='evpn')")
-
-            # tor_gs present. pull the links to remove later
             for tor_intf_node in tor_interface_nodes_in_main:
                 if tor_intf_node[CkEnum.GENERIC_SYSTEM]:
                     self.tor_gs.id = tor_intf_node[CkEnum.GENERIC_SYSTEM]['id']
