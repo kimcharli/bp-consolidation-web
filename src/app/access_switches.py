@@ -12,33 +12,6 @@ from .virtual_networks import VirtualNetworks
 from .vlan_cts import sync_tor_ct, sync_main_ct, referesh_ct_table, migrate_connectivity_templates
 
 
-class _AccessSwitchResponseItem(BaseModel):
-    id: str
-    value: Optional[str] = None
-    state: Optional[str] = None
-    fill: Optional[str] = None
-    visibility: Optional[str] = None
-
-    def loaded(self):
-        self.state = DataStateEnum.LOADED
-        return self
-
-    def hidden(self):
-        self.visibility = 'hidden'
-        return self
-
-    def visible(self):
-        self.visibility = 'visible'
-        return self
-
-
-class _AccessSwitchResponse(BaseModel):
-    done: Optional[bool] = False
-    values: Optional[List[_AccessSwitchResponseItem]] = []
-    caption: Optional[str] = None
-    button_state: str = DataStateEnum.INIT
-
-
 def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
     '''
     Build each "links" data from tor_interface_nodes_in_main
@@ -80,8 +53,6 @@ def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
 
 
 
-
-
 class LeafLink(BaseModel):
     server_intf: str = ''
     switch_intf: str
@@ -116,7 +87,7 @@ class AccessSwitches(BaseModel):
     tor_interface_nodes_in_main: Any = None  # set by sync_tor_gs_in_main
     logger: Any = logging.getLogger("AccessSwitches") 
     virtual_networks_data: Any = None
-    is_access_switches_done: bool = False  # set if access switches are created
+    # is_access_switches_done: bool = False  # set if access switches are created
     # TODO:
 
     @property
@@ -161,10 +132,13 @@ class AccessSwitches(BaseModel):
     # 
     # generic systems
     # 
-    async def update_generic_systems_table(self):
-        self.logger.warning(f"update_generic_systems_table begin...")
-        data = await self.generic_systems.pull_tor_generic_systems_table()
-        self.logger.warning(f"update_generic_systems_table end...")
+    async def sync_generic_systems(self):
+        self.logger.warning(f"sync_generic_systems begin...")
+        # breakpoint()
+        data = await self.generic_systems.sync_tor_generic_systems()
+        data = await self.generic_systems.refresh_tor_generic_systems()
+        self.logger.warning(f"sync_generic_systems end...")
+        # breakpoint()
         return data
 
     async def migrate_generic_system(self, tbody_id):
@@ -193,30 +167,33 @@ class AccessSwitches(BaseModel):
     # 
     # connectivity template
     #
-    async def sync_connectivity_template(self):
+    async def sync_connectivity_template(self) -> bool:
+        """
+        Return True if the connectivity template is done
+        """
         # if not self.virtual_networks.is_all_done:
         #     self.logger.warning(f"sync_connectivity_template: virtual networks not done")
         #     return {}
 
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT, state=DataStateEnum.LOADING)).send()
+        # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).loading()).send()
 
         data = sync_tor_ct(global_store.bp['tor_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
         sync_main_ct(global_store.bp['main_bp'], self.generic_systems.generic_systems, self.access_switch_pair)
 
         await referesh_ct_table(self.generic_systems.generic_systems)
 
-        if self.generic_systems.is_ct_done:
-            button_state = DataStateEnum.DONE
-        else:
-            button_state = DataStateEnum.INIT
-        # breakpoint()
-        self.logger.warning(f"sync_connectivity_template {button_state=}")
-        await SseEvent(
-            event=SseEventEnum.DATA_STATE, 
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_CT, 
-                state=button_state)).send()
-        return {}
+        # if self.generic_systems.is_ct_done:
+        #     button_state = DataStateEnum.DONE
+        # else:
+        #     button_state = DataStateEnum.INIT
+        # # breakpoint()
+        # self.logger.warning(f"sync_connectivity_template {button_state=}")
+        # await SseEvent(
+        #     event=SseEventEnum.DATA_STATE, 
+        #     data=SseEventData(
+        #         id=SseEventEnum.BUTTON_MIGRATE_CT, 
+        #         state=button_state)).send()
+        return self.generic_systems.is_ct_done
 
 
     async def migrate_connectivity_templates(self):
@@ -242,7 +219,6 @@ class AccessSwitches(BaseModel):
                 id=f"tor-config-text-{index}", value=tor_confg)).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, 
                            data=SseEventData(id=f"tor-config-caption-{index}").set_href(switch_tor_href).set_target()).send()
-
 
 
     #
@@ -304,6 +280,7 @@ class AccessSwitches(BaseModel):
         # 
         self.generic_systems.sync_tor_generic_systems()  # generic_systems and leaf_gs
 
+        # breakpoint()
         self.generic_systems.sync_main_links()  # pull gs links from main_bp.
 
         self.leaf_gs = self.generic_systems.leaf_gs
@@ -322,8 +299,8 @@ class AccessSwitches(BaseModel):
 
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-box').done()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-box').done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switches[self.access_switch_pair[0]].label)).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-label', value=self.access_switches[self.access_switch_pair[1]].label)).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switch_pair[0])).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-label', value=self.access_switch_pair[1])).send()
         
         if len(self.leaf_switches) == 2:
             # leaf switches in main blueprint are loaded
@@ -340,7 +317,8 @@ class AccessSwitches(BaseModel):
         self.logger.warning(f"sync_access_switches {self.access_switches=}")
         if len([x.id for x in self.access_switches.values() if x.id != '']) == 2:            
             # access switches are created            
-            self.is_access_switches_done = True
+            is_access_switches_done = True
+            await global_store.migration_status.set_as_done(is_access_switches_done)
             # hide access-gs-box, and show access1-box, access2-box
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').hidden()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label').hidden()).send()
@@ -362,10 +340,10 @@ class AccessSwitches(BaseModel):
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').not_done()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label', value=self.tor_gs.label).done()).send()
 
-        if self.is_access_switches_done:
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).done()).send()
+        # if self.is_access_switches_done:
+        #     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).done()).send()
 
-        return self.is_access_switches_done
+        return global_store.migration_status.is_as_done
 
     def build_switch_pair_spec(self, tor_interface_nodes_in_main, tor_label) -> dict:
         '''

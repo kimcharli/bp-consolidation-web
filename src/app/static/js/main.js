@@ -160,6 +160,7 @@ class MigrateGenericSystemsButton {
     }
 
     handleMigrateGenericSystems(event) {
+        this.button.dataset.state = 'loading';
         const srcButton = event.srcElement || event.target;
         Array.from(document.getElementById('generic-systems-table').getElementsByTagName('tbody'))
         .forEach(tbody => {
@@ -384,14 +385,14 @@ class CkIDB {
 const eventSource = new EventSource("/sse");
 console.log('eventSource', eventSource);
 
-eventSource.addEventListener('sse', (event) => {
-    console.log('sse EventListener', event)
-    console.log('sse EventListener', event.data);        // document.getElementById("server-time").innerHTML = event.data;
-});
+// eventSource.addEventListener('sse', (event) => {
+//     console.log('sse EventListener', event)
+//     console.log('sse EventListener', event.data);        // document.getElementById("server-time").innerHTML = event.data;
+// });
 
 eventSource.addEventListener('data-state', (event) => {
     const data = JSON.parse(event.data);
-    // console.log('sse data-state', data)
+    console.log('sse data-state', data)
     const target = document.getElementById(data.id);
     // console.log('sse data-state', target)
     try {
@@ -401,6 +402,7 @@ eventSource.addEventListener('data-state', (event) => {
         if (data.visibility) target.style.visibility = data.visibility;
         if (data.href) target.href = data.href;
         if (data.target) target.target = data.target;
+        if (data.disabled != null) target.disabled = data.disabled;
     } catch (error) {
         console.log('sse data-state error', error, 'for data', data)
     }
@@ -408,6 +410,7 @@ eventSource.addEventListener('data-state', (event) => {
 
 eventSource.addEventListener('tbody-gs', (event) => {
     const data = JSON.parse(event.data);
+    console.log('sse tbody-gs', data)
     const the_table = document.getElementById('generic-systems-table');
     let tbody = document.getElementById(data.id);
     if ( tbody == null ) {
@@ -418,17 +421,17 @@ eventSource.addEventListener('tbody-gs', (event) => {
 });
 
 
-eventSource.addEventListener('disable-button', (event) => {
-    const data = JSON.parse(event.data);
-    // console.log('sse data-state', data)
-    const target = document.getElementById(data.id);
-    target.disabled = data.disabled;
-});
+// eventSource.addEventListener('disable-button', (event) => {
+//     const data = JSON.parse(event.data);
+//     // console.log('sse data-state', data)
+//     const target = document.getElementById(data.id);
+//     target.disabled = data.disabled;
+// });
 
-eventSource.onmessage = (event) => {
-    console.log('eventSource', event)
-    console.log('eventSource.onmessage', event.data);        // document.getElementById("server-time").innerHTML = event.data;
-};  
+// eventSource.onmessage = (event) => {
+//     console.log('eventSource', event)
+//     console.log('eventSource.onmessage', event.data);        // document.getElementById("server-time").innerHTML = event.data;
+// };  
 
 eventSource.addEventListener('update-vn', (event) => {
     const data = JSON.parse(event.data);
@@ -450,29 +453,29 @@ eventSource.addEventListener('update-vn', (event) => {
     window.scrollTo(0, document.body.scrollHeight);
 });        
 
-eventSource.addEventListener('update-caption', (event) => {
-    const data = JSON.parse(event.data);
-    // id: id of the caption
-    // value: caption text
-    const the_caption = document.getElementById(data.id);
-    the_caption.innerHTML = data.value;
-});        
+// eventSource.addEventListener('update-caption', (event) => {
+//     const data = JSON.parse(event.data);
+//     // id: id of the caption
+//     // value: caption text
+//     const the_caption = document.getElementById(data.id);
+//     the_caption.innerHTML = data.value;
+// });        
 
-eventSource.addEventListener('ct-update', (event) => {
-    const data = JSON.parse(event.data);
-    // id: id of the button
-    // attrs: [ { attr: , value: } ]
-    // value: button text
-    console.log('sse ct-update', data)
-    const tbody = document.getElementById(data.id);  // tbody_id
-    const target = tbody.getElementsByClassName('cts')[0];
-    // console.log('sse update-vn', target)
-    target.setAttribute('rowspan', data.rowspan)
-    data.attrs.forEach(attr => {
-        target.setAttribute(attr.attr, attr.value)
-    })
-    target.innerHTML = data.value;
-});
+// eventSource.addEventListener('ct-update', (event) => {
+//     const data = JSON.parse(event.data);
+//     // id: id of the button
+//     // attrs: [ { attr: , value: } ]
+//     // value: button text
+//     console.log('sse ct-update', data)
+//     const tbody = document.getElementById(data.id);  // tbody_id
+//     const target = tbody.getElementsByClassName('cts')[0];
+//     // console.log('sse update-vn', target)
+//     target.setAttribute('rowspan', data.rowspan)
+//     data.attrs.forEach(attr => {
+//         target.setAttribute(attr.attr, attr.value)
+//     })
+//     target.innerHTML = data.value;
+// });
 
 
 window.addEventListener("load", (event) => {

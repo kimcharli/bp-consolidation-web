@@ -76,52 +76,39 @@ async def login_blueprint(blueprint: BlueprintItem):
 @app.get("/sync")
 async def sync():
     logging.warning(f"/sync_access_switches begin")
-    is_access_switches_done = await access_switches.sync_access_switches()
+    await global_store.migration_status.refresh()
+    is_as_done = await access_switches.sync_access_switches()
+    await global_store.migration_status.set_as_done(is_as_done)
     logging.warning(f"/sync_access_switches end")
-    if not is_access_switches_done:
-        await SseEvent(
-            event=SseEventEnum.BUTTION_DISABLE, 
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_GS,
-                state=DataStateEnum.INIT).disable()).send()
-        await SseEvent(
-            event=SseEventEnum.BUTTION_DISABLE, 
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_VN,
-                state=DataStateEnum.INIT).disable()).send()
-        await SseEvent(
-            event=SseEventEnum.BUTTION_DISABLE, 
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_CT,
-                state=DataStateEnum.INIT).disable()).send()
 
-    else:
-        await SseEvent(
-            event=SseEventEnum.BUTTION_DISABLE, 
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_GS,
-                state=DataStateEnum.INIT).enable()).send()
-
-    logging.warning(f"/update_generic_systems_table begin")
-    as_data = await access_switches.update_generic_systems_table()
-    logging.warning(f"/update_generic_systems_table end")
+    logging.warning(f"/sync_generic_systems begin")
+    is_gs_done = await access_switches.sync_generic_systems()
+    await global_store.migration_status.set_gs_done(is_gs_done)
+    logging.warning(f"/sync_generic_systems end")
 
     logging.warning(f"/update_virtual_networks_data begin")
-    data = await access_switches.update_virtual_networks_data()
+    is_vn_done = await access_switches.update_virtual_networks_data()
+    await global_store.migration_status.set_vn_done(is_vn_done)
     logging.warning(f"/update_virtual_networks_data end")
 
     logging.warning(f"/update-connectivity-template-data begin")
-    await access_switches.sync_connectivity_template()
+    # is_ct_done = await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).loading()).send()
+    is_ct_done = await access_switches.sync_connectivity_template()
+    await global_store.migration_status.set_ct_done(is_ct_done)
+    # if is_ct_done:
+    #     logging.warning(f"/update-connectivity-template-data: done")
+    #     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
+    # else:
+    #     logging.warning(f"/update-connectivity-template-data: not_done")
+    #     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done()).send()
     logging.warning(f"/update-connectivity-template-data end")
 
-    await SseEvent(
-        event=SseEventEnum.DATA_STATE, 
-        data=SseEventData(
-            id=SseEventEnum.BUTTON_SYNC_STATE,
-            state=DataStateEnum.DONE)).send()
+    await global_store.migration_status.set_sync_done()
+    # await SseEvent(
+    #     event=SseEventEnum.DATA_STATE, 
+    #     data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).done().enable()).send()
 
-    return as_data
-
+    return {}
 class SystemLabel(BaseModel):
     tbody_id: str
 
@@ -133,21 +120,23 @@ async def migrate_access_switches():
     logging.warning(f"/migrate_access_switches begin")
     data = access_switches.remove_tor_gs_from_main()
     is_access_switch_created = await access_switches.create_new_access_switch_pair()
+    await global_store.migration_status.set_as_done(is_access_switch_created)
     logging.warning(f"/migrate_access_switches end")
-    if is_access_switch_created:
-        await SseEvent(
-            event=SseEventEnum.BUTTION_DISABLE, 
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_GS,
-                state=DataStateEnum.INIT).enable()).send()
+    # if is_access_switch_created:
+    #     await SseEvent(
+    #         event=SseEventEnum.BUTTION_DISABLE, 
+    #         data=SseEventData(
+    #             id=SseEventEnum.BUTTON_MIGRATE_GS,
+    #             state=DataStateEnum.INIT).enable()).send()
         
-    return data
+    return {}
 
 
 @app.post("/migrate-generic-system")
 async def migrate_generic_system(system_label: SystemLabel):
     logging.warning(f"/migrate_generic_system begin {system_label=}")
     is_migrated = await access_switches.migrate_generic_system(system_label.tbody_id)
+    await global_store.migration_status.set_gs_done(is_migrated)
     logging.warning(f"/migrate_generic_system end {is_migrated=}")
     return {'is_migrated': is_migrated }
 
@@ -155,14 +144,16 @@ async def migrate_generic_system(system_label: SystemLabel):
 @app.post("/migrate-virtual-networks")
 async def migrate_virtual_networks():
     logging.warning(f"/migrate_virtual_networks begin")
-    data = await access_switches.migrate_virtual_networks()
+    is_vn_done = await access_switches.migrate_virtual_networks()
+    await global_store.migration_status.set_vn_done(is_vn_done)
     logging.warning(f"/migrate_virtual_networks end")
     return {}
 
 @app.post("/migrate-cts")
 async def migrate_cts():
     logging.warning(f"/migrate_cts begin")
-    data = await access_switches.migrate_connectivity_templates()
+    is_ct_done = await access_switches.migrate_connectivity_templates()
+    await global_store.migration_status.set_ct_done(is_ct_done)
     logging.warning(f"/migrate_cts end")
     return {}
 

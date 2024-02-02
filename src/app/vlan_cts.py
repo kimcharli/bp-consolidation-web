@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from ck_apstra_api.apstra_blueprint import CkEnum
 
 # from .generic_systems import CtData
-from .ck_global import CtEnum, DataStateEnum, SseEvent, SseEventEnum, SseEventData
+from .ck_global import CtEnum, DataStateEnum, SseEvent, SseEventEnum, SseEventData, global_store
 
 
 class CtData(BaseModel):
@@ -176,7 +176,7 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
                     ]
                 }
                 batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
-                if batch_result.status_code != 200:
+                if batch_result.status_code != 201:
                     logging.warning(f"migrate_connectivity_templates: {ae_data=} {len(cts_chunk)=} {batch_ct_spec=} {batch_result=} {batch_result.content=}")
                 # if not ae_data.new_ae_id:
                 #     logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {ae_data=}")
@@ -192,18 +192,16 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
                         state=cell_state, 
                         value=f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}')).send()
 
-    if generic_systems.is_ct_done:
-        await SseEvent(
-            event=SseEventEnum.DATA_STATE, 
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_CT,
-                state=DataStateEnum.DONE)).send()
-    else:
-        await SseEvent(
-            event=SseEventEnum.DATA_STATE, 
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_CT,
-                state=DataStateEnum.INIT)).send()
+    await global_store.migration_status.set_ct_done(True)
+    # if generic_systems.is_ct_done:
+    #     await SseEvent(
+    #         event=SseEventEnum.DATA_STATE, 
+    #         data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
+    # else:
+    #     await SseEvent(
+    #         event=SseEventEnum.DATA_STATE, 
+    #         data=SseEventData(
+    #             id=SseEventEnum.BUTTON_MIGRATE_CT).not_done()).send()
 
     return {}
 

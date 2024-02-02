@@ -5,7 +5,7 @@ from enum import Enum, StrEnum, auto
 import time
 
 from ck_apstra_api.apstra_blueprint import CkEnum
-from .ck_global import DataStateEnum, sse_queue, SseEvent, SseEventEnum, SseEventData
+from .ck_global import DataStateEnum, sse_queue, SseEvent, SseEventEnum, SseEventData, global_store
 from .vlan_cts import CtData
 # TODO: consolidate
 # TODO: catch AE creation delay
@@ -589,9 +589,9 @@ class GenericSystems(BaseModel):
         return len(ct_not_done_list) == 0
 
 
-    def sync_tor_generic_systems(self):
+    async def sync_tor_generic_systems(self):
         """
-        Pull the generic systems data and rebuild generic_systems and leaf_gs
+        Pull the generic systems data from tor blueprint and rebuild generic_systems and leaf_gs
         the 1st call
         does not render the web page (TODO: may be render the page)
         """
@@ -601,7 +601,7 @@ class GenericSystems(BaseModel):
         # build generic_systems data from tor_bp. set the variables 'old-'
         for server_link in self.tor_bp.get_switch_interface_nodes(self.access_switch_pair):
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
-            new_label = self.set_new_generic_system_label(server_label)
+            new_label = self.get_new_label(server_label)
             tbody_id = f"gs-{new_label}"
             # link_id = server_link[CkEnum.LINK]['id']
             old_switch_intf_id = server_link[CkEnum.MEMBER_INTERFACE]['id']
@@ -613,11 +613,11 @@ class GenericSystems(BaseModel):
             old_server_intf = server_link[CkEnum.GENERIC_SYSTEM_INTERFACE]['if_name'] or ''
             tag = server_link[CkEnum.TAG]['label'] if server_link[CkEnum.TAG] != None else None
 
-            server_data = self.generic_systems.setdefault(tbody_id, _GenericSystem(label=server_label, new_label=self.set_new_generic_system_label(server_label)))
+            server_data = self.generic_systems.setdefault(tbody_id, _GenericSystem(label=server_label, new_label=self.get_new_label(server_label)))
             # check if leaf_gs
             if switch_intf in ['et-0/0/48', 'et-0/0/49']:
                 server_data.is_leaf_gs = True
-                server_data.new_label = server_label  # do not rename leaf_gs
+                # server_data.new_label = server_label  # do not rename leaf_gs
                 self.leaf_gs.label = server_label
                 if switch.endswith(('a', 'c')):  # left tor
                     if switch_intf == 'et-0/0/48':
@@ -665,7 +665,7 @@ class GenericSystems(BaseModel):
         return
 
 
-    async def pull_tor_generic_systems_table(self) -> dict:
+    async def refresh_tor_generic_systems(self) -> dict:
         """
         Called by main.py from SyncState
         Build generic_systems from tor_blueprint and return the data 
@@ -690,21 +690,22 @@ class GenericSystems(BaseModel):
                 value=caption)).send()
 
         # update buttion state
-        for _, gs in self.generic_systems.items():
-            if gs.is_not_done():
-                # breakpoint()
-                await SseEvent(
-                    event=SseEventEnum.DATA_STATE,
-                    data=SseEventData(
-                        id=SseEventEnum.BUTTON_MIGRATE_GS,
-                        state=DataStateEnum.INIT)).send()
-                return
+        # for _, gs in self.generic_systems.items():
+        #     if gs.is_not_done():
+        #         # breakpoint()
+        #         await SseEvent(
+        #             event=SseEventEnum.DATA_STATE,
+        #             data=SseEventData(
+        #                 id=SseEventEnum.BUTTON_MIGRATE_GS,
+        #                 state=DataStateEnum.INIT)).send()
+        #         return
         # no init - done
-        await SseEvent(
-            event=SseEventEnum.DATA_STATE,
-            data=SseEventData(
-                id=SseEventEnum.BUTTON_MIGRATE_GS,
-                state=DataStateEnum.DONE)).send()
+        # await global_store.migration_status.set_as_done(True)
+        # await SseEvent(
+        #     event=SseEventEnum.DATA_STATE,
+        #     data=SseEventData(
+        #         id=SseEventEnum.BUTTON_MIGRATE_GS,
+        #         state=DataStateEnum.DONE)).send()
         self.logger.warning(f"pull_tor_generic_systems_table end")
         return
 
@@ -712,12 +713,15 @@ class GenericSystems(BaseModel):
         """
         """
         self.logger.warning(f"migrate_generic_system {tbody_id=}")
-        is_migrated = await self.generic_systems[tbody_id].migrate(self.main_bp, self.access_switches)
+        if tbody_id not in self.generic_systems:
+            return {'error': f"tbody_id {tbody_id} not found", 'is_migrated': False}
+        the_gs = self.generic_systems[tbody_id]
+        is_migrated = await the_gs.migrate(self.main_bp, self.access_switches)
         return is_migrated
 
 
 
-    def set_new_generic_system_label(self, old_label) -> str:
+    def get_new_label(self, old_label) -> str:
         """
         Return new label of the generic system from the old label and tor name
         This is to avoid duplicate names which was created by old tor_bp

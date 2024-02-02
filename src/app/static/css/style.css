@@ -111,12 +111,8 @@ body {
     font-family: Arial, Helvetica, sans-serif;
 }
 
-.yellow {
-    background-color: yellow;
-}
-
-.teal {
-    background-color: teal;
+:disabled {
+    background-color: grey;
 }
 
 
@@ -226,7 +222,9 @@ aside button {
     text-align: left;
 }
 
-
+.data-state:disabled {
+    background-color: gray;
+}
 .data-state[data-state="init"] {
     background-color: var(--global-warning-color);
 }
@@ -238,6 +236,9 @@ aside button {
     background-color: var(--global-ok-color);
 }
 .data-state[data-state="none"] {
+    background-color: gray;
+}
+.data-state[data-state="disabled"] {
     background-color: gray;
 }
 .data-state[data-state="error"] {
