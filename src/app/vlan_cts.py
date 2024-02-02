@@ -71,13 +71,22 @@ def sync_main_ct(the_bp, generic_systems, switch_label_pair: list):
         # breakpoint()
         for tbody_id, gs in generic_systems.items():
             for old_ae_id, ae_data in gs.group_links.items():
-                if ae_data.new_ae_id == the_interface_id:
+                if ae_data.new_ae_id and (ae_data.new_ae_id == the_interface_id):
                     # breakpoint()
                     if tagged:
                         ae_data.old_tagged_vlans[vn_id].new_ct_id = ct_node_id
                     else:
                         ae_data.old_untagged_vlan[vn_id].is_tagged = False
                         ae_data.old_untagged_vlan[vn_id].new_ct_id = ct_node_id                   
+                else:
+                    # assume ae_data.new_ae_id is None. 
+                    for link_data in ae_data.links.values():
+                        if link_data.new_switch_intf_id == the_interface_id:
+                            if tagged:
+                                ae_data.old_tagged_vlans[vn_id].new_ct_id = ct_node_id
+                            else:
+                                ae_data.old_untagged_vlan[vn_id].is_tagged = False
+                                ae_data.old_untagged_vlan[vn_id].new_ct_id = ct_node_id
                     # breakpoint()
     return {}
 
@@ -103,6 +112,7 @@ async def referesh_ct_table(generic_systems):
 async def migrate_connectivity_templates(main_bp, generic_systems):
     # main_bp = global_store.bp['main_bp']
 
+    # the nodes for the single vlan cts
     ct_vlan_query = f"""node('ep_endpoint_policy', name='{CtEnum.CT_NODE}')
         .out('ep_subpolicy').node('ep_endpoint_policy', policy_type_name='pipeline')
         .out('ep_first_subpolicy').node('ep_endpoint_policy', policy_type_name='AttachSingleVLAN', name='{CtEnum.SINGLE_VLAN_NODE}')
@@ -112,6 +122,7 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
     # interate generic systems and fix the connectivity templates
     for tbody_id, gs in generic_systems.generic_systems.items():
         if gs.is_leaf_gs:
+            # won't fix the connectivity tempaltes towards the leaf switches
             continue
         for old_ae_id, ae_data in gs.group_links.items():
             # ct attachment per group_link
@@ -121,6 +132,7 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
             ct_data_queue = []
             # add tagged vlan cts
             # TODO: use new_ct_id instead of new_tagged_vlans
+            # breakpoint()
             for vn_id, ct_data in ae_data.old_tagged_vlans.items():
                 if ct_data.new_ct_id:
                     # it is already migrated
@@ -146,6 +158,7 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
             while len(ct_data_queue) > 0:
                 throttle_number = 50
                 cts_chunk = ct_data_queue[:throttle_number]
+                interface_id = ae_data.new_ae_id if ae_data.new_ae_id else [x for x in ae_data.links.values()][0].new_switch_intf_id
                 batch_ct_spec = {
                     "operations": [
                         {
@@ -154,7 +167,7 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
                             "payload": {
                                 "application_points": [
                                     {
-                                        "id": ae_data.new_ae_id,
+                                        "id": interface_id,
                                         "policies": [ {"policy": x.new_ct_id, "used": True} for x in cts_chunk]
                                     }
                                 ]
@@ -163,9 +176,10 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
                     ]
                 }
                 batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
-                logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {len(cts_chunk)=} {total_cts=} {batch_result=} {batch_result.content=}")
-                if not ae_data.new_ae_id:
-                    logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {ae_data=}")
+                if batch_result.status_code != 200:
+                    logging.warning(f"migrate_connectivity_templates: {ae_data=} {len(cts_chunk)=} {batch_ct_spec=} {batch_result=} {batch_result.content=}")
+                # if not ae_data.new_ae_id:
+                #     logging.warning(f"migrate_connectivity_templates: {ae_data.new_ae_id=} {ae_data=}")
                 # for ct_data in cts_chunk:
                 #     ae_data.new_tagged_vlans[vn_id] = ae_data.old_tagged_vlans[vn_id]
                 del ct_data_queue[:throttle_number]

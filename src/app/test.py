@@ -36,18 +36,16 @@ async def main():
     id = global_store.login_blueprint(tor_bp)
     # data = GlobalStore.pull_tor_bp_data()
     as_data = await access_switches.sync_access_switches()
-    # logging.warning(f"AccessSwitches {as_data=}")
     gs_data = await access_switches.update_generic_systems_table()
-    # logging.warning(f"GenericSystems {gs_data=}")
     vn_data = await access_switches.update_virtual_networks_data()
+    ct_data = await access_switches.sync_connectivity_template()
     # logging.warning(f"VirtualNetworks {vn_data=}")
     # breakpoint()
     gs_new = await access_switches.migrate_generic_system('gs-az1kvm1004-az1kvm1028-atl1-LACP')
 
     ## vn_mig = access_switches.migrate_virtual_networks()
 
-    ct_data = await access_switches.sync_connectivity_template()
-    # ct_m_data = await access_switches.migrate_connectivity_templates()
+    ct_m_data = await access_switches.migrate_connectivity_templates()
 
 if __name__ == '__main__':
     import asyncio

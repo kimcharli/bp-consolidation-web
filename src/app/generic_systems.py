@@ -158,6 +158,8 @@ class _GroupLink(BaseModel):
         untagged_cts_not_done = [vn_id for vn_id, ct_data in self.old_untagged_vlan.items() if ct_data.new_ct_id is None]
         is_is_ct_done =len(tagged_cts_not_done) == 0 and len(untagged_cts_not_done) == 0
         # logging.warning(f"is_ct_done {self.old_ae_id=} {is_is_ct_done=} {tagged_cts_not_done=} {untagged_cts_not_done=}")
+        # if not is_is_ct_done:
+        #     breakpoint()
         return is_is_ct_done
 
     def cts(self, is_leaf_gs):
