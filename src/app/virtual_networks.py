@@ -27,7 +27,7 @@ class _VirtualNetwork(BaseModel):
     ipv6_subnet: str = ''
     virtual_gateway_ipv4: str = ''
     virtual_gateway_ipv6: str = ''
-    bound_to: Dict[str, _BoundTo] = {}
+    bound_to: Dict[str, _BoundTo] = {}  # the systems this vn is bound to (assigned to)
 
     @property
     def button_vn_id(self):
@@ -82,7 +82,7 @@ class VirtualNetworks(BaseModel):
     main_bp: Any
     tor_bp: Any
     bound_to: Dict[str, _BoundTo] = {}
-    this_bound_to: str
+    this_bound_to: str  # the access switch pair label like 'atl1tor-r5r15-pair'
     # is_all_done: bool = False
 
     logger: Any = logging.getLogger('VirtualNetworks')
@@ -92,9 +92,11 @@ class VirtualNetworks(BaseModel):
         response.values = [v.html_element(self.this_bound_to) for k, v in self.vns.items()]
         response.caption = f"Virtual Networks ({len(self.vns)})"
 
-        not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]
+        not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]        
         if len(not_done_list) == 0:
-            response.done = True
+            # all vns are assigned to this access switch pair
+            global_store.migration_status.set_vn_done(True)
+            # response.done = True
         return response
 
     async def queue_render(self):
@@ -111,11 +113,9 @@ class VirtualNetworks(BaseModel):
             # self.logger.warning(f"queue_render {sse_message=}")
             await sse_queue.put(sse_message)
 
-        await SseEvent(
-            event=SseEventEnum.DATA_STATE, 
-            data=SseEventData(
-                id=SseEventEnum.CAPTION_VN, 
-                value=f'Virtual Networks ({len(self.vns)})')).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, 
+                        data=SseEventData(id=SseEventEnum.CAPTION_VN, 
+                            value=f'Virtual Networks ({len(self.vns)})')).send()
         not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]
         # if len(not_done_list) == 0:
         #     await SseEvent(event=SseEventEnum.DATA_STATE, 

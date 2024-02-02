@@ -22,7 +22,7 @@ app.mount("/static", StaticFiles(directory="src/app/static"), name="static")
 app.mount("/js", StaticFiles(directory="src/app/static/js"), name="js")
 app.mount("/css", StaticFiles(directory="src/app/static/css"), name="css")
 app.mount("/images", StaticFiles(directory="src/app/static/images"), name="images")
-app.mount("/component", StaticFiles(directory="src/app/component"), name="component")
+# app.mount("/component", StaticFiles(directory="src/app/component"), name="component")
 
 @app.get("/", response_class=HTMLResponse)
 async def get_index_html(request: Request):
@@ -104,9 +104,6 @@ async def sync():
     logging.warning(f"/update-connectivity-template-data end")
 
     await global_store.migration_status.set_sync_done()
-    # await SseEvent(
-    #     event=SseEventEnum.DATA_STATE, 
-    #     data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).done().enable()).send()
 
     return {}
 class SystemLabel(BaseModel):
@@ -122,12 +119,6 @@ async def migrate_access_switches():
     is_access_switch_created = await access_switches.create_new_access_switch_pair()
     await global_store.migration_status.set_as_done(is_access_switch_created)
     logging.warning(f"/migrate_access_switches end")
-    # if is_access_switch_created:
-    #     await SseEvent(
-    #         event=SseEventEnum.BUTTION_DISABLE, 
-    #         data=SseEventData(
-    #             id=SseEventEnum.BUTTON_MIGRATE_GS,
-    #             state=DataStateEnum.INIT).enable()).send()
         
     return {}
 

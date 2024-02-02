@@ -144,7 +144,7 @@ class MigrateAccessSwitchesButton {
         .then(response => response.json())
         .then(data => {
             console.log('/migrate-access-switches', data)
-            srcButton.dataset.state = 'done';
+            // srcButton.dataset.state = 'done';  # done processed by SSE
             document.getElementById("migrate-access-switches").dataset.state = data.button_state;
         })
         .catch(error => console.error('handleMigrateAccessSwitches - Error:', error, error.name, error.message));
@@ -396,12 +396,12 @@ eventSource.addEventListener('data-state', (event) => {
     const target = document.getElementById(data.id);
     // console.log('sse data-state', target)
     try {
-        if (data.state !== undefined && data.state != null) target.dataset.state = data.state;
+        if (data.state !== null) target.dataset.state = data.state;
         // null check undefined too
         if (data.value !== null) target.innerHTML = data.value;
-        if (data.visibility) target.style.visibility = data.visibility;
-        if (data.href) target.href = data.href;
-        if (data.target) target.target = data.target;
+        if (data.visibility !== null) target.style.visibility = data.visibility;
+        if (data.href !== null) target.href = data.href;
+        if (data.target !== null) target.target = data.target;
         if (data.disabled != null) target.disabled = data.disabled;
     } catch (error) {
         console.log('sse data-state error', error, 'for data', data)
@@ -420,18 +420,6 @@ eventSource.addEventListener('tbody-gs', (event) => {
     if (data.value !== null) tbody.innerHTML = data.value;
 });
 
-
-// eventSource.addEventListener('disable-button', (event) => {
-//     const data = JSON.parse(event.data);
-//     // console.log('sse data-state', data)
-//     const target = document.getElementById(data.id);
-//     target.disabled = data.disabled;
-// });
-
-// eventSource.onmessage = (event) => {
-//     console.log('eventSource', event)
-//     console.log('eventSource.onmessage', event.data);        // document.getElementById("server-time").innerHTML = event.data;
-// };  
 
 eventSource.addEventListener('update-vn', (event) => {
     const data = JSON.parse(event.data);
