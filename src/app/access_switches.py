@@ -135,7 +135,7 @@ class AccessSwitches(BaseModel):
     async def sync_generic_systems(self):
         self.logger.warning(f"sync_generic_systems begin...")
         # breakpoint()
-        data = await self.generic_systems.sync_tor_generic_systems()
+        # data = await self.generic_systems.sync_tor_generic_systems()  # already done by sync_access_switches
         data = await self.generic_systems.refresh_tor_generic_systems()
         self.logger.warning(f"sync_generic_systems end...")
         # breakpoint()
@@ -182,18 +182,7 @@ class AccessSwitches(BaseModel):
 
         await referesh_ct_table(self.generic_systems.generic_systems)
 
-        # if self.generic_systems.is_ct_done:
-        #     button_state = DataStateEnum.DONE
-        # else:
-        #     button_state = DataStateEnum.INIT
-        # # breakpoint()
-        # self.logger.warning(f"sync_connectivity_template {button_state=}")
-        # await SseEvent(
-        #     event=SseEventEnum.DATA_STATE, 
-        #     data=SseEventData(
-        #         id=SseEventEnum.BUTTON_MIGRATE_CT, 
-        #         state=button_state)).send()
-        return self.generic_systems.is_ct_done
+        return await self.generic_systems.is_ct_done
 
 
     async def migrate_connectivity_templates(self):
@@ -278,10 +267,10 @@ class AccessSwitches(BaseModel):
         #
         # build generic systems for tor blueprint and set leaf_gs
         # 
-        self.generic_systems.sync_tor_generic_systems()  # generic_systems and leaf_gs
+        await self.generic_systems.sync_tor_generic_systems()  # generic_systems and leaf_gs
 
         # breakpoint()
-        self.generic_systems.sync_main_links()  # pull gs links from main_bp.
+        self.generic_systems.sync_main_links()  # update generic systems with the data from the main blueprint
 
         self.leaf_gs = self.generic_systems.leaf_gs
 
@@ -289,6 +278,7 @@ class AccessSwitches(BaseModel):
         self.sync_tor_gs_in_main()  # sync tor_gs in main, or access_switches in main
 
         # breakpoint()
+        # this will be base data captured from tor blueprint
         if len([x.tor_id for x in self.access_switches.values() if x.tor_id != '']) == 2:
             # tor switches are pulled from tor_bp
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-box').done()).send()

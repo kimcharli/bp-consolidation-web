@@ -370,7 +370,7 @@ class _GenericSystem(BaseModel):
 
     def refresh(self, main_bp, server_links = None):
         """
-        Refresh new data from main blueprint given by server_links
+        Refresh generic systesms with the new data from main blueprint given by server_links
         """
         # get server_links from main_bp
         if server_links is None:
@@ -505,7 +505,7 @@ class _GenericSystem(BaseModel):
         return
 
 
-    def update_interface_names(self, main_bp, access_switches):
+    def patch_interface_names(self, main_bp, access_switches):
         link_name_spec = {
             'links': []
         }
@@ -516,7 +516,7 @@ class _GenericSystem(BaseModel):
                     link_name_spec['links'].append(new_item)
         if len(link_name_spec['links']):
             cable_map_patched = main_bp.patch_cable_map(link_name_spec)
-            self.logger.warning(f"update_interface_names {cable_map_patched=}")
+            self.logger.warning(f"patch_interface_names {cable_map_patched=}")
             # TODO: wait for the finish the task
             self.refresh(main_bp)
         return
@@ -535,7 +535,7 @@ class _GenericSystem(BaseModel):
 
         self.form_lag(main_bp)
 
-        self.update_interface_names(main_bp, access_switches)
+        self.patch_interface_names(main_bp, access_switches)
 
         self.add_tags(main_bp)
 
@@ -584,8 +584,9 @@ class GenericSystems(BaseModel):
 
 
     @property
-    def is_ct_done(self) -> bool:
+    async def is_ct_done(self) -> bool:
         ct_not_done_list = [ tbody_id for tbody_id, gs in self.generic_systems.items() if not gs.is_ct_done]
+        await global_store.migration_status.set_ct_done(len(ct_not_done_list) == 0)
         return len(ct_not_done_list) == 0
 
 
@@ -647,8 +648,8 @@ class GenericSystems(BaseModel):
 
     def sync_main_links(self):
         """
-        Pull the main_bp data for the access_switches and update generic_systems
-        Not sure of this 
+        Pull the server information of the created access switches in main_bp
+          and update the generic_systems data (refresh)
         """
         server_links_dict = {}
         # update generic_systems from main_bp
@@ -661,7 +662,6 @@ class GenericSystems(BaseModel):
         for tbody_id, links in server_links_dict.items():
             # breakpoint()
             self.generic_systems[tbody_id].refresh(self.main_bp, server_links=links)
-
         return
 
 

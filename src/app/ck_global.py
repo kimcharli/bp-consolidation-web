@@ -79,6 +79,7 @@ class SseEventData(BaseModel):
     def disable(self):
         self.disabled = True
         self.state = DataStateEnum.DISABLED
+        # logging.warning(f"SseEventData.disable() ######## {self=}")
         return self
     
     def enable(self):
@@ -99,7 +100,7 @@ class SseEvent(BaseModel):
 
     async def send(self):
         sse_dict = {'event': self.event, 'data': json.dumps(dict(self.data))}
-        # logging.warning(f"SseEvent.send() {self.event=} {self.data=} {sse_dict=}")
+        # logging.warning(f"SseEvent.send() ######## {self.event=} {self.data=} {sse_dict=}")
         await sse_queue.put(sse_dict)
 
 

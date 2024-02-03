@@ -100,7 +100,7 @@ async def referesh_ct_table(generic_systems):
                         cell_state = DataStateEnum.DONE
                     else:
                         cell_state = DataStateEnum.INIT
-                # breakpoint()
+                # update per AE 
                 await SseEvent(
                     event=SseEventEnum.DATA_STATE, 
                     data=SseEventData(

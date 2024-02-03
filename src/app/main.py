@@ -93,7 +93,7 @@ async def sync():
     logging.warning(f"/update-connectivity-template-data begin")
     # is_ct_done = await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).loading()).send()
     is_ct_done = await access_switches.sync_connectivity_template()
-    await global_store.migration_status.set_ct_done(is_ct_done)
+    # await global_store.migration_status.set_ct_done(is_ct_done)  # done in generic_systems
     # if is_ct_done:
     #     logging.warning(f"/update-connectivity-template-data: done")
     #     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
@@ -143,7 +143,7 @@ async def migrate_virtual_networks():
 async def migrate_cts():
     logging.warning(f"/migrate_cts begin")
     is_ct_done = await access_switches.migrate_connectivity_templates()
-    await global_store.migration_status.set_ct_done(is_ct_done)
+    # await global_store.migration_status.set_ct_done(is_ct_done)  # done in generic_systems
     logging.warning(f"/migrate_cts end")
     return {}
 
