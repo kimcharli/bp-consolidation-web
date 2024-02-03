@@ -69,6 +69,7 @@ class SseEventData(BaseModel):
         return self    
 
     def done(self):
+        self.disabled = False
         self.state = DataStateEnum.DONE
         return self
 
@@ -158,7 +159,7 @@ class MigrationStatus(BaseModel):
         """
         if is_as_done != self.is_as_done:
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).enable()).send()
 
     async def set_gs_done(self, is_gs_done: bool):
         """
@@ -166,7 +167,7 @@ class MigrationStatus(BaseModel):
         """
         if is_gs_done != self.is_gs_done:
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).enable()).send()
 
     async def set_vn_done(self, is_vn_done: bool):
         """
@@ -174,7 +175,7 @@ class MigrationStatus(BaseModel):
         """
         if is_vn_done != self.is_vn_done:
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).enable()).send()
 
     async def set_ct_done(self, is_ct_done: bool):
         """

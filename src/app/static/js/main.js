@@ -438,7 +438,7 @@ eventSource.addEventListener('update-vn', (event) => {
         vn_button.setAttribute(attr.attr, attr.value)
     })
     vn_button.innerHTML = data.value;
-    window.scrollTo(0, document.body.scrollHeight);
+    // window.scrollTo(0, document.body.scrollHeight);
 });        
 
 // eventSource.addEventListener('update-caption', (event) => {
