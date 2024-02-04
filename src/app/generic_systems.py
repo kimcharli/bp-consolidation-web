@@ -566,12 +566,12 @@ class LeafGS(BaseModel):
     b_49: str = None
 
 class GenericSystems(BaseModel):
-    generic_systems: Dict[str, _GenericSystem] = {}  # init by sys_tor_generic_systems. <tbody-id>: { GenericSystem }
+    generic_systems: Dict[str, _GenericSystem] = {}  # init by sync_tor_generic_systems. <tbody-id>: { GenericSystem }
     leaf_gs: LeafGS = LeafGS()  # set from sync_tor_generic_systems 
     # main_servers = {}
     # tor_ae1 = None
     # tor_gs = None  # {'label': <>, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
-    access_switches: Any = {}  # <label>: _AccessSwitch
+    access_switches: Any = {}  # coming from access switches. <label>: _AccessSwitch
     logger: Any = logging.getLogger('GenericSystems')
     # given by AccessSwitch
     main_bp: Any
@@ -656,16 +656,20 @@ class GenericSystems(BaseModel):
         server_links = self.main_bp.get_switch_interface_nodes(self.access_switch_pair)
         self.logger.warning(f"sync_main_links {len(server_links)=}")
         for server_link in server_links:
+            switch_label = server_link[CkEnum.MEMBER_SWITCH]['label']
+            switch_id = server_link[CkEnum.MEMBER_SWITCH]['id']
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             tbody_id = f"gs-{server_label}"
-            server_links_dict.setdefault(tbody_id, []).append(server_link)            
+            server_links_dict.setdefault(tbody_id, []).append(server_link)
+            self.access_switch_pair[server_label].id = switch_id
+
         for tbody_id, links in server_links_dict.items():
             # breakpoint()
             self.generic_systems[tbody_id].refresh(self.main_bp, server_links=links)
         return
 
 
-    async def refresh_tor_generic_systems(self) -> dict:
+    async def refresh_tor_generic_systems(self) -> None:
         """
         Called by main.py from SyncState
         Build generic_systems from tor_blueprint and return the data 

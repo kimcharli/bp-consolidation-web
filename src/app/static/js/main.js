@@ -392,7 +392,9 @@ console.log('eventSource', eventSource);
 
 eventSource.addEventListener('data-state', (event) => {
     const data = JSON.parse(event.data);
-    console.log('sse data-state', data)
+    const date = new Date();
+    const timestamp = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+    console.log(`sse data-state at ${timestamp} data=${data}`)
     const target = document.getElementById(data.id);
     // console.log('sse data-state', target)
     try {

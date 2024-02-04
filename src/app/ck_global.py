@@ -76,7 +76,11 @@ class SseEventData(BaseModel):
     def not_done(self):
         self.state = DataStateEnum.INIT
         return self
-    
+
+    def error(self):
+        self.state = DataStateEnum.ERROR
+        return self
+
     def disable(self):
         self.disabled = True
         self.state = DataStateEnum.DISABLED
@@ -95,6 +99,7 @@ class SseEventData(BaseModel):
         self.target = target
         return self
 
+# https://html.spec.whatwg.org/multipage/server-sent-events.html
 class SseEvent(BaseModel):
     event: str      # SseEventEnum.DATA_STATE, SseEventEnum.TBODY_GS, SseEventEnum.BUTTION_DISABLE
     data: SseEventData
@@ -143,23 +148,23 @@ class MigrationStatus(BaseModel):
 
         else:
             # AS is not done
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).not_done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).disable()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).disable()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).not_done().enable()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).not_done().disable()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).not_done().disable()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done().disable()).send()
 
     async def set_sync_done(self):
         self.is_sync_done = True
         await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).done().enable()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable()).send()
+        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().not_done()).send()
 
     async def set_as_done(self, is_as_done: bool):
         """
         Set AS done, and set GS init
         """
         if is_as_done != self.is_as_done:
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).enable()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().done()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).enable().not_done()).send()
 
     async def set_gs_done(self, is_gs_done: bool):
         """

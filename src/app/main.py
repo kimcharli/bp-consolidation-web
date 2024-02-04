@@ -3,7 +3,7 @@ import dotenv
 import asyncio
 import uvicorn
 import json
-from fastapi import FastAPI, Request, UploadFile, File
+from fastapi import FastAPI, Request, UploadFile, BackgroundTasks
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
@@ -73,26 +73,33 @@ async def login_blueprint(blueprint: BlueprintItem):
 
 # from SyncStateButton
 @app.get("/sync")
-async def sync():
+async def sync(background_tasks: BackgroundTasks):
+    # yield {}
     logging.warning(f"/sync_access_switches begin")
-    await global_store.migration_status.refresh()
-    is_as_done = await access_switches.sync_access_switches()
-    await global_store.migration_status.set_as_done(is_as_done)
+    # await global_store.migration_status.refresh()
+    background_tasks.add_task(global_store.migration_status.refresh)
+    # await access_switches.sync_access_switches()
+    background_tasks.add_task(access_switches.sync_access_switches)
+    # await global_store.migration_status.set_as_done(is_as_done)
     logging.warning(f"/sync_access_switches end")
 
     logging.warning(f"/sync_generic_systems begin")
-    is_gs_done = await access_switches.sync_generic_systems()
-    await global_store.migration_status.set_gs_done(is_gs_done)
+    # await access_switches.sync_generic_systems()
+    background_tasks.add_task(access_switches.sync_generic_systems)
+    # # await global_store.migration_status.set_gs_done(is_gs_done)
+    # background_tasks.add_task(global_store.migration_status.set_gs_done, is_gs_done)
     logging.warning(f"/sync_generic_systems end")
 
     logging.warning(f"/update_virtual_networks_data begin")
-    is_vn_done = await access_switches.update_virtual_networks_data()
-    await global_store.migration_status.set_vn_done(is_vn_done)
+    # is_vn_done = await access_switches.update_virtual_networks_data()
+    background_tasks.add_task(access_switches.update_virtual_networks_data)
+    # await global_store.migration_status.set_vn_done(is_vn_done)
     logging.warning(f"/update_virtual_networks_data end")
 
     logging.warning(f"/update-connectivity-template-data begin")
     # is_ct_done = await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).loading()).send()
-    is_ct_done = await access_switches.sync_connectivity_template()
+    # is_ct_done = await access_switches.sync_connectivity_template()
+    background_tasks.add_task(access_switches.sync_connectivity_template)
     # await global_store.migration_status.set_ct_done(is_ct_done)  # done in generic_systems
     # if is_ct_done:
     #     logging.warning(f"/update-connectivity-template-data: done")
@@ -102,9 +109,11 @@ async def sync():
     #     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done()).send()
     logging.warning(f"/update-connectivity-template-data end")
 
-    await global_store.migration_status.set_sync_done()
+    background_tasks.add_task(global_store.migration_status.set_sync_done)
+    # await global_store.migration_status.set_sync_done()
 
     return {}
+
 class SystemLabel(BaseModel):
     tbody_id: str
 
@@ -167,9 +176,11 @@ async def sse(request: Request):
             # logging.warning(f"event_generator yield")            
             # await asyncio.sleep(1)
     return EventSourceResponse(event_generator())
+    # return StreamResponse(event_generator(), media_type="text/event-stream")
+    # return StreamResponse(event_generator(), media_type="application/json")
 
 
-def main():
+async def main():
     dotenv.load_dotenv()
     app_host = os.getenv("app_host") or "127.0.0.1"
     app_port = int(os.getenv("app_port")) or 8000

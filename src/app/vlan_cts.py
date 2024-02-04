@@ -91,23 +91,23 @@ def sync_main_ct(the_bp, generic_systems, switch_label_pair: list):
     return {}
 
 async def referesh_ct_table(generic_systems):
-        for _, gs in generic_systems.items():
-            for _, ae_data in gs.group_links.items():
-                if gs.is_leaf_gs or (ae_data.speed and ae_data.is_old_cts_absent):
-                    cell_state = DataStateEnum.NONE
+    for _, gs in generic_systems.items():
+        for _, ae_data in gs.group_links.items():
+            if gs.is_leaf_gs or (ae_data.speed and ae_data.is_old_cts_absent):
+                cell_state = DataStateEnum.NONE
+            else:
+                if ae_data.is_ct_done:
+                    cell_state = DataStateEnum.DONE
                 else:
-                    if ae_data.is_ct_done:
-                        cell_state = DataStateEnum.DONE
-                    else:
-                        cell_state = DataStateEnum.INIT
-                # update per AE 
-                await SseEvent(
-                    event=SseEventEnum.DATA_STATE, 
-                    data=SseEventData(
-                        id=ae_data.cts_cell_id, 
-                        state=cell_state, 
-                        value=f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}')).send()
-
+                    cell_state = DataStateEnum.INIT
+            # update per AE 
+            await SseEvent(
+                event=SseEventEnum.DATA_STATE, 
+                data=SseEventData(
+                    id=ae_data.cts_cell_id, 
+                    state=cell_state, 
+                    value=f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}')).send()
+    return
 
 async def migrate_connectivity_templates(main_bp, generic_systems):
     # main_bp = global_store.bp['main_bp']

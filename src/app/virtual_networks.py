@@ -88,6 +88,8 @@ class VirtualNetworks(BaseModel):
     logger: Any = logging.getLogger('VirtualNetworks')
 
     def render_all(self):
+        """
+        """
         response = _VirtualNetworksResponse()
         response.values = [v.html_element(self.this_bound_to) for k, v in self.vns.items()]
         response.caption = f"Virtual Networks ({len(self.vns)})"
@@ -100,6 +102,9 @@ class VirtualNetworks(BaseModel):
         return response
 
     async def queue_render(self):
+        """
+        Does set_vn_done
+        """
         # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
 
         import json
