@@ -319,7 +319,7 @@ class AccessSwitches(BaseModel):
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-box').visible().done()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label', value=self.access_switch_pair[0]).visible()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-box').visible().done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label', vlaue=self.access_switch_pair[1]).visible()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label', value=self.access_switch_pair[1]).visible()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='peer-link').visible()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='peer-link-name').visible()).send()
 

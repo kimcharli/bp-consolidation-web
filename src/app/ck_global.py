@@ -112,7 +112,7 @@ class SseEvent(BaseModel):
     async def send(self):
         await asyncio.sleep(0)
         sse_dict = {'event': self.event, 'data': json.dumps(dict(self.data))}
-        logging.warning(f"######## SseEvent send {get_timestamp()=} {sse_queue.qsize()=} {self=}")        
+        logging.warning(f"######## SseEvent put {get_timestamp()} {sse_queue.qsize()=} {self=}")        
         await sse_queue.put(sse_dict)
 
 
@@ -162,7 +162,8 @@ class MigrationStatus(BaseModel):
     async def set_sync_done(self):
         self.is_sync_done = True
         await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).done().enable()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().not_done()).send()
+        # GS may be done when sync is done
+        # DO NOT DO THIS: await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().not_done()).send()
 
     async def set_as_done(self, is_as_done: bool):
         """
@@ -178,7 +179,7 @@ class MigrationStatus(BaseModel):
         """
         if is_gs_done != self.is_gs_done:
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).enable()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).not_done().enable()).send()
 
     async def set_vn_done(self, is_vn_done: bool):
         """

@@ -24,10 +24,10 @@ class _Memberlink(BaseModel):
     new_switch_intf_id: str = ''
     new_server_intf_id: str = ''
 
-    def is_not_done(self) -> bool:
+    def is_link_done(self) -> bool:
         if not self.new_switch_intf_id or self.old_tags != self.new_tags or self.old_server_intf != self.new_server_intf:
-            return True
-        return False
+            return False
+        return True
      
     def reset_to_tor_data(self):
         self.new_tags = []
@@ -173,15 +173,15 @@ class _GroupLink(BaseModel):
             state_attribute = f'class="{DataStateEnum.DATA_STATE} cts" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}"'
         return f'<td rowspan={self.rowspan} id="{self.cts_cell_id}" data-cell="cts" {state_attribute}>{self.count_of_new_cts}/{self.count_of_old_cts}</td>'
 
-    def is_not_done(self) -> bool:
+    def is_ae_done(self) -> bool:
         if self.speed != self.new_speed:
-            return True
+            return False
         if self.new_ae_name != self.old_ae_name:
-            return True
+            return False
         for _, link in self.links.items():
-            if link.is_not_done():
-                return True
-        return False
+            if not link.is_link_done():
+                return False
+        return True
 
     def reset_to_tor_data(self):
         self.new_ae_name = ''
@@ -292,17 +292,17 @@ class _GenericSystem(BaseModel):
         # breakpoint()
         return len(ct_not_done_list) == 0
 
-    def is_not_done(self) -> bool:
+    def is_gs_done(self) -> bool:
         if self.is_leaf_gs:
-            return False
-        if not self.new_gs_id:
-            # self.logger.warning(f"is_not_done {self.new_label=} {self.new_gs_id=}")
             return True
+        if not self.new_gs_id:
+            # self.logger.warning(f"is_gs_done {self.new_label=} {self.new_gs_id=}")
+            return False
         for _, ae in self.group_links.items():
-            if ae.is_not_done():
-                # self.logger.warning(f"is_not_done {self.new_label=}")
+            if not ae.is_ae_done():
+                # self.logger.warning(f"is_gs_done {self.new_label=}")
                 return True
-        return False
+        return True
 
     def reset_to_tor_data(self):
         self.new_gs_id = None
@@ -331,10 +331,10 @@ class _GenericSystem(BaseModel):
         row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="label" class="system-label">{self.label}</td>')
         if self.is_leaf_gs:
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.NONE}" {message_attr}>{self.new_label}</td>')
-        elif self.is_not_done():
-            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}" {message_attr}>{self.new_label}</td>')
-        else:
+        elif self.is_gs_done():
             row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.DONE}" {message_attr}>{self.new_label}</td>')
+        else:
+            row0_head_list.append(f'<td rowspan={self.rowspan} data-cell="new_label" class="{DataStateEnum.DATA_STATE} new_label" {DataStateEnum.DATA_STATE}="{DataStateEnum.INIT}" {message_attr}>{self.new_label}</td>')
         row0_head = ''.join(row0_head_list)       
 
         tbody_lines = []
@@ -571,9 +571,9 @@ class GenericSystems(BaseModel):
     # main_servers = {}
     # tor_ae1 = None
     # tor_gs = None  # {'label': <>, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
-    access_switches: Any = {}  # coming from access switches. <label>: _AccessSwitch
     logger: Any = logging.getLogger('GenericSystems')
     # given by AccessSwitch
+    access_switches: Any  # coming from access switches. <label>: _AccessSwitch
     main_bp: Any
     tor_bp: Any
     tor_gs_label: str
@@ -672,19 +672,17 @@ class GenericSystems(BaseModel):
     async def refresh_tor_generic_systems(self) -> None:
         """
         Called by main.py from SyncState
-        Build generic_systems from tor_blueprint and return the data 
+        The generic systems are synced from tor_bp and main_bp by sysnc_access_groups
+        Build rendering data and send it to the web page
         """
-        self.logger.warning(f"pull_tor_generic_systems_table begin")
-        # response = _GenericSystemResponse()
+        self.logger.warning(f"refresh_tor_generic_systems begin")
         gs_count = len(self.generic_systems)
+        is_all_done = True
         # render each generic system
         for tbody_id, server_data in self.generic_systems.items():
             await server_data.sse_tbody()
-            # response.values.append(_GenericSystemResponseItem(
-            #     id=tbody_id,
-            #     newId='',
-            #     value=server_data.get_tbody()
-            #     ))
+            if not server_data.is_gs_done():
+                is_all_done = False
         # update caption
         caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
         await SseEvent(
@@ -692,25 +690,10 @@ class GenericSystems(BaseModel):
             data=SseEventData(
                 id=SseEventEnum.CAPTION_GS,
                 value=caption)).send()
+        if is_all_done:
+            await global_store.migration_status.set_gs_done(True)
 
-        # update buttion state
-        # for _, gs in self.generic_systems.items():
-        #     if gs.is_not_done():
-        #         # breakpoint()
-        #         await SseEvent(
-        #             event=SseEventEnum.DATA_STATE,
-        #             data=SseEventData(
-        #                 id=SseEventEnum.BUTTON_MIGRATE_GS,
-        #                 state=DataStateEnum.INIT)).send()
-        #         return
-        # no init - done
-        # await global_store.migration_status.set_as_done(True)
-        # await SseEvent(
-        #     event=SseEventEnum.DATA_STATE,
-        #     data=SseEventData(
-        #         id=SseEventEnum.BUTTON_MIGRATE_GS,
-        #         state=DataStateEnum.DONE)).send()
-        self.logger.warning(f"pull_tor_generic_systems_table end")
+        self.logger.warning(f"refresh_tor_generic_systems end")
         return
 
     async def migrate_generic_system(self, tbody_id) -> dict:
