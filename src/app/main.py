@@ -10,7 +10,7 @@ from sse_starlette.sse import EventSourceResponse
 import os
 from pydantic import BaseModel
 
-from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData
+from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, get_timestamp
 from .generic_systems import GenericSystems
 from .access_switches import access_switches
 from .virtual_networks import VirtualNetworks
@@ -75,31 +75,31 @@ async def login_blueprint(blueprint: BlueprintItem):
 @app.get("/sync")
 async def sync(background_tasks: BackgroundTasks):
     # yield {}
-    logging.warning(f"/sync_access_switches begin")
-    # await global_store.migration_status.refresh()
-    background_tasks.add_task(global_store.migration_status.refresh)
-    # await access_switches.sync_access_switches()
-    background_tasks.add_task(access_switches.sync_access_switches)
+    logging.warning(f"/sync_access_switches begin {get_timestamp()=}")
+    await global_store.migration_status.refresh()
+    # background_tasks.add_task(global_store.migration_status.refresh)
+    await access_switches.sync_access_switches()
+    # background_tasks.add_task(access_switches.sync_access_switches)
     # await global_store.migration_status.set_as_done(is_as_done)
     logging.warning(f"/sync_access_switches end")
 
     logging.warning(f"/sync_generic_systems begin")
-    # await access_switches.sync_generic_systems()
-    background_tasks.add_task(access_switches.sync_generic_systems)
+    await access_switches.sync_generic_systems()
+    # background_tasks.add_task(access_switches.sync_generic_systems)
     # # await global_store.migration_status.set_gs_done(is_gs_done)
     # background_tasks.add_task(global_store.migration_status.set_gs_done, is_gs_done)
     logging.warning(f"/sync_generic_systems end")
 
     logging.warning(f"/update_virtual_networks_data begin")
-    # is_vn_done = await access_switches.update_virtual_networks_data()
-    background_tasks.add_task(access_switches.update_virtual_networks_data)
+    await access_switches.update_virtual_networks_data()
+    # background_tasks.add_task(access_switches.update_virtual_networks_data)
     # await global_store.migration_status.set_vn_done(is_vn_done)
     logging.warning(f"/update_virtual_networks_data end")
 
     logging.warning(f"/update-connectivity-template-data begin")
     # is_ct_done = await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).loading()).send()
-    # is_ct_done = await access_switches.sync_connectivity_template()
-    background_tasks.add_task(access_switches.sync_connectivity_template)
+    await access_switches.sync_connectivity_template()
+    # background_tasks.add_task(access_switches.sync_connectivity_template)
     # await global_store.migration_status.set_ct_done(is_ct_done)  # done in generic_systems
     # if is_ct_done:
     #     logging.warning(f"/update-connectivity-template-data: done")
@@ -109,8 +109,8 @@ async def sync(background_tasks: BackgroundTasks):
     #     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done()).send()
     logging.warning(f"/update-connectivity-template-data end")
 
-    background_tasks.add_task(global_store.migration_status.set_sync_done)
-    # await global_store.migration_status.set_sync_done()
+    # background_tasks.add_task(global_store.migration_status.set_sync_done)
+    await global_store.migration_status.set_sync_done()
 
     return {}
 
@@ -171,13 +171,12 @@ async def sse(request: Request):
             if await request.is_disconnected():
                 break
             item = await sse_queue.get()
+            logging.warning(f"######## event_generator get {get_timestamp()=} {sse_queue.qsize()=} {item=}")          
             yield item
             sse_queue.task_done()
-            # logging.warning(f"event_generator yield")            
-            # await asyncio.sleep(1)
+            # set 0.05 to produce progressing
+            await asyncio.sleep(0.02)
     return EventSourceResponse(event_generator())
-    # return StreamResponse(event_generator(), media_type="text/event-stream")
-    # return StreamResponse(event_generator(), media_type="application/json")
 
 
 async def main():

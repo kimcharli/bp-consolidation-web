@@ -5,6 +5,7 @@ import json
 import time
 import asyncio
 from enum import StrEnum
+from datetime import datetime
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
@@ -12,6 +13,10 @@ from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
 
 
 sse_queue = asyncio.Queue()
+
+def get_timestamp() -> str:
+    timestamp = datetime.now().strftime('%Y%m%d %H:%M:%S:%f')
+    return timestamp
 
 class DataStateEnum(StrEnum):
     LOADED = 'done'
@@ -105,8 +110,9 @@ class SseEvent(BaseModel):
     data: SseEventData
 
     async def send(self):
+        await asyncio.sleep(0)
         sse_dict = {'event': self.event, 'data': json.dumps(dict(self.data))}
-        # logging.warning(f"SseEvent.send() ######## {self.event=} {self.data=} {sse_dict=}")
+        logging.warning(f"######## SseEvent send {get_timestamp()=} {sse_queue.qsize()=} {self=}")        
         await sse_queue.put(sse_dict)
 
 

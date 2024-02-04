@@ -311,8 +311,7 @@ class AccessSwitches(BaseModel):
         self.logger.warning(f"sync_access_switches {self.access_switches=}")
         if len([x.id for x in self.access_switches.values() if x.id != '']) == 2:            
             # access switches are created            
-            is_access_switches_done = True
-            await global_store.migration_status.set_as_done(is_access_switches_done)
+            await global_store.migration_status.set_as_done(True)
             # hide access-gs-box, and show access1-box, access2-box
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').hidden()).send()
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label').hidden()).send()
@@ -332,9 +331,6 @@ class AccessSwitches(BaseModel):
         else:
             # access switches are not created yet
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').not_done()).send()
-
-        # if self.is_access_switches_done:
-        #     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).done()).send()
 
         return
 

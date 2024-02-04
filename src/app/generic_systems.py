@@ -444,7 +444,7 @@ class _GenericSystem(BaseModel):
                 switch_label = member_link.switch
                 switch_intf = member_link.switch_intf
                 trasnsformation_id = main_bp.get_transformation_id(switch_label, switch_intf , ae_link.speed)
-                logging.warning(f"create_generic_system() {trasnsformation_id=}")
+                # logging.warning(f"create_generic_system() {trasnsformation_id=}")
                 generic_system_spec['links'].append({
                     'lag_mode': None,
                     'system': {
@@ -661,7 +661,7 @@ class GenericSystems(BaseModel):
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             tbody_id = f"gs-{server_label}"
             server_links_dict.setdefault(tbody_id, []).append(server_link)
-            self.access_switch_pair[server_label].id = switch_id
+            self.access_switches[switch_label].id = switch_id
 
         for tbody_id, links in server_links_dict.items():
             # breakpoint()
