@@ -110,7 +110,7 @@ class SseEvent(BaseModel):
     data: SseEventData
 
     async def send(self):
-        await asyncio.sleep(0)
+        await asyncio.sleep(0.05)
         sse_dict = {'event': self.event, 'data': json.dumps(dict(self.data))}
         logging.warning(f"######## SseEvent put {get_timestamp()} {sse_queue.qsize()=} {self=}")        
         await sse_queue.put(sse_dict)
@@ -187,7 +187,7 @@ class MigrationStatus(BaseModel):
         """
         if is_vn_done != self.is_vn_done:
             await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).enable()).send()
+            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done().enable()).send()
 
     async def set_ct_done(self, is_ct_done: bool):
         """
