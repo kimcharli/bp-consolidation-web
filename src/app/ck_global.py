@@ -297,8 +297,9 @@ class GlobalStore(BaseModel):
     logger: Any = logging.getLogger("GlobalStore")  # logging.Logger
     data: dict = {}
     migration_status: MigrationStatus = MigrationStatus()
-
-    # access_switches: Any = None  # AccessSwitches
+    access_switches: Any = None  # created by main.py::sync() AccessSwitches
+    generic_systems: Any = None  # created by access_switches GenericSystems
+    
 
     @classmethod
     def get_blueprints(cls):
@@ -314,6 +315,10 @@ class GlobalStore(BaseModel):
     def get_data(cls, key):
         cls.logger.warning(f"get_data(): {key=} {cls.data.get(key)=}")
         return cls.data.get(key)
+
+    @property
+    def access_switch_pair(self):
+        return sorted(self.access_switches.access_switches)
 
     def update_env_ini(self, data):  
         self.logger.warning(f"update_env_ini(): {data=}")

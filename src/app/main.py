@@ -12,8 +12,9 @@ from pydantic import BaseModel
 
 from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, get_timestamp
 from .generic_systems import GenericSystems
-from .access_switches import access_switches
-from .virtual_networks import VirtualNetworks
+from .access_switches import AccessSwitches
+from .vlan_cts import migrate_connectivity_templates
+
 
 logger = logging.getLogger(__name__)
 app = FastAPI()
@@ -73,15 +74,19 @@ async def login_blueprint(blueprint: BlueprintItem):
 
 # from SyncStateButton
 @app.get("/sync")
-async def sync():
-    # yield {}
-    logging.warning(f"/sync_access_switches begin {get_timestamp()=}")
+async def sync():    
+    logging.warning(f"/sync begin {get_timestamp()=}")
+    global_store.access_switches = AccessSwitches()
+    global_store.generic_systems = None
+    access_switches = global_store.access_switches
+
     await global_store.migration_status.refresh()
     await access_switches.sync_access_switches()
     logging.warning(f"/sync_access_switches end")
 
     logging.warning(f"/sync_generic_systems begin")
-    await access_switches.sync_generic_systems()
+    # await access_switches.sync_generic_systems()
+    await global_store.generic_systems.refresh_tor_generic_systems()
     logging.warning(f"/sync_generic_systems end")
 
     logging.warning(f"/update_virtual_networks_data begin")
@@ -104,26 +109,37 @@ async def migrate_access_switches():
     """
     Remove TOR generic system in main blueprint
     """
+    access_switches = global_store.access_switches
     logging.warning(f"/migrate_access_switches begin")
-    data = access_switches.remove_tor_gs_from_main()
-    is_access_switch_created = await access_switches.create_new_access_switch_pair()
-    await global_store.migration_status.set_as_done(is_access_switch_created)
+    await access_switches.remove_tor_gs_from_main()
+    await access_switches.create_new_access_switch_pair()
+    # await global_store.migration_status.set_as_done(is_access_switch_created)
     logging.warning(f"/migrate_access_switches end")
         
     return {}
 
 
-@app.post("/migrate-generic-system")
-async def migrate_generic_system(system_label: SystemLabel):
-    logging.warning(f"/migrate_generic_system begin {system_label=}")
-    is_migrated = await access_switches.migrate_generic_system(system_label.tbody_id)
-    await global_store.migration_status.set_gs_done(is_migrated)
-    logging.warning(f"/migrate_generic_system end {is_migrated=}")
-    return {'is_migrated': is_migrated }
+# @app.post("/migrate-generic-system")
+# async def migrate_generic_system(system_label: SystemLabel):
+#     access_switches = global_store.access_switches
+#     logging.warning(f"/migrate_generic_system begin {system_label=}")
+#     # is_migrated = await access_switches.migrate_generic_system(system_label.tbody_id)
+#     await global_store.generic_systems.migrate_generic_system(system_label.tbody_id)
+#     # await global_store.migration_status.set_gs_done(is_migrated)
+#     logging.warning(f"/migrate_generic_system end")
+#     return {}
+
+@app.post("/migrate-generic-systems")
+async def migrate_generic_system():
+    logging.warning(f"/migrate_generic_systems begin")
+    await global_store.generic_systems.migrate_generic_systems()
+    logging.warning(f"/migrate_generic_systems end")
+    return {}
 
 
 @app.post("/migrate-virtual-networks")
 async def migrate_virtual_networks():
+    access_switches = global_store.access_switches
     logging.warning(f"/migrate_virtual_networks begin")
     is_vn_done = await access_switches.migrate_virtual_networks()
     await global_store.migration_status.set_vn_done(is_vn_done)
@@ -132,14 +148,16 @@ async def migrate_virtual_networks():
 
 @app.post("/migrate-cts")
 async def migrate_cts():
+    access_switches = global_store.access_switches
     logging.warning(f"/migrate_cts begin")
-    is_ct_done = await access_switches.migrate_connectivity_templates()
+    await migrate_connectivity_templates()
     # await global_store.migration_status.set_ct_done(is_ct_done)  # done in generic_systems
     logging.warning(f"/migrate_cts end")
     return {}
 
 @app.post("/compare-config")
 async def compare_config():
+    access_switches = global_store.access_switches
     logging.warning(f"/compare_config begin")
     data = await access_switches.compare_config()
     logging.warning(f"/compare_config end")

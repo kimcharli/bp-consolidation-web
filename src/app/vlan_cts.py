@@ -109,8 +109,9 @@ async def referesh_ct_table(generic_systems):
                     value=f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}')).send()
     return
 
-async def migrate_connectivity_templates(main_bp, generic_systems):
-    # main_bp = global_store.bp['main_bp']
+async def migrate_connectivity_templates():
+    main_bp = global_store.bp['main_bp']
+    generic_systems = global_store.generic_systems
 
     # the nodes for the single vlan cts
     ct_vlan_query = f"""node('ep_endpoint_policy', name='{CtEnum.CT_NODE}')
@@ -120,11 +121,11 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
     ct_vlan_nodes = main_bp.query(ct_vlan_query)
 
     # interate generic systems and fix the connectivity templates
-    for tbody_id, gs in generic_systems.generic_systems.items():
+    for gs in generic_systems.generic_systems.values():
         if gs.is_leaf_gs:
             # won't fix the connectivity tempaltes towards the leaf switches
             continue
-        for old_ae_id, ae_data in gs.group_links.items():
+        for ae_data in gs.group_links.values():
             # ct attachment per group_link
             if ae_data.is_ct_done:
                 continue
@@ -193,15 +194,6 @@ async def migrate_connectivity_templates(main_bp, generic_systems):
                         value=f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}')).send()
 
     await global_store.migration_status.set_ct_done(True)
-    # if generic_systems.is_ct_done:
-    #     await SseEvent(
-    #         event=SseEventEnum.DATA_STATE, 
-    #         data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
-    # else:
-    #     await SseEvent(
-    #         event=SseEventEnum.DATA_STATE, 
-    #         data=SseEventData(
-    #             id=SseEventEnum.BUTTON_MIGRATE_CT).not_done()).send()
 
     return {}
 

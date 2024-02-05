@@ -9,7 +9,7 @@ from .ck_global import global_store, DataStateEnum, sse_queue, CtEnum, SseEventE
 from .generic_systems import GenericSystems, LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
 from .virtual_networks import VirtualNetworks
-from .vlan_cts import sync_tor_ct, sync_main_ct, referesh_ct_table, migrate_connectivity_templates
+from .vlan_cts import sync_tor_ct, sync_main_ct, referesh_ct_table
 
 
 def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
@@ -81,7 +81,7 @@ class AccessSwitches(BaseModel):
     access_switches: Dict[str, AccessSwitch] = {}  # inited by sync_access_switches
     tor_gs: TorGS = TorGS(label='')  # in main blueprint. inited by sync_access_switches {'label': None, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
     leaf_gs: LeafGS = None  # in tor blueprint. copy from generic_systems. = {'intfs': [None] * 4}  #{'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
-    generic_systems_data: Any = None
+    # generic_systems_data: Any = None  # moved to ck_global
     leaf_switches: Dict[str, LeafSwitch] = {}  # inited by sync_access_switches
     switch_pair_spec: Any = None  # to create access switches. set by sync_tor_gs_in_main
     tor_interface_nodes_in_main: Any = None  # set by sync_tor_gs_in_main
@@ -118,10 +118,10 @@ class AccessSwitches(BaseModel):
 
     @property
     def generic_systems(self):
-        if self.generic_systems_data is None:
-            self.generic_systems_data = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, access_switches=self.access_switches, tor_gs_label=self.tor_gs.label)
-            self.logger.warning(f"generic_systems {self.generic_systems_data=}")
-        return self.generic_systems_data
+        if global_store.generic_systems is None:
+            global_store.generic_systems = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, tor_gs_label=self.tor_gs.label)
+            self.logger.warning(f"generic_systems {global_store.generic_systems=}")
+        return global_store.generic_systems
 
     @property
     def virtual_networks(self):
@@ -132,24 +132,24 @@ class AccessSwitches(BaseModel):
     # 
     # generic systems
     # 
-    async def sync_generic_systems(self):
-        self.logger.warning(f"sync_generic_systems begin...")
-        # breakpoint()
-        # data = await self.generic_systems.sync_tor_generic_systems()  # already done by sync_access_switches
-        await self.generic_systems.refresh_tor_generic_systems()
-        self.logger.warning(f"sync_generic_systems end...")
-        # breakpoint()
-        return
+    # async def sync_generic_systems(self):
+    #     self.logger.warning(f"sync_generic_systems begin...")
+    #     # breakpoint()
+    #     # data = await self.generic_systems.sync_tor_generic_systems()  # already done by sync_access_switches
+    #     await self.generic_systems.refresh_tor_generic_systems()
+    #     self.logger.warning(f"sync_generic_systems end...")
+    #     # breakpoint()
+    #     return
 
-    async def migrate_generic_system(self, tbody_id):
-        # self.generic_systems.access_switches = self.access_switches
-        access_switch_ids = [x.id for x in self.access_switches.values() if x.id != '']
-        self.logger.warning(f"migrate_generic_system: {access_switch_ids=}")
-        if len(access_switch_ids) != 2:
-            self.logger.warning(f"migrate_generic_system: access switches not ready {access_switch_ids=}")
-            return {}
-        is_migrated = await self.generic_systems.migrate_generic_system(tbody_id)
-        return is_migrated
+    # async def migrate_generic_system(self, tbody_id):
+    #     # self.generic_systems.access_switches = self.access_switches
+    #     access_switch_ids = [x.id for x in self.access_switches.values() if x.id != '']
+    #     self.logger.warning(f"migrate_generic_system: {access_switch_ids=}")
+    #     if len(access_switch_ids) != 2:
+    #         self.logger.warning(f"migrate_generic_system: access switches not ready {access_switch_ids=}")
+    #         return {}
+    #     is_migrated = await self.generic_systems.migrate_generic_system(tbody_id)
+    #     return is_migrated
 
     # 
     # virtual networks
@@ -170,23 +170,18 @@ class AccessSwitches(BaseModel):
     async def sync_connectivity_template(self) -> bool:
         """
         """
-        # if not self.virtual_networks.is_all_done:
-        #     self.logger.warning(f"sync_connectivity_template: virtual networks not done")
-        #     return {}
-
-        # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).loading()).send()
 
         sync_tor_ct(self.tor_bp, self.generic_systems.generic_systems, self.access_switch_pair)
         sync_main_ct(self.main_bp, self.generic_systems.generic_systems, self.access_switch_pair)
 
         await referesh_ct_table(self.generic_systems.generic_systems)
 
-        is_ct_done = await self.generic_systems.is_ct_done
+        global_store.migration_status.set_ct_done(self.generic_systems.is_ct_done)
         return
 
 
-    async def migrate_connectivity_templates(self):
-        await migrate_connectivity_templates(global_store.bp['main_bp'], self.generic_systems)
+    # async def migrate_connectivity_templates(self):
+    #     await migrate_connectivity_templates(global_store.bp['main_bp'], self.generic_systems)
 
 
     #
@@ -436,7 +431,7 @@ class AccessSwitches(BaseModel):
         
         if self.is_access_switch_present_in_main():
             logging.warning(f"create_new_access_switch_pair: access switches are already created")
-            return True
+            return
         main_bp = self.main_bp
         switch_pair_spec = self.switch_pair_spec
 
@@ -496,10 +491,11 @@ class AccessSwitches(BaseModel):
         await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label').visible()).send()
         await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label').visible()).send()
 
-        return True
+        await global_store.migration_status.set_as_done(True)
+        return
 
 
-    def remove_tor_gs_from_main(self) -> bool:
+    async def remove_tor_gs_from_main(self) -> bool:
         """
         Remove the old generic system from the main blueprint
         remove the connectivity templates assigned to the generic system
@@ -567,6 +563,9 @@ class AccessSwitches(BaseModel):
             time.sleep(3)
         # the generic system is gone.            
 
+
+
         return
 
-access_switches = AccessSwitches()
+# moved to ck_global
+# access_switches = AccessSwitches()

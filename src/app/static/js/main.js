@@ -144,8 +144,6 @@ class MigrateAccessSwitchesButton {
         .then(response => response.json())
         .then(data => {
             console.log('/migrate-access-switches', data)
-            // srcButton.dataset.state = 'done';  # done processed by SSE
-            document.getElementById("migrate-access-switches").dataset.state = data.button_state;
         })
         .catch(error => console.error('handleMigrateAccessSwitches - Error:', error, error.name, error.message));
         srcButton.dataset.state="loading";
@@ -160,47 +158,15 @@ class MigrateGenericSystemsButton {
     }
 
     handleMigrateGenericSystems(event) {
-        this.button.dataset.state = 'loading';
         const srcButton = event.srcElement || event.target;
-        Array.from(document.getElementById('generic-systems-table').getElementsByTagName('tbody'))
-        .forEach(tbody => {
-            const tbody_id = tbody.getAttribute('id');
-            console.log('migrate generic system begin - tbody_id', tbody_id)
-            fetch('/migrate-generic-system', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    tbody_id: tbody_id,
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                /*
-                    done: true/false
-                    values: [
-                        id: id of tbody,
-                        value: html-string
-                    ]
-                    caption: the caption of the table
-                */
-                console.log('migrate generic system data for', tbody_id, '=', data)
-                // tbody.innerHTML = data.value;
-                // if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
-            })
-            .catch(error => {
-                console.log('handleMigrateAccessSwitchesClick - Error:', error);
-                srcButton.dataset.state="error";  
-            });
-            const new_label_element = tbody.getElementsByClassName('new_label')[0];
-            // console.log(new_label_element)
-            new_label_element.dataset.state="loading";
+        fetch('/migrate-generic-systems', {
+            method: 'POST',
         })
-        // TODO: 
-        // this.button.dataset.state = 'done';
-        //     if (data.done) document.getElementById('migrate-generic-systems').dataset.state = 'done';
-        
+        .then(response => response.json())
+        .then(data => {
+            console.log('/migrate-generic-systems', data)
+        })
+        this.button.dataset.state = 'loading';
     }
 }
 
