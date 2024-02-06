@@ -19,7 +19,7 @@
         <div>            
             <div id="load-env-div" class="data-state" style="padding-left: 6px;padding-right: 6px;font-family: Arial;font-size: 14px;" data-state="init">
                 Load
-                <img id="trash-env" src="/images/trash.svg" alt="trash env" align="right" />
+                <img id="disconnect" src="/images/trash.svg" alt="trash env" align="right" hx-get="/disconnect" hx-target="#last-message"/>
                 <a href="/static/env-example.yml" download="env-example.yml"><img src="/images/download.svg" align="right" /></a>
                 <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" onclick="document.getElementById('upload-env-ini-input').click()"/><input type="file" id="upload-env-ini-input" name="file"  hx-encoding="multipart/form-data" hx-post="/upload-env-ini" hx-target="#last-message" hx-trigger="change" style="display: none;">
                 
@@ -31,7 +31,7 @@
 
             </div>
             <div>
-                <button id="connect-button" class="data-state" type="button" data-state="init" hx-get="/connect" hx-target="#last-message">Connect</button>
+                <button id="connect" class="data-state" type="button" data-state="init" hx-get="/connect" hx-target="#last-message">Connect</button>
             </div>
             <div>
                 <button id="sync-state" type="button" data-state="init" class="data-state">Sync States</button>

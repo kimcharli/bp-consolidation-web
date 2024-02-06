@@ -27,21 +27,21 @@
 // };
 
 
-class TrashButton {
-    constructor(connectButton) {
-        this.connectButton = connectButton;
-        this.button = document.getElementById('trash-env');
-        this.button.addEventListener('click', this.handleTrashEnv.bind(this));
-    }
+// class TrashButton {
+//     constructor(connectButton) {
+//         this.connectButton = connectButton;
+//         this.button = document.getElementById('trash-env');
+//         this.button.addEventListener('click', this.handleTrashEnv.bind(this));
+//     }
 
-    handleTrashEnv(event) {
-        CkIDB.trashEnv()
-        document.getElementById('connect-button').dataset.state = 'init';
-        // TODO: logout
-        // TODO: cascade clear
-    }
+//     handleTrashEnv(event) {
+//         CkIDB.trashEnv()
+//         document.getElementById('connect-button').dataset.state = 'init';
+//         // TODO: logout
+//         // TODO: cascade clear
+//     }
 
-}
+// }
 
 // class ConnectButton {
 //     constructor() {

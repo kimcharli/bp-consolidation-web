@@ -35,7 +35,7 @@ async def upload_env_ini(request: Request, file: UploadFile):
     file_content = await file.read()
     file_dict = yaml.safe_load(file_content)
     logger.warning(f"/upload-env-ini: {file.filename=} {file_dict=}")
-    global_store = GlobalStore(file_dict['apstra'], file_dict['target'], file_dict['lldp'])
+    global_store = GlobalStore(**file_dict)
     
     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-host', value=global_store.apstra['host'])).send()
     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-port', value=global_store.apstra['port'])).send()
@@ -47,7 +47,7 @@ async def upload_env_ini(request: Request, file: UploadFile):
 
     await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='load-env-div').done()).send()
 
-    logging.warning(f"/upload_env_ini: {global_store}")
+    logging.warning(f"/upload_env_ini: {global_store=}")
     return 'file loaded'
 
 
@@ -66,20 +66,35 @@ async def upload_env_ini(request: Request, file: UploadFile):
 #     return version
 
 @app.get("/connect")
-async def connect(request: Request, response: Response):
+async def connect():
     global global_store
     logging.warning(f"/connect")
     version = global_store.login_server()
     await global_store.login_blueprint()
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='connect-button').done()).send()
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='connect').done()).send()
+    logging.warning(f"/connect: {global_store=}")
     return version
 
 
-@app.post("/logout-server")
-async def logout_server():
-    logging.warning(f"/logout_server")
-    version = GlobalStore.logout_server()
-    return
+@app.get("/disconnect")
+async def disconnect():
+    global global_store
+    logging.warning(f"/disconnect")
+    global_store.logout_server()
+    global_store = None
+
+
+    await SseEvent(data=SseEventData(id='apstra-host', value="")).send()
+    await SseEvent(data=SseEventData(id='apstra-port', value="")).send()
+    await SseEvent(data=SseEventData(id='apstra-username', value="")).send()
+    await SseEvent(data=SseEventData(id='apstra-password', value="")).send()
+
+    await SseEvent(data=SseEventData(id='main_bp', value="").not_done()).send()
+    await SseEvent(data=SseEventData(id='tor_bp', value="").not_done()).send()
+
+    await SseEvent(data=SseEventData(id='connect').not_done()).send()
+    await SseEvent(data=SseEventData(id='load-env-div').not_done()).send()
+    return "disconnected"
 
 
 # @app.post("/login-blueprint")

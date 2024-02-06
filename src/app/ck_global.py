@@ -107,7 +107,7 @@ class SseEventData(BaseModel):
 
 # https://html.spec.whatwg.org/multipage/server-sent-events.html
 class SseEvent(BaseModel):
-    event: str      # SseEventEnum.DATA_STATE, SseEventEnum.TBODY_GS, SseEventEnum.BUTTION_DISABLE
+    event: str = SseEventEnum.DATA_STATE     # SseEventEnum.DATA_STATE, SseEventEnum.TBODY_GS, SseEventEnum.BUTTION_DISABLE
     data: SseEventData
 
     async def send(self):
@@ -303,10 +303,10 @@ class BpTarget:
 
 @dataclass
 class ApstraServer:
-    host: str = 'nf-apstra.pslab.link'
-    port: str = '443'
-    username: str = 'admin'
-    password: str = 'admin'
+    host: str
+    port: str
+    username: str
+    password: str
     logging_level: str = 'DEBUG'
     apstra_server: Any = None  # CkApstraSession
 
@@ -362,13 +362,11 @@ class GlobalStore:
         self.logger.warning(f"login_server(): {self.apstra_server=}")
         return self.apstra_server.version
 
-    @classmethod
-    def logout_server(cls):
-        cls.logout_blueprint()
-        if cls.apstra_server:
-            cls.apstra_server.logout() 
-        cls.logger.warning(f"logout_server()")
-        cls.apstra_server = None
+    def logout_server(self):
+        # self.logout_blueprint()
+        if self.apstra_server:
+            self.apstra_server.logout() 
+        self.apstra_server = None
         return
 
     async def login_blueprint(self):
@@ -390,10 +388,10 @@ class GlobalStore:
             self.logger.warning(f"login_blueprint() end")
         return
     
-    @classmethod
-    def logout_blueprint(cls):
-        cls.bp = {}
-        return
+    # @classmethod
+    # def logout_blueprint(cls):
+    #     cls.bp = {}
+    #     return
 
 
 # def pull_interface_vlan_table(the_bp, switch_label_pair: list) -> dict:
