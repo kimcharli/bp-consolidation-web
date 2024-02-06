@@ -705,9 +705,7 @@ class GenericSystems(BaseModel):
                 is_all_done = False
         # update caption
         caption = f"Generic Systems (0/{gs_count}) servers, (0/0) links, (0/0) interfaces"
-        await SseEvent(
-            event=SseEventEnum.DATA_STATE,
-            data=SseEventData(
+        await SseEvent(data=SseEventData(
                 id=SseEventEnum.CAPTION_GS,
                 value=caption)).send()
         if is_all_done:

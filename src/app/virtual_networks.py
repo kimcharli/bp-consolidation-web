@@ -105,7 +105,7 @@ class VirtualNetworks(BaseModel):
         """
         Does set_vn_done
         """
-        # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
+        # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
 
         import json
         for vn_id, vn in self.vns.items():
@@ -118,16 +118,16 @@ class VirtualNetworks(BaseModel):
             # self.logger.warning(f"queue_render {sse_message=}")
             await sse_queue.put(sse_message)
 
-        await SseEvent(event=SseEventEnum.DATA_STATE, 
+        await SseEvent(
                         data=SseEventData(id=SseEventEnum.CAPTION_VN, 
                             value=f'Virtual Networks ({len(self.vns)})')).send()
         not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]
         # if len(not_done_list) == 0:
-        #     await SseEvent(event=SseEventEnum.DATA_STATE, 
+        #     await SseEvent(
         #                    data=SseEventData(
         #                        id=SseEventEnum.BUTTON_MIGRATE_VN, 
         #                        state=DataStateEnum.DONE)).send()
-        #     # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).enable()).send()
+        #     # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).enable()).send()
         #     self.is_all_done = True
         await global_store.migration_status.set_vn_done(len(not_done_list) == 0)
 
@@ -245,7 +245,7 @@ class VirtualNetworks(BaseModel):
         await self.queue_render()
 
         await global_store.migration_status.set_vn_done(True)
-        # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
+        # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
         # await SseEvent(event=SseEventEnum.BUTTION_DISABLE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).enable()).send()
 
         return {}

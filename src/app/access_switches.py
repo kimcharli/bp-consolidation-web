@@ -192,16 +192,16 @@ class AccessSwitches(BaseModel):
         for index, (k, switch) in enumerate(self.access_switches.items()):
             main_confg = self.main_bp.get_item(f"nodes/{switch.id}/config-rendering")['config']
             switch_main_href = f"{global_store.env_ini.url}/#/blueprints/{self.main_bp.id}/staged/physical/selection/node-preview/{switch.id}"
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
+            await SseEvent(data=SseEventData(
                 id=f"main-config-text-{index}", value=main_confg)).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, 
+            await SseEvent(
                            data=SseEventData(id=f"main-config-caption-{index}").set_href(switch_main_href)).send()
             
             switch_tor_href = f"{global_store.env_ini.url}/#/blueprints/{self.tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}"
             tor_confg = self.tor_bp.get_item(f"nodes/{switch.tor_id}/config-rendering")['config']
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(
+            await SseEvent(data=SseEventData(
                 id=f"tor-config-text-{index}", value=tor_confg)).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, 
+            await SseEvent(
                            data=SseEventData(id=f"tor-config-caption-{index}").set_href(switch_tor_href).set_target()).send()
 
 
@@ -245,10 +245,10 @@ class AccessSwitches(BaseModel):
 
             if len([x.tor_id for x in self.access_switches.values() if x.tor_id != '']) == 2:
                 # tor switches are pulled from tor_bp
-                await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-box').done()).send()
-                await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-box').done()).send()
-                await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor1-label', value=self.access_switch_pair[0])).send()
-                await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor2-label', value=self.access_switch_pair[1])).send()
+                await SseEvent(data=SseEventData(id='tor1-box').done()).send()
+                await SseEvent(data=SseEventData(id='tor2-box').done()).send()
+                await SseEvent(data=SseEventData(id='tor1-label', value=self.access_switch_pair[0])).send()
+                await SseEvent(data=SseEventData(id='tor2-label', value=self.access_switch_pair[1])).send()
                 self.logger.warning(f"sync_access_switches tor switches fetched {self.access_switches=}")
 
             else:
@@ -268,7 +268,7 @@ class AccessSwitches(BaseModel):
 
         self.logger.warning(f"sync_access_switches tor_gs fetched {self.tor_gs=}")
 
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label', value=self.tor_gs.label).not_done()).send()
+        await SseEvent(data=SseEventData(id='access-gs-label', value=self.tor_gs.label).not_done()).send()
 
 
         #
@@ -277,17 +277,17 @@ class AccessSwitches(BaseModel):
         await self.generic_systems.sync_tor_generic_systems()  # generic_systems and leaf_gs
         self.generic_systems.sync_main_links()  # update generic systems with the data from the main blueprint
         self.leaf_gs = self.generic_systems.leaf_gs
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-label', value=self.leaf_gs.label)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf1', value=self.leaf_gs.a_48)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs1-intf2', value=self.leaf_gs.a_49)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf1', value=self.leaf_gs.b_48)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leafgs2-intf2', value=self.leaf_gs.b_49)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf-gs-box').done()).send()
+        await SseEvent(data=SseEventData(id='leaf-gs-label', value=self.leaf_gs.label)).send()
+        await SseEvent(data=SseEventData(id='leafgs1-intf1', value=self.leaf_gs.a_48)).send()
+        await SseEvent(data=SseEventData(id='leafgs1-intf2', value=self.leaf_gs.a_49)).send()
+        await SseEvent(data=SseEventData(id='leafgs2-intf1', value=self.leaf_gs.b_48)).send()
+        await SseEvent(data=SseEventData(id='leafgs2-intf2', value=self.leaf_gs.b_49)).send()
+        await SseEvent(data=SseEventData(id='leaf-gs-box').done()).send()
 
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-intf1', value=self.leaf_gs.a_48)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-intf2', value=self.leaf_gs.a_49)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-intf1', value=self.leaf_gs.b_48)).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-intf2', value=self.leaf_gs.b_49)).send()
+        await SseEvent(data=SseEventData(id='leaf1-intf1', value=self.leaf_gs.a_48)).send()
+        await SseEvent(data=SseEventData(id='leaf1-intf2', value=self.leaf_gs.a_49)).send()
+        await SseEvent(data=SseEventData(id='leaf2-intf1', value=self.leaf_gs.b_48)).send()
+        await SseEvent(data=SseEventData(id='leaf2-intf2', value=self.leaf_gs.b_49)).send()
 
 
         # pull the information from main_bp
@@ -295,10 +295,10 @@ class AccessSwitches(BaseModel):
 
         if len(self.leaf_switches) == 2:
             # leaf switches in main blueprint are loaded
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-box').done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-box').done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf1-label', value=self.leaf_switch_pair[0])).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='leaf2-label', value=self.leaf_switch_pair[1])).send()
+            await SseEvent(data=SseEventData(id='leaf1-box').done()).send()
+            await SseEvent(data=SseEventData(id='leaf2-box').done()).send()
+            await SseEvent(data=SseEventData(id='leaf1-label', value=self.leaf_switch_pair[0])).send()
+            await SseEvent(data=SseEventData(id='leaf2-label', value=self.leaf_switch_pair[1])).send()
 
 
 
@@ -308,24 +308,24 @@ class AccessSwitches(BaseModel):
             # access switches are created            
             await global_store.migration_status.set_as_done(True)
             # hide access-gs-box, and show access1-box, access2-box
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').hidden()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label').hidden()).send()
+            await SseEvent(data=SseEventData(id='access-gs-box').hidden()).send()
+            await SseEvent(data=SseEventData(id='access-gs-label').hidden()).send()
 
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-box').visible().done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label', value=self.access_switch_pair[0]).visible()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-box').visible().done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label', value=self.access_switch_pair[1]).visible()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='peer-link').visible()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='peer-link-name').visible()).send()
+            await SseEvent(data=SseEventData(id='access1-box').visible().done()).send()
+            await SseEvent(data=SseEventData(id='access1-label', value=self.access_switch_pair[0]).visible()).send()
+            await SseEvent(data=SseEventData(id='access2-box').visible().done()).send()
+            await SseEvent(data=SseEventData(id='access2-label', value=self.access_switch_pair[1]).visible()).send()
+            await SseEvent(data=SseEventData(id='peer-link').visible()).send()
+            await SseEvent(data=SseEventData(id='peer-link-name').visible()).send()
 
 
             # update switch configuration section
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='switch-0', value=self.access_switch_pair[0])).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='switch-1', value=self.access_switch_pair[1])).send()
+            await SseEvent(data=SseEventData(id='switch-0', value=self.access_switch_pair[0])).send()
+            await SseEvent(data=SseEventData(id='switch-1', value=self.access_switch_pair[1])).send()
 
         else:
             # access switches are not created yet
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').not_done()).send()
+            await SseEvent(data=SseEventData(id='access-gs-box').not_done()).send()
 
         return
 
@@ -480,16 +480,16 @@ class AccessSwitches(BaseModel):
                 )
         
         # hide access-gs-box
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-box').hidden()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access-gs-label').hidden()).send()
+        await SseEvent(data=SseEventData(id='access-gs-box').hidden()).send()
+        await SseEvent(data=SseEventData(id='access-gs-label').hidden()).send()
 
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-box').visible().done()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-box').visible().done()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='peer-link').visible()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='peer-link-name').visible()).send()
+        await SseEvent(data=SseEventData(id='access1-box').visible().done()).send()
+        await SseEvent(data=SseEventData(id='access2-box').visible().done()).send()
+        await SseEvent(data=SseEventData(id='peer-link').visible()).send()
+        await SseEvent(data=SseEventData(id='peer-link-name').visible()).send()
 
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access1-label').visible()).send()
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='access2-label').visible()).send()
+        await SseEvent(data=SseEventData(id='access1-label').visible()).send()
+        await SseEvent(data=SseEventData(id='access2-label').visible()).send()
 
         await global_store.migration_status.set_as_done(True)
         return

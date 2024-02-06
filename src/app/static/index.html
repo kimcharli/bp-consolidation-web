@@ -34,7 +34,7 @@
                 <button id="connect" class="data-state" type="button" data-state="init" hx-get="/connect" hx-target="#last-message">Connect</button>
             </div>
             <div>
-                <button id="sync-state" type="button" data-state="init" class="data-state">Sync States</button>
+                <button id="sync" type="button" data-state="init" class="data-state" hx-get="/sync" hx-target="#last-message">Sync States</button>
             </div>
             <div>
                 <button id="migrate-access-switches" type="button" data-state="init" class="data-state">Migrate Access Switches</button>

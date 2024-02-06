@@ -41,7 +41,7 @@ class SseEventEnum(StrEnum):
     DATA_STATE = 'data-state'  # generic system data state
     TBODY_GS = 'tbody-gs'  # create generic system as tbody
     # BUTTION_DISABLE = 'disable-button'
-    BUTTON_SYNC_STATE = 'sync-state'
+    BUTTON_SYNC_STATE = 'sync'
     BUTTON_MIGRATE_AS = 'migrate-access-switches'
     BUTTON_MIGRATE_GS = 'migrate-generic-systems'
     BUTTON_MIGRATE_VN = 'migrate-virtual-networks'
@@ -134,69 +134,69 @@ class MigrationStatus(BaseModel):
 
         """
         if self.is_as_done:
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).done()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).done()).send()
             if self.is_gs_done:
-                await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).done()).send()
+                await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).done()).send()
                 if self.is_vn_done:
-                    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
+                    await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
                     if self.is_ct_done:
-                        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
+                        await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
                     else:
-                        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done()).send()
+                        await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done()).send()
                 else:
                     # vn not done
-                    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).not_done()).send()
-                    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
+                    await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).not_done()).send()
+                    await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
             else:
                 # gs not done
-                await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).not_done()).send()
-                await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).disable()).send()
-                await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
+                await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).not_done()).send()
+                await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).disable()).send()
+                await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
 
         else:
             # AS is not done
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).not_done().enable()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).not_done().disable()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).not_done().disable()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done().disable()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).not_done().enable()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).not_done().disable()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).not_done().disable()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done().disable()).send()
 
     async def set_sync_done(self):
         self.is_sync_done = True
-        await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).done().enable()).send()
+        await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).done().enable()).send()
         # GS may be done when sync is done
-        # DO NOT DO THIS: await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().not_done()).send()
+        # DO NOT DO THIS: await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().not_done()).send()
 
     async def set_as_done(self, is_as_done: bool):
         """
         Set AS done, and set GS init
         """
         if is_as_done != self.is_as_done:
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).enable().not_done()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().done()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).enable().not_done()).send()
 
     async def set_gs_done(self, is_gs_done: bool):
         """
         Set GS done, and set VN init
         """
         if is_gs_done != self.is_gs_done:
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).not_done().enable()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).done()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).not_done().enable()).send()
 
     async def set_vn_done(self, is_vn_done: bool):
         """
         Set VN done, and set CT init
         """
         if is_vn_done != self.is_vn_done:
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done().enable()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).not_done().enable()).send()
 
     async def set_ct_done(self, is_ct_done: bool):
         """
         Set VN done, and set CT init
         """
         if is_ct_done != self.is_ct_done:
-            await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
-            # await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
+            # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
 
 class ServerItem(BaseModel):
     id: Optional[int] = None
@@ -382,9 +382,7 @@ class GlobalStore:
             apstra_url = self.apstra_server.url_prefix[:-4]
             value = f'<a href="{apstra_url}/#/blueprints/{id}/staged" target="_blank">{label}</a>'
             # data = { "id": id, "url": url, "label": label }
-            await SseEvent(event=SseEventEnum.DATA_STATE, 
-                           data=SseEventData(id=role, 
-                                             value=value).done()).send()
+            await SseEvent(data=SseEventData(id=role, value=value).done()).send()
             self.logger.warning(f"login_blueprint() end")
         return
     

@@ -102,7 +102,7 @@ async def referesh_ct_table(generic_systems):
                     cell_state = DataStateEnum.INIT
             # update per AE 
             await SseEvent(
-                event=SseEventEnum.DATA_STATE, 
+                
                 data=SseEventData(
                     id=ae_data.cts_cell_id, 
                     state=cell_state, 
@@ -186,9 +186,7 @@ async def migrate_connectivity_templates():
                 del ct_data_queue[:throttle_number]
                 cell_state = DataStateEnum.DONE if ae_data.is_ct_done else DataStateEnum.INIT
 
-                await SseEvent(
-                    event=SseEventEnum.DATA_STATE, 
-                    data=SseEventData(
+                await SseEvent(data=SseEventData(
                         id=ae_data.cts_cell_id, 
                         state=cell_state, 
                         value=f'{ae_data.count_of_new_cts}/{ae_data.count_of_old_cts}')).send()

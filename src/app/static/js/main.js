@@ -107,27 +107,27 @@
     
 // };
 
-class SyncStateButton {
-    constructor() {
-        this.button = document.getElementById('sync-state');
-        this.button.addEventListener('click', this.handleSyncState.bind(this));
-    }
+// class SyncStateButton {
+//     constructor() {
+//         this.button = document.getElementById('sync-state');
+//         this.button.addEventListener('click', this.handleSyncState.bind(this));
+//     }
 
-    handleSyncState(event) {
-        const srcButton = event.srcElement || event.target;
+//     handleSyncState(event) {
+//         const srcButton = event.srcElement || event.target;
 
-        fetch('/sync', {
-            method: 'GET',
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('/sync', data)
-        })
-        .catch(error => console.error('handleSyncState - Error:', error, error.name, error.message));
-        this.button.dataset.state = 'loading';
-    }
+//         fetch('/sync', {
+//             method: 'GET',
+//         })
+//         .then(response => response.json())
+//         .then(data => {
+//             console.log('/sync', data)
+//         })
+//         .catch(error => console.error('handleSyncState - Error:', error, error.name, error.message));
+//         this.button.dataset.state = 'loading';
+//     }
 
-}
+// }
 
 
 class MigrateAccessSwitchesButton {

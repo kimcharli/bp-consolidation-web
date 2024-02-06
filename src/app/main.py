@@ -32,23 +32,26 @@ async def get_index_html(request: Request):
 @app.post("/upload-env-ini")
 async def upload_env_ini(request: Request, file: UploadFile):
     global global_store
+
     file_content = await file.read()
     file_dict = yaml.safe_load(file_content)
     logger.warning(f"/upload-env-ini: {file.filename=} {file_dict=}")
     global_store = GlobalStore(**file_dict)
     
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-host', value=global_store.apstra['host'])).send()
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-port', value=global_store.apstra['port'])).send()
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-username', value=global_store.apstra['username'])).send()
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-password', value=global_store.apstra['password'])).send()
+    await SseEvent(data=SseEventData(id='apstra-host', value=global_store.apstra['host'])).send()
+    await SseEvent(data=SseEventData(id='apstra-port', value=global_store.apstra['port'])).send()
+    await SseEvent(data=SseEventData(id='apstra-username', value=global_store.apstra['username'])).send()
+    await SseEvent(data=SseEventData(id='apstra-password', value=global_store.apstra['password'])).send()
 
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='main_bp', value=global_store.target['main_bp'])).send()
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor_bp', value=global_store.target['tor_bp'])).send()
+    await SseEvent(data=SseEventData(id='main_bp', value=global_store.target['main_bp'])).send()
+    await SseEvent(data=SseEventData(id='tor_bp', value=global_store.target['tor_bp'])).send()
 
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='load-env-div').done()).send()
+    await SseEvent(data=SseEventData(id='load-env-div').done()).send()
 
     logging.warning(f"/upload_env_ini: {global_store=}")
-    return 'file loaded'
+    # return 'file loaded'
+    return await connect()
+
 
 
 # @app.post("/update-env-ini")
@@ -68,10 +71,11 @@ async def upload_env_ini(request: Request, file: UploadFile):
 @app.get("/connect")
 async def connect():
     global global_store
+
     logging.warning(f"/connect")
     version = global_store.login_server()
     await global_store.login_blueprint()
-    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='connect').done()).send()
+    await SseEvent(data=SseEventData(id='connect').done()).send()
     logging.warning(f"/connect: {global_store=}")
     return version
 
@@ -79,6 +83,7 @@ async def connect():
 @app.get("/disconnect")
 async def disconnect():
     global global_store
+
     logging.warning(f"/disconnect")
     global_store.logout_server()
     global_store = None
@@ -108,7 +113,11 @@ async def disconnect():
 # from SyncStateButton
 @app.get("/sync")
 async def sync():    
+    global global_store
+
     logging.warning(f"/sync begin {get_timestamp()=}")
+    await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).init()).send()
+
     global_store.access_switches = AccessSwitches()
     global_store.generic_systems = None
     access_switches = global_store.access_switches
