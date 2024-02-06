@@ -1,30 +1,30 @@
 
 
 
-class UploadFileButton {
-    constructor() {
-        document.getElementById('upload-env-ini-img')
-            .addEventListener('click', () => document.getElementById('upload-env-ini-input').click());
-        this.input = document.getElementById('upload-env-ini-input');
-        this.input.addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
-    }
+// class UploadFileButton {
+//     constructor() {
+//         document.getElementById('upload-env-ini-img')
+//             .addEventListener('click', () => document.getElementById('upload-env-ini-input').click());
+//         this.input = document.getElementById('upload-env-ini-input');
+//         this.input.addEventListener('change', this.handleUploadIniInputChange.bind(this), false);
+//     }
 
-    handleUploadIniInputChange(event) {
-        console.log('handleUploadIniInputChange() id =', event.currentTarget.id );
-        const formData = new FormData();
-        formData.append('file', this.input.files[0]);
-        fetch('/upload-env-ini', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('handleUploadIniInputChange - fetched', data);
-            CkIDB.addServerStore(data);
-        })
-        .catch(error => console.error('handleUploadIniInputChange - fetch Error:', error));
-    }
-};
+//     handleUploadIniInputChange(event) {
+//         console.log('handleUploadIniInputChange() id =', event.currentTarget.id );
+//         const formData = new FormData();
+//         formData.append('file', this.input.files[0]);
+//         fetch('/upload-env-ini', {
+//             method: 'POST',
+//             body: formData
+//         })
+//         .then(response => response.json())
+//         .then(data => {
+//             console.log('handleUploadIniInputChange - fetched', data);
+//             CkIDB.addServerStore(data);
+//         })
+//         .catch(error => console.error('handleUploadIniInputChange - fetch Error:', error));
+//     }
+// };
 
 
 class TrashButton {
@@ -43,69 +43,69 @@ class TrashButton {
 
 }
 
-class ConnectButton {
-    constructor() {
-        this.button = document.getElementById('connect-button');
-        this.button.addEventListener('click', this.handleConnectServer.bind(this));
-    }
+// class ConnectButton {
+//     constructor() {
+//         this.button = document.getElementById('connect-button');
+//         this.button.addEventListener('click', this.handleConnectServer.bind(this));
+//     }
 
-    handleConnectServer(event) {
-        const srcButton = event.srcElement || event.target;
-        // console.log('handleConnectServer() begin.. event=', event);
-        const apstra_host = document.getElementById('apstra-host').value;
-        const apstra_port = document.getElementById('apstra-port').value;
-        const apstra_username = document.getElementById('apstra-username').value;
-        const apstra_password = document.getElementById('apstra-password').value;
-        fetch('/login-server', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                host: apstra_host,
-                port: apstra_port,
-                username: apstra_username,
-                password: apstra_password                
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('/login-server: Apstra version: ', data.version);
-            this.connect_blueprint();
-            srcButton.dataset.state = 'done';
-        })
-        .catch(error => {
-            console.log(error);
-        })
-        srcButton.dataset.state = 'loading';    
-    }
+//     handleConnectServer(event) {
+//         const srcButton = event.srcElement || event.target;
+//         // console.log('handleConnectServer() begin.. event=', event);
+//         const apstra_host = document.getElementById('apstra-host').value;
+//         const apstra_port = document.getElementById('apstra-port').value;
+//         const apstra_username = document.getElementById('apstra-username').value;
+//         const apstra_password = document.getElementById('apstra-password').value;
+//         fetch('/login-server', {
+//             method: 'POST',
+//             headers: { 
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify({
+//                 host: apstra_host,
+//                 port: apstra_port,
+//                 username: apstra_username,
+//                 password: apstra_password                
+//             })
+//         })
+//         .then(response => response.json())
+//         .then(data => {
+//             console.log('/login-server: Apstra version: ', data.version);
+//             this.connect_blueprint();
+//             srcButton.dataset.state = 'done';
+//         })
+//         .catch(error => {
+//             console.log(error);
+//         })
+//         srcButton.dataset.state = 'loading';    
+//     }
 
-    connect_blueprint() {
-        ['main_bp', 'tor_bp'].forEach(element => 
-            fetch('/login-blueprint', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    label: document.getElementById(element).innerHTML,
-                    role: element,
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(`connect_blueprint then`, data)
-                document.getElementById(element).dataset.id = data.id;
-                document.getElementById(element).innerHTML = `<a href="${data.url}" target="_blank">${data.label}</a>`;
-                document.getElementById(element).dataset.state = 'done';
+//     connect_blueprint() {
+//         ['main_bp', 'tor_bp'].forEach(element => 
+//             fetch('/login-blueprint', {
+//                 method: 'POST',
+//                 headers: { 
+//                     'Content-Type': 'application/json',
+//                 },
+//                 body: JSON.stringify({
+//                     label: document.getElementById(element).innerHTML,
+//                     role: element,
+//                 })
+//             })
+//             .then(response => response.json())
+//             .then(data => {
+//                 console.log(`connect_blueprint then`, data)
+//                 document.getElementById(element).dataset.id = data.id;
+//                 document.getElementById(element).innerHTML = `<a href="${data.url}" target="_blank">${data.label}</a>`;
+//                 document.getElementById(element).dataset.state = 'done';
     
-                // auto continue to sync
-            })
-        );
-        document.getElementById('sync-state').click();
-    }
+//                 // auto continue to sync
+//             })
+//         );
+//         document.getElementById('sync-state').click();
+//     }
     
-};
+// };
 
 class SyncStateButton {
     constructor() {
@@ -438,8 +438,8 @@ window.addEventListener("load", (event) => {
     console.log("page is fully loaded");
 
 
-    const uploadFileButton = new UploadFileButton();
-    const connectButton = new ConnectButton();
+    // const uploadFileButton = new UploadFileButton();
+    // const connectButton = new ConnectButton();
     const trashButton = new TrashButton();
     console.log('added trashButton')
     const syncStateButton = new SyncStateButton();

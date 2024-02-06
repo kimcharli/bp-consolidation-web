@@ -10,27 +10,28 @@
 
     <script src="/js/dexie.js"></script>
     <script src="/js/main.js"></script>
-    <!-- script type="module" src="/component/apstra-server.js" defer></script -->
-    <!-- script type="module" src="/component/access-switches.js" defer></script -->
-    <!-- script type="module" src="/component/generic-systems.js" defer></script -->
-    <!-- script type="module" src="/component/virtual-networks.js" defer></script -->
-    <!-- script type="module" src="/component/command.js" defer></script -->
-    <!-- script type="module" src="/component/footer-component.js" defer></script -->
+    <script src="/js/htmx.min.js"></script>
 </head>
 
 <body>
-
     <aside class="sidebar">
         <h3>Commands</h3>
-        <div>
+        <div>            
             <div id="load-env-div" class="data-state" style="padding-left: 6px;padding-right: 6px;font-family: Arial;font-size: 14px;" data-state="init">
                 Load
                 <img id="trash-env" src="/images/trash.svg" alt="trash env" align="right" />
-                <a href="/static/env-example.ini" download="env-example.ini"><img src="/images/download.svg" align="right" /></a>
-                <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" /><input type="file" id="upload-env-ini-input" style="display: none;">
+                <a href="/static/env-example.yml" download="env-example.yml"><img src="/images/download.svg" align="right" /></a>
+                <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" onclick="document.getElementById('upload-env-ini-input').click()"/><input type="file" id="upload-env-ini-input" name="file"  hx-encoding="multipart/form-data" hx-post="/upload-env-ini" hx-target="#last-message" hx-trigger="change" style="display: none;">
+                
+                <!-- <form hx-encoding="multipart/form-data" hx-post="/upload-env-ini" hx-target="#last-message" > -->
+                    <!-- <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" >                         -->
+                    <!-- <input type="file" id="upload-env-ini-input" name="file">
+                    <button type="submit"><img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" > </button>
+                </form> -->
+
             </div>
             <div>
-                <button id="connect-button" class="data-state" type="button" data-state="init">Connect</button>
+                <button id="connect-button" class="data-state" type="button" data-state="init" hx-get="/connect" hx-target="#last-message">Connect</button>
             </div>
             <div>
                 <button id="sync-state" type="button" data-state="init" class="data-state">Sync States</button>
@@ -52,6 +53,10 @@
             </div>
             <div>
                 <button type="button" data-state="init" class="data-state">Move Devices</button>
+            </div>
+            <div>
+                <label>Last Message</label>
+                <div id="last-message"></div>
             </div>
         </div>
     </aside>

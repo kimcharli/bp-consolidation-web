@@ -32,7 +32,7 @@ run-web
 
 Duing develop
 ```
-uvicorn src.app.main:app --reload
+uvicorn src.app.main:app --reload --log-config=log_conf.yml
 ```
 
 ## closing

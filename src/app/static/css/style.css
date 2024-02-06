@@ -165,6 +165,20 @@ body {
 }
 
 
+/* file input */
+input::file-selector-button {
+    font-weight: bold;
+    color: dodgerblue;
+    padding: 0.5em;
+    border: thin solid grey;
+    border-radius: 3px;
+}
+  
+
+div#last-message {
+    color: white;
+}
+
 details {
     border: 1px solid #aaa;
     border-radius: 4px;

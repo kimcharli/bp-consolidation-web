@@ -3,14 +3,15 @@ import dotenv
 import asyncio
 import uvicorn
 import json
-from fastapi import FastAPI, Request, UploadFile
+from fastapi import FastAPI, Request, UploadFile, Response
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 import os
 from pydantic import BaseModel
+import yaml
 
-from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, get_timestamp
+from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, get_timestamp, GlobalStore
 from .generic_systems import GenericSystems
 from .access_switches import AccessSwitches
 from .vlan_cts import migrate_connectivity_templates
@@ -28,34 +29,51 @@ app.mount("/images", StaticFiles(directory="src/app/static/images"), name="image
 async def get_index_html(request: Request):
     return FileResponse("src/app/static/index.html")
 
-@app.post("/test", response_class=HTMLResponse)
-async def test(request: Request):
-    data = await request.body()
-    logger.warning(f"request.body: {data}")
-    result = data
-    return result
-
 @app.post("/upload-env-ini")
-async def upload_env_ini(file: UploadFile):
+async def upload_env_ini(request: Request, file: UploadFile):
+    global global_store
     file_content = await file.read()
-    logging.warning(f"/upload_env_ini: {file.filename=} {file_content=}")
-    content = global_store.env_ini.update(file_content)
-    logging.warning(f"/upload_env_ini: {global_store.env_ini.__dict__}")
-    return content
+    file_dict = yaml.safe_load(file_content)
+    logger.warning(f"/upload-env-ini: {file.filename=} {file_dict=}")
+    global_store = GlobalStore(file_dict['apstra'], file_dict['target'], file_dict['lldp'])
+    
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-host', value=global_store.apstra['host'])).send()
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-port', value=global_store.apstra['port'])).send()
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-username', value=global_store.apstra['username'])).send()
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='apstra-password', value=global_store.apstra['password'])).send()
 
-@app.post("/update-env-ini")
-async def update_env_ini(server: ServerItem):
-    logging.warning(f"/update-env-ini: {server=}")
-    global_store.update_env_ini(server)
-    logging.warning(f"/update-env-ini: {global_store.env_ini.__dict__}")
-    return server
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='main_bp', value=global_store.target['main_bp'])).send()
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='tor_bp', value=global_store.target['tor_bp'])).send()
+
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='load-env-div').done()).send()
+
+    logging.warning(f"/upload_env_ini: {global_store}")
+    return 'file loaded'
 
 
-@app.post("/login-server")
-async def login_server(server: ServerItem):
-    logging.warning(f"/login_server: {server=}")
-    version = global_store.login_server(server)
+# @app.post("/update-env-ini")
+# async def update_env_ini(server: ServerItem):
+#     logging.warning(f"/update-env-ini: {server=}")
+#     global_store.update_env_ini(server)
+#     logging.warning(f"/update-env-ini: {global_store.env_ini.__dict__}")
+#     return server
+
+
+# @app.post("/login-server")
+# async def login_server(server: ServerItem):
+#     logging.warning(f"/login_server: {server=}")
+#     version = global_store.login_server(server)
+#     return version
+
+@app.get("/connect")
+async def connect(request: Request, response: Response):
+    global global_store
+    logging.warning(f"/connect")
+    version = global_store.login_server()
+    await global_store.login_blueprint()
+    await SseEvent(event=SseEventEnum.DATA_STATE, data=SseEventData(id='connect-button').done()).send()
     return version
+
 
 @app.post("/logout-server")
 async def logout_server():
@@ -64,12 +82,12 @@ async def logout_server():
     return
 
 
-@app.post("/login-blueprint")
-async def login_blueprint(blueprint: BlueprintItem):
-    logging.warning(f"/login_blueprint: begin {blueprint=}")
-    id = global_store.login_blueprint(blueprint)
-    logging.warning(f"/login_blueprint: end {blueprint=}")
-    return id
+# @app.post("/login-blueprint")
+# async def login_blueprint(blueprint: BlueprintItem):
+#     logging.warning(f"/login_blueprint: begin {blueprint=}")
+#     id = global_store.login_blueprint(blueprint)
+#     logging.warning(f"/login_blueprint: end {blueprint=}")
+#     return id
 
 
 # from SyncStateButton

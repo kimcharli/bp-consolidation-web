@@ -1,11 +1,12 @@
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, field_validator
 import json
 import time
 import asyncio
 from enum import StrEnum
 from datetime import datetime
+from dataclasses import dataclass, field
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
@@ -56,7 +57,7 @@ class SseEventData(BaseModel):
     id: str
     state: Optional[str] = None
     value: Optional[str] = None
-    disabled: Optional[bool] = True  # for disable button
+    disabled: Optional[bool] = None  # for disable button
     visibility: Optional[bool] = None # for visable button
     href: Optional[str] = None
     target: Optional[str] = None
@@ -214,89 +215,116 @@ class BlueprintItem(BaseModel):
     label: str
     role: str
 
-class EnvIni(BaseModel):
-    logger: Any = logging.getLogger("EnvIni")  # logging.Logger
-    host: str = None
-    port: int = None
-    username: str = None
-    password: str  = None
-    main_bp_label: str = None
-    tor_bp_label: str = None
+# class EnvIni(BaseModel):
+#     logger: Any = logging.getLogger("EnvIni")  # logging.Logger
+#     host: str = None
+#     port: int = None
+#     username: str = None
+#     password: str  = None
+#     main_bp_label: str = None
+#     tor_bp_label: str = None
     
-    @property
-    def url(self) -> str:
-        if not self.host or not self.port:
-            self.logger.warning(f"get_url() {self.host=} {self.port=}")
-            return
-        return f"https://{self.host}:{self.port}"
+#     @property
+#     def url(self) -> str:
+#         if not self.host or not self.port:
+#             self.logger.warning(f"get_url() {self.host=} {self.port=}")
+#             return
+#         return f"https://{self.host}:{self.port}"
 
-    def clear(self):
-        self.host = None
-        self.port = None
-        self.username = None
-        self.password = None
-        self.main_bp_label = None
-        self.tor_bp_label = None
+#     def clear(self):
+#         self.host = None
+#         self.port = None
+#         self.username = None
+#         self.password = None
+#         self.main_bp_label = None
+#         self.tor_bp_label = None
 
-    def update(self, data=None) -> dict:
-        """
-        Update the environment variables from the file_content, and return the updated dict.
-        """
-        # self.clear()
-        self.logger.warning(f"update(): cleared: {self.__dict__}, {data=} {type(data)=} {type(data).__name__=}")
-        if type(data).__name__ == 'ServerItem':
-            self.host = data.host
-            self.port = data.port
-            self.username = data.username
-            self.password = data.password
-            self.main_bp_label = data.main_bp_label
-            self.tor_bp_label = data.tor_bp_label
-            return self
+#     def update(self, data=None) -> dict:
+#         """
+#         Update the environment variables from the file_content, and return the updated dict.
+#         """
+#         # self.clear()
+#         self.logger.warning(f"update(): cleared: {self.__dict__}, {data=} {type(data)=} {type(data).__name__=}")
+#         if type(data).__name__ == 'ServerItem':
+#             self.host = data.host
+#             self.port = data.port
+#             self.username = data.username
+#             self.password = data.password
+#             self.main_bp_label = data.main_bp_label
+#             self.tor_bp_label = data.tor_bp_label
+#             return self
         
-        # upload case
-        file_content = data
-        lines = file_content.decode('utf-8').splitlines() if file_content else []
-        for line in lines:
-            name_value = line.split("=")
-            if len(name_value) != 2:
-                self.logger.warning(f"update(): invalid line: {line}")
-                continue
-            if name_value[0] == "apstra_server_host":
-                self.host = name_value[1]
-            elif name_value[0] == "apstra_server_port":
-                self.port = int(name_value[1])
-            elif name_value[0] == "apstra_server_username":
-                self.username = name_value[1]
-            elif name_value[0] == "apstra_server_password":
-                self.password = name_value[1]
-            elif name_value[0] == "main_bp":
-                self.main_bp_label = name_value[1]
-            elif name_value[0] == "tor_bp":
-                self.tor_bp_label = name_value[1]
-            else:
-                self.logger.warning(f"update(): invalid name: {name_value}")        
-        # self.logger.warning(f"update(): after update: {self.__dict__}")
-        # return_content = {
-        #     "host": self.host,
-        #     "port": self.port,
-        #     "username": self.username,
-        #     "password": self.password,
-        #     "main_bp_label": self.main_bp_label,
-        #     "tor_bp_label": self.tor_bp_label,
-        # }
-        # return return_content
-        return self
+#         # upload case
+#         file_content = data
+#         lines = file_content.decode('utf-8').splitlines() if file_content else []
+#         for line in lines:
+#             name_value = line.split("=")
+#             if len(name_value) != 2:
+#                 self.logger.warning(f"update(): invalid line: {line}")
+#                 continue
+#             if name_value[0] == "apstra_server_host":
+#                 self.host = name_value[1]
+#             elif name_value[0] == "apstra_server_port":
+#                 self.port = int(name_value[1])
+#             elif name_value[0] == "apstra_server_username":
+#                 self.username = name_value[1]
+#             elif name_value[0] == "apstra_server_password":
+#                 self.password = name_value[1]
+#             elif name_value[0] == "main_bp":
+#                 self.main_bp_label = name_value[1]
+#             elif name_value[0] == "tor_bp":
+#                 self.tor_bp_label = name_value[1]
+#             else:
+#                 self.logger.warning(f"update(): invalid name: {name_value}")        
+#         # self.logger.warning(f"update(): after update: {self.__dict__}")
+#         # return_content = {
+#         #     "host": self.host,
+#         #     "port": self.port,
+#         #     "username": self.username,
+#         #     "password": self.password,
+#         #     "main_bp_label": self.main_bp_label,
+#         #     "tor_bp_label": self.tor_bp_label,
+#         # }
+#         # return return_content
+#         return self
 
-class GlobalStore(BaseModel):
+@dataclass
+class LinkLldp:
+    neighbor_interface_name: str
+    neighbor_system_id: str
+    interface_name: str
+@dataclass
+class BpTarget:
+    main_bp: str = 'ATLANTA-Master'
+    tor_bp: str = 'AZ-1_1-R5R15'
+    tor_im_new: str = '_ATL-AS-5120-48T'
+    cabling_maps_yaml_file: str = 'tests/fixtures/sample-cabling-maps.yaml'
+
+
+@dataclass
+class ApstraServer:
+    host: str = 'nf-apstra.pslab.link'
+    port: str = '443'
+    username: str = 'admin'
+    password: str = 'admin'
+    logging_level: str = 'DEBUG'
+    apstra_server: Any = None  # CkApstraSession
+
+@dataclass
+class GlobalStore:
+    apstra: ApstraServer
+    target: BpTarget
+    lldp: Dict[str, List[LinkLldp]]  # leaf: []
+
     apstra_server: Any = None  #  ApstaServer
-    bp: Dict[str, Any] = {}  # main_bp, tor_bp (CkApstraBlueprint)
+    bp: Dict[str, Any] = field(default_factory=dict)  # main_bp, tor_bp (CkApstraBlueprint)
     # main_bp = None  # ApstaBlueprint
     # tor_bp = None  # ApstaBlueprint
-    tor_data: dict = {}  # 
-    env_ini: EnvIni = EnvIni()
+    tor_data: dict = field(default_factory=dict)  # 
+    # env_ini: EnvIni = EnvIni()
     logger: Any = logging.getLogger("GlobalStore")  # logging.Logger
-    data: dict = {}
-    migration_status: MigrationStatus = MigrationStatus()
+    data: dict = field(default_factory=dict)
+    migration_status: MigrationStatus = field(default_factory=MigrationStatus)
     access_switches: Any = None  # created by main.py::sync() AccessSwitches
     generic_systems: Any = None  # created by access_switches GenericSystems
     
@@ -320,19 +348,19 @@ class GlobalStore(BaseModel):
     def access_switch_pair(self):
         return sorted(self.access_switches.access_switches)
 
-    def update_env_ini(self, data):  
-        self.logger.warning(f"update_env_ini(): {data=}")
-        self.env_ini.update(data)
-        return
+    # def update_env_ini(self, data):  
+    #     self.logger.warning(f"update_env_ini(): {data=}")
+    #     self.env_ini.update(data)
+    #     return
     
-    def replace_env_ini(self, env_ini: EnvIni):
-        self.env_ini = env_ini
+    # def replace_env_ini(self, env_ini: EnvIni):
+    #     self.env_ini = env_ini
 
-    def login_server(self, server: ServerItem) -> dict:
-        self.logger.warning(f"login_server() {server=}")
-        self.apstra_server = CkApstraSession(server.host, int(server.port), server.username, server.password)
-        self.logger.warning(f"login_server(): {self.apstra_server.__dict__}")
-        return { "version": self.apstra_server.version }
+    def login_server(self) -> str:
+        self.logger.warning(f"login_server()")
+        self.apstra_server = CkApstraSession(self.apstra['host'], int(self.apstra['port']), self.apstra['username'], self.apstra['password'])
+        self.logger.warning(f"login_server(): {self.apstra_server=}")
+        return self.apstra_server.version
 
     @classmethod
     def logout_server(cls):
@@ -343,19 +371,25 @@ class GlobalStore(BaseModel):
         cls.apstra_server = None
         return
 
-    def login_blueprint(self, blueprint: BlueprintItem):
-        self.logger.warning(f"login_blueprint {blueprint=} {self.apstra_server=}")
-        role = blueprint.role
-        label = blueprint.label
-        bp = CkApstraBlueprint(self.apstra_server, label)
-        self.bp[role] = bp
-        self.logger.warning(f"login_blueprint {bp=}")
-        id = bp.id
-        url = f"{self.env_ini.url}/#/blueprints/{id}/staged"
-        data = { "id": id, "url": url, "label": label }
-        self.logger.warning(f"login_blueprint() return: {data}")
-        return data
-
+    async def login_blueprint(self):
+        self.logger.warning(f"login_blueprint")
+        for role in ['main_bp', 'tor_bp']:
+            label = self.target[role]
+        # role = blueprint.role
+        # label = blueprint.label
+            bp = CkApstraBlueprint(self.apstra_server, label)
+            self.bp[role] = bp
+            self.logger.warning(f"login_blueprint {bp=}")
+            id = bp.id
+            apstra_url = self.apstra_server.url_prefix[:-4]
+            value = f'<a href="{apstra_url}/#/blueprints/{id}/staged" target="_blank">{label}</a>'
+            # data = { "id": id, "url": url, "label": label }
+            await SseEvent(event=SseEventEnum.DATA_STATE, 
+                           data=SseEventData(id=role, 
+                                             value=value).done()).send()
+            self.logger.warning(f"login_blueprint() end")
+        return
+    
     @classmethod
     def logout_blueprint(cls):
         cls.bp = {}
@@ -446,4 +480,4 @@ class GlobalStore(BaseModel):
 
 #     return interface_vlan_table
 
-global_store = GlobalStore()
+global_store: GlobalStore = None  # initialized by main.py
