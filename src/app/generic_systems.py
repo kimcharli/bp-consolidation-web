@@ -600,18 +600,16 @@ class GenericSystemWorker():
         return len(ct_not_done_list) == 0
 
 
-    @classmethod
-    def guess_tor_gs_label(cls, tor_switch_label):
-        name_prefix = 'atl1tor-'
-        if tor_switch_label.startswith(name_prefix):
-            if tor_switch_label.endswith(('a', 'b')):
-                return tor_switch_label[len(name_prefix):-1]
-            elif tor_switch_label.endswith(('c', 'c')):
-                return f"{tor_switch_label[len(name_prefix):-1]}cd"
-        cls.logger.error(f"guess_tor_gs_label() irregular label: {tor_switch_label=}")
-        return None
-
-        return global_store.tor_gs_label
+    # @classmethod
+    # def guess_tor_gs_label(cls, tor_switch_label):
+    #     name_prefix = 'atl1tor-'
+    #     if tor_switch_label.startswith(name_prefix):
+    #         if tor_switch_label.endswith(('a', 'b')):
+    #             return tor_switch_label[len(name_prefix):-1]
+    #         elif tor_switch_label.endswith(('c', 'c')):
+    #             return f"{tor_switch_label[len(name_prefix):-1]}cd"
+    #     cls.logger.error(f"guess_tor_gs_label() irregular label: {tor_switch_label=}")
+    #     return None
 
     @classmethod
     async def sync_tor_generic_systems(cls, global_store):
@@ -647,14 +645,12 @@ class GenericSystemWorker():
             switch_intf = server_link[CkEnum.MEMBER_INTERFACE]['if_name']
             switch_id = server_link[CkEnum.MEMBER_SWITCH]['id']
             if tor_gs is None:
-                guessed_label = cls.guess_tor_gs_label(switch_label)
-                cls.logger.warning(f"sync_tor_generic_systems() {guessed_label=}")
-                tor_gs = global_store.tor_gs = TorGS(label=guessed_label, link_ids=[])
+
+                tor_gs = global_store.tor_gs = make_tor_gs_data(switch_label)
                 # tor_gs.label = cls.guess_tor_gs_label(switch_label)
                 if tor_gs.label is None:
                     cls.logger.error(f"sync_tor_generic_systems() irregular label: {switch_label=}")
                     return
-                tor_gs.prefix = tor_gs.label[len('atl1tor-'):]
             access_switches.setdefault(switch_label, AccessSwitch(label=switch_label, tor_id=switch_id))
             old_server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             new_label = make_new_label(global_store, old_server_label)
@@ -696,11 +692,6 @@ class GenericSystemWorker():
 
         # render leaf_gs
         await SseEvent(data=SseEventData(id='leaf-gs-label', value=leaf_gs_label)).send()
-        # await SseEvent(data=SseEventData(id='leafgs-48a', value=leaf_gs.a_48)).send()
-        # await SseEvent(data=SseEventData(id='leafgs-48b', value=leaf_gs.b_48)).send()
-        # await SseEvent(data=SseEventData(id='leafgs-49a', value=leaf_gs.a_49)).send()
-        # await SseEvent(data=SseEventData(id='leafgs-49b', value=leaf_gs.b_49)).send()
-        # await SseEvent(data=SseEventData(id='leaf-gs-box').done()).send()
 
         await SseEvent(data=SseEventData(id='tor1-label', value=global_store.access_switch_pair[0])).send()
         await SseEvent(data=SseEventData(id='tor2-label', value=global_store.access_switch_pair[1])).send()
@@ -742,12 +733,7 @@ class GenericSystemWorker():
 
         await SseEvent(data=SseEventData(id='leaf1-label', value=sorted(leaf_switches)[0])).send()
         await SseEvent(data=SseEventData(id='leaf2-label', value=sorted(leaf_switches)[1])).send()
-        # for leaf_label in sorted(leaf_switches):
 
-        # await SseEvent(data=SseEventData(id='leafgs-48a', value=leaf_gs.a_48)).send()
-        # await SseEvent(data=SseEventData(id='leafgs-48b', value=leaf_gs.b_48)).send()
-        # await SseEvent(data=SseEventData(id='leafgs-49a', value=leaf_gs.a_49)).send()
-        # await SseEvent(data=SseEventData(id='leafgs-49b', value=leaf_gs.b_49)).send()
         await SseEvent(data=SseEventData(id='leaf-gs-box').done()).send()
 
         #
@@ -781,7 +767,9 @@ class GenericSystemWorker():
         if len([x.id for x in leaf_switches.values()]) == 2:
             await SseEvent(data=SseEventData(id='leaf1-box').done()).send()
             await SseEvent(data=SseEventData(id='leaf2-box').done()).send()
+
         if len([x.main_id for x in access_switches.values()]) == 2:
+            # both access switches present
             await global_store.migration_status.set_as_done(True)
             await SseEvent(data=SseEventData(id='access1-box').done().visible()).send()
             await SseEvent(data=SseEventData(id='access2-box').done().visible()).send()
@@ -790,34 +778,12 @@ class GenericSystemWorker():
             await SseEvent(data=SseEventData(id='peer-link').done().visible()).send()
             await SseEvent(data=SseEventData(id='peer-link-name').done().visible()).send()
 
-            await cls.sync_main_links(global_store)
+            sync_main_links(global_store)
 
         cls.logger.warning(f"init_leaf_switches end {leaf_switches=}")
         return
 
 
-    def sync_main_links(self, global_store):
-        """
-        Pull the server information of the created access switches in main_bp
-          and update the generic_systems data (refresh)
-        """
-        main_bp = global_store.bp['main_bp']
-        server_links_dict = {}
-        # update generic_systems from main_bp
-        server_links = main_bp.get_switch_interface_nodes(global_store.access_switches.access_switch_pair)
-        self.logger.warning(f"sync_main_links {len(server_links)=}")
-        for server_link in server_links:
-            switch_label = server_link[CkEnum.MEMBER_SWITCH]['label']
-            switch_id = server_link[CkEnum.MEMBER_SWITCH]['id']
-            server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
-            tbody_id = f"gs-{server_label}"
-            server_links_dict.setdefault(tbody_id, []).append(server_link)
-            global_store.access_switches.access_switches[switch_label].id = switch_id
-
-        for tbody_id, links in server_links_dict.items():
-            # breakpoint()
-            self.generic_systems[tbody_id].refresh(server_links=links)
-        return
 
 
     async def refresh_tor_generic_systems(self) -> None:
@@ -891,3 +857,45 @@ def make_new_label(global_store, old_label) -> str:
         return old_label
     # good to just prefix
     return f"{tor_gs_prefix}-{old_label}"
+
+def sync_main_links(global_store):
+    """
+    Pull the server information of the created access switches in main_bp
+        and update the generic_systems data (refresh)
+    """
+    main_bp = global_store.bp['main_bp']
+    generic_systems = global_store.generic_systems
+    access_switches = global_store.access_switches
+    # server_links_dict = {}
+    logging.warning(f"sync_main_links begin {generic_systems=}")
+    # update generic_systems from main_bp
+    server_links = main_bp.get_switch_interface_nodes(list(access_switches))
+    logging.warning(f"sync_main_links {len(server_links)=}")
+    for server_link in server_links:
+        switch_label = server_link[CkEnum.MEMBER_SWITCH]['label']
+        switch_id = server_link[CkEnum.MEMBER_SWITCH]['id']
+        server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
+        new_gs_id = server_link[CkEnum.GENERIC_SYSTEM]['id']
+        tbody_id = f"gs-{server_label}"
+        logging.warning(f"sync_main_links {tbody_id=} {generic_systems.keys()=} {global_store.tor_gs=}")
+        this_generic_system = generic_systems[tbody_id]
+        this_generic_system.new_gs_id = new_gs_id
+        # server_links_dict.setdefault(tbody_id, []).append(server_link)
+        # access_switches[switch_label].id = switch_id
+
+    # for tbody_id, links in server_links_dict.items():
+    #     # breakpoint()
+    #     generic_systems[tbody_id].refresh(server_links=links)
+    return
+
+def make_tor_gs_data(tor_switch_label) -> TorGS:    
+    name_prefix = 'atl1tor-'
+    tor_prefix = tor_switch_label.split(name_prefix)[1][:-1]
+    tag = tor_switch_label[-1]
+    if tor_switch_label.startswith(name_prefix):
+        if tag in ['a', 'b']:
+            return TorGS(label=tor_switch_label[:-1], prefix=tor_prefix, link_ids=[])
+        elif tag in ['c', 'd']:
+            return TorGS(label=f"{tor_switch_label[:-1]}cd", prefix=tor_prefix, link_ids=[])
+    logging.error(f"guess_tor_gs_label() irregular label: {tor_switch_label=}")
+    return None
