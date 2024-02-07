@@ -40,7 +40,7 @@ async def main():
     # sync
     # 
     global_store.access_switches = AccessSwitches()
-    global_store.generic_systems = None
+    # global_store.generic_systems = None
     access_switches = global_store.access_switches
 
     await global_store.migration_status.refresh()

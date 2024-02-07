@@ -253,99 +253,99 @@ class CompareConfigsButton {
 }
 
 
-class CkIDB {
-    static db = null;
-    static serverStore = null;
+// class CkIDB {
+//     static db = null;
+//     static serverStore = null;
 
-    static openDB(connectButton) {
-        this.connectButton = connectButton;
-        // console.log('openDB: Dexie', Dexie);
-        this.db = new Dexie('ConsolidationDatabase');
-        this.db.version(1).stores({
-            apstra_server:
-                `++id, 
-                [host+port+username], 
-                password`,
-        });
-        this.db.apstra_server.toCollection().first(data => {
-            console.log(`openDB: data=`, data)
-            if (typeof data !== 'undefined') {
-                fetch('/update-env-ini', {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then(response => response.json())
-                .catch(error => {
-                    console.log(`error`, error)
-                })
-                console.log('openDB: invoke TriggerFetchEnvIni()')
-                this.TriggerFetchEnvIni(data);
-            }
-        })
-        .then(data => {
-            console.log('ok');
-         })
-        .catch(err => console.log('err', err))
-    }
+//     static openDB(connectButton) {
+//         this.connectButton = connectButton;
+//         // console.log('openDB: Dexie', Dexie);
+//         this.db = new Dexie('ConsolidationDatabase');
+//         this.db.version(1).stores({
+//             apstra_server:
+//                 `++id, 
+//                 [host+port+username], 
+//                 password`,
+//         });
+//         this.db.apstra_server.toCollection().first(data => {
+//             console.log(`openDB: data=`, data)
+//             if (typeof data !== 'undefined') {
+//                 fetch('/update-env-ini', {
+//                     method: 'POST',
+//                     headers: { 
+//                         'Content-Type': 'application/json',
+//                     },
+//                     body: JSON.stringify(data)
+//                 })
+//                 .then(response => response.json())
+//                 .catch(error => {
+//                     console.log(`error`, error)
+//                 })
+//                 console.log('openDB: invoke TriggerFetchEnvIni()')
+//                 this.TriggerFetchEnvIni(data);
+//             }
+//         })
+//         .then(data => {
+//             console.log('ok');
+//          })
+//         .catch(err => console.log('err', err))
+//     }
 
 
-    static isServerValid(data) {
-        console.log('isServerValid() data.host =', data.host)
-        return data.host && data.port && data.username && data.password
-    }
+//     static isServerValid(data) {
+//         console.log('isServerValid() data.host =', data.host)
+//         return data.host && data.port && data.username && data.password
+//     }
 
-    // triggered by side-bar
-    static addServerStore(data) {
-        console.log('addServerStore() data', data)
-        if (this.isServerValid(data)) {
-            console.log('addServerStore() - isServerValid')
-            this.db.apstra_server.put(data)
-            console.log('addServerStore() - invoke TriggerFetchEnvIni')
-            this.TriggerFetchEnvIni(data);    
-        } else {
-            console.log('addServerStore() - invalid input')
-        }
-    }
+//     // triggered by side-bar
+//     static addServerStore(data) {
+//         console.log('addServerStore() data', data)
+//         if (this.isServerValid(data)) {
+//             console.log('addServerStore() - isServerValid')
+//             this.db.apstra_server.put(data)
+//             console.log('addServerStore() - invoke TriggerFetchEnvIni')
+//             this.TriggerFetchEnvIni(data);    
+//         } else {
+//             console.log('addServerStore() - invalid input')
+//         }
+//     }
 
-    static TriggerFetchEnvIni(data) {
-        // window.dispatchEvent(
-        //     new CustomEvent(GlobalEventEnum.FETCH_ENV_INI, { detail: data } )
-        // );
+//     static TriggerFetchEnvIni(data) {
+//         // window.dispatchEvent(
+//         //     new CustomEvent(GlobalEventEnum.FETCH_ENV_INI, { detail: data } )
+//         // );
 
-        document.getElementById('apstra-host').value = data.host;
-        document.getElementById('apstra-port').value = data.port;
-        document.getElementById('apstra-username').value = data.username;
-        document.getElementById('apstra-password').value = data.password;    
-        document.getElementById('apstra-host').dataset.id = data.id;
+//         document.getElementById('apstra-host').value = data.host;
+//         document.getElementById('apstra-port').value = data.port;
+//         document.getElementById('apstra-username').value = data.username;
+//         document.getElementById('apstra-password').value = data.password;    
+//         document.getElementById('apstra-host').dataset.id = data.id;
 
-        document.getElementById("main_bp").innerHTML = data.main_bp_label;
-        document.getElementById("tor_bp").innerHTML = data.tor_bp_label;
+//         document.getElementById("main_bp").innerHTML = data.main_bp_label;
+//         document.getElementById("tor_bp").innerHTML = data.tor_bp_label;
 
-        document.getElementById('load-env-div').dataset.state = 'done';
+//         document.getElementById('load-env-div').dataset.state = 'done';
 
-        console.log('TriggerFetchEnvIni() - invoke connectButton.click()')
-        this.connectButton.button.click();
-    }
+//         console.log('TriggerFetchEnvIni() - invoke connectButton.click()')
+//         this.connectButton.button.click();
+//     }
 
-    static trashEnv() {
-        const transaction = this.db.transaction('rw', this.db.apstra_server, async () => {
-            const servers = await this.db.apstra_server.clear();
-        }).then(() => {
-                console.log(`transaction completed`);
-                // window.dispatchEvent(
-                //     new CustomEvent(GlobalEventEnum.CLEAR_ENV_INI, { bubbles: true, composed: true } )
-                // );        
-            }).catch(err => {
-                console.log(`transaction failed -`, err);
-        })
-        // window.dispatchEvent(
-        //     new CustomEvent(GlobalEventEnum.DISCONNECT_SERVER)
-        // );
-    }
-}
+//     static trashEnv() {
+//         const transaction = this.db.transaction('rw', this.db.apstra_server, async () => {
+//             const servers = await this.db.apstra_server.clear();
+//         }).then(() => {
+//                 console.log(`transaction completed`);
+//                 // window.dispatchEvent(
+//                 //     new CustomEvent(GlobalEventEnum.CLEAR_ENV_INI, { bubbles: true, composed: true } )
+//                 // );        
+//             }).catch(err => {
+//                 console.log(`transaction failed -`, err);
+//         })
+//         // window.dispatchEvent(
+//         //     new CustomEvent(GlobalEventEnum.DISCONNECT_SERVER)
+//         // );
+//     }
+// }
 
 
 const eventSource = new EventSource("/sse");
@@ -440,16 +440,16 @@ window.addEventListener("load", (event) => {
 
     // const uploadFileButton = new UploadFileButton();
     // const connectButton = new ConnectButton();
-    const trashButton = new TrashButton();
-    console.log('added trashButton')
-    const syncStateButton = new SyncStateButton();
+    // const trashButton = new TrashButton();
+    // console.log('added trashButton')
+    // const syncStateButton = new SyncStateButton();
     console.log('added syncStateButton')
     const migrateAccessSwitchesButton = new MigrateAccessSwitchesButton();
     const migrateGenericSystemsButton = new MigrateGenericSystemsButton();
     const migrateVirtualNetworksButtion = new MigrateVirtualNetworksButton();
     const migrateCTsButton = new MigrateCTsButton();
     const compareConfigsButton = new CompareConfigsButton();
-    CkIDB.openDB(connectButton);
+    // CkIDB.openDB(connectButton);
 
 });
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bp-consolidation-web"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
     'fastapi == 0.104.1',
     'sse_starlette == 2.0.0',
@@ -12,7 +12,7 @@ dependencies = [
     'uvicorn[standard] == 0.24.0.post1',
     'Markdown == 3.5.1',
     'pytest == 7.4.3',
-    'ck-apstra-api == 0.2.19',
+    'ck-apstra-api == 0.2.20',
     'python-multipart',
 ]
 requires-python = ">=3.11"

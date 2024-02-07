@@ -1,12 +1,13 @@
 import logging
-from pydantic import BaseModel
+# from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+from dataclasses import dataclass, field
 import time
 import json
 
 from .ck_global import global_store, DataStateEnum, sse_queue, CtEnum, SseEventEnum, SseEvent, SseEventData
 
-from .generic_systems import GenericSystems, LeafGS
+from .generic_systems import LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
 from .virtual_networks import VirtualNetworks
 from .vlan_cts import sync_tor_ct, sync_main_ct, referesh_ct_table
@@ -53,36 +54,37 @@ def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
 
 
 
-class LeafLink(BaseModel):
-    server_intf: str = ''
-    switch_intf: str
-class LeafSwitch(BaseModel):
-    label: str
-    id: str
-    links: List[LeafLink] = []
+# @dataclass
+# class LeafLink():
+#     switch_intf: str
+#     server_intf: str = field(default_factory='')
 
-class AccessSwitch(BaseModel):
-    label: str
-    id: str = ''
-    tor_id: str = ''
-    asn: str = ''  # this is not used in 4.1.2
+# @dataclass
+# class LeafSwitch():
+#     label: str
+#     id: str
+#     links: List[LeafLink] = field(default_factory=[])
 
-class TorGS(BaseModel):
-    label: str
-    id: str = None
-    ae_id: str = None
-    link_ids: List[str] = []
+# @dataclass
+# class AccessSwitch():
+#     label: str
+#     main_id: str = field(default_factory='')
+#     tor_id: str = field(default_factory='')
+#     asn: str = field(default_factory='')  # this is not used in 4.1.2
+
 
 # class LeafGS(BaseModel):
 #     label: str 
 #     intfs: List[str] = []
 
-class AccessSwitches(BaseModel):
-    access_switches: Dict[str, AccessSwitch] = {}  # inited by sync_access_switches
-    tor_gs: TorGS = TorGS(label='')  # in main blueprint. inited by sync_access_switches {'label': None, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
-    leaf_gs: LeafGS = None  # in tor blueprint. copy from generic_systems. = {'intfs': [None] * 4}  #{'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
+@dataclass
+class AccessSwitcheWorker():
+    # access_switches: Dict[str, AccessSwitch] = None  # inited by sync_access_switches
+    # tor_gs: TorGS = field(default_factory=TorGS(''))  # in main blueprint. inited by sync_access_switches {'label': None, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
+    # tor_gs: TorGS = None  # in main blueprint. inited by sync_access_switches {'label': None, 'id': None, 'ae_id': None},  # id and ae_id of main_bp
+    # leaf_gs: LeafGS = None  # in tor blueprint. copy from generic_systems. = {'intfs': [None] * 4}  #{'label': None, 'intfs': [None] * 4},  # label:, intfs[a-48, a-49, b-48, b-49] - the generic system info for the leaf
     # generic_systems_data: Any = None  # moved to ck_global
-    leaf_switches: Dict[str, LeafSwitch] = {}  # inited by sync_access_switches
+    # leaf_switches: Dict[str, LeafSwitch] = None  # inited by sync_access_switches
     switch_pair_spec: Any = None  # to create access switches. set by sync_tor_gs_in_main
     tor_interface_nodes_in_main: Any = None  # set by sync_tor_gs_in_main
     logger: Any = logging.getLogger("AccessSwitches") 
@@ -118,9 +120,9 @@ class AccessSwitches(BaseModel):
 
     @property
     def generic_systems(self):
-        if global_store.generic_systems is None:
-            global_store.generic_systems = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, tor_gs_label=self.tor_gs.label)
-            self.logger.warning(f"generic_systems {global_store.generic_systems=}")
+        # if global_store.generic_systems is None:
+        #     global_store.generic_systems = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, tor_gs_label=self.tor_gs.label)
+        #     self.logger.warning(f"generic_systems {global_store.generic_systems=}")
         return global_store.generic_systems
 
     @property
@@ -212,48 +214,50 @@ class AccessSwitches(BaseModel):
     async def sync_access_switches(self) -> None:
         """
         sync access switches from tor_bp
-        The first action for sync
+        The first action for sync operation
         Does set_as_done
         """
 
-        if self.access_switches == {}:                
-            #
-            # build access switches from tor_bp
-            # TODO: remove peer_link
-            #
-            class PeerSystem(BaseModel):
-                switch_intf: List[str] = []
+        # self.access_switches should be None
+        #
+        # build access switches from tor_bp
+        # TODO: remove peer_link
+        # #
+        # @dataclass
+        # class PeerSystem():
+        #     switch_intf: List[str] = []
 
-            class PeerLink(BaseModel):
-                speed: str
-                system: Dict[str, PeerSystem] = {}
+        # @dataclass
+        # class PeerLink():
+        #     speed: str
+        #     system: Dict[str, PeerSystem] = {}
 
-            peer_link: Dict[str, PeerLink] = {}
+        # peer_link: Dict[str, PeerLink] = {}
 
-            peer_link_query = """
-                node('link',role='leaf_leaf',  name='link')
-                    .in_('link').node('interface', name='intf')
-                    .in_('hosted_interfaces').node('system', name='switch')
-                    .in_('composed_of_systems').node('domain', name='domain')
-            """
-            peer_link_nodes = self.tor_bp.query(peer_link_query)
-            for link_nodes in peer_link_nodes:
-                switch_label = link_nodes['switch']['label']
-                tor_id = link_nodes['switch']['id']
-                asn = link_nodes['domain']['domain_id']
-                self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label, tor_id=tor_id, asn=asn))
+        # peer_link_query = """
+        #     node('link',role='leaf_leaf',  name='link')
+        #         .in_('link').node('interface', name='intf')
+        #         .in_('hosted_interfaces').node('system', name='switch')
+        #         .in_('composed_of_systems').node('domain', name='domain')
+        # """
+        # peer_link_nodes = self.tor_bp.query(peer_link_query)
+        # for link_nodes in peer_link_nodes:
+        #     switch_label = link_nodes['switch']['label']
+        #     tor_id = link_nodes['switch']['id']
+        #     asn = link_nodes['domain']['domain_id']
+        #     self.access_switches.setdefault(switch_label, AccessSwitch(label=switch_label, tor_id=tor_id, asn=asn))
 
-            if len([x.tor_id for x in self.access_switches.values() if x.tor_id != '']) == 2:
-                # tor switches are pulled from tor_bp
-                await SseEvent(data=SseEventData(id='tor1-box').done()).send()
-                await SseEvent(data=SseEventData(id='tor2-box').done()).send()
-                await SseEvent(data=SseEventData(id='tor1-label', value=self.access_switch_pair[0])).send()
-                await SseEvent(data=SseEventData(id='tor2-label', value=self.access_switch_pair[1])).send()
-                self.logger.warning(f"sync_access_switches tor switches fetched {self.access_switches=}")
+        # if len([x.tor_id for x in self.access_switches.values() if x.tor_id != '']) == 2:
+        #     # tor switches are pulled from tor_bp
+        #     await SseEvent(data=SseEventData(id='tor1-box').done()).send()
+        #     await SseEvent(data=SseEventData(id='tor2-box').done()).send()
+        #     await SseEvent(data=SseEventData(id='tor1-label', value=self.access_switch_pair[0])).send()
+        #     await SseEvent(data=SseEventData(id='tor2-label', value=self.access_switch_pair[1])).send()
+        #     self.logger.warning(f"sync_access_switches tor switches fetched {self.access_switches=}")
 
-            else:
-                self.logger.warning(f"sync_access_switches: tor switches not ready{self.access_switches=}")
-                return
+        # else:
+        #     self.logger.warning(f"sync_access_switches: tor switches not ready{self.access_switches=}")
+        #     return
 
         #
         #  setup tor_gs label from the name of access switches (came from tor_bp)
@@ -276,13 +280,13 @@ class AccessSwitches(BaseModel):
         # 
         await self.generic_systems.sync_tor_generic_systems()  # generic_systems and leaf_gs
         self.generic_systems.sync_main_links()  # update generic systems with the data from the main blueprint
-        self.leaf_gs = self.generic_systems.leaf_gs
-        await SseEvent(data=SseEventData(id='leaf-gs-label', value=self.leaf_gs.label)).send()
-        await SseEvent(data=SseEventData(id='leafgs1-intf1', value=self.leaf_gs.a_48)).send()
-        await SseEvent(data=SseEventData(id='leafgs1-intf2', value=self.leaf_gs.a_49)).send()
-        await SseEvent(data=SseEventData(id='leafgs2-intf1', value=self.leaf_gs.b_48)).send()
-        await SseEvent(data=SseEventData(id='leafgs2-intf2', value=self.leaf_gs.b_49)).send()
-        await SseEvent(data=SseEventData(id='leaf-gs-box').done()).send()
+        # self.leaf_gs = self.generic_systems.leaf_gs
+        # await SseEvent(data=SseEventData(id='leaf-gs-label', value=self.leaf_gs.label)).send()
+        # await SseEvent(data=SseEventData(id='leafgs1-intf1', value=self.leaf_gs.a_48)).send()
+        # await SseEvent(data=SseEventData(id='leafgs1-intf2', value=self.leaf_gs.a_49)).send()
+        # await SseEvent(data=SseEventData(id='leafgs2-intf1', value=self.leaf_gs.b_48)).send()
+        # await SseEvent(data=SseEventData(id='leafgs2-intf2', value=self.leaf_gs.b_49)).send()
+        # await SseEvent(data=SseEventData(id='leaf-gs-box').done()).send()
 
         await SseEvent(data=SseEventData(id='leaf1-intf1', value=self.leaf_gs.a_48)).send()
         await SseEvent(data=SseEventData(id='leaf1-intf2', value=self.leaf_gs.a_49)).send()

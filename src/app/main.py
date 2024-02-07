@@ -11,9 +11,9 @@ import os
 from pydantic import BaseModel
 import yaml
 
-from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, get_timestamp, GlobalStore
-from .generic_systems import GenericSystems
-from .access_switches import AccessSwitches
+from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, GlobalStore
+from .generic_systems import GenericSystemWorker
+from .access_switches import AccessSwitcheWorker
 from .vlan_cts import migrate_connectivity_templates
 
 
@@ -36,6 +36,7 @@ async def upload_env_ini(request: Request, file: UploadFile):
     file_content = await file.read()
     file_dict = yaml.safe_load(file_content)
     logger.warning(f"/upload-env-ini: {file.filename=} {file_dict=}")
+
     global_store = GlobalStore(**file_dict)
     
     await SseEvent(data=SseEventData(id='apstra-host', value=global_store.apstra['host'])).send()
@@ -73,12 +74,15 @@ async def connect():
     global global_store
 
     logging.warning(f"/connect")
+    await SseEvent(data=SseEventData(id='connect').loading()).send()
+
     version = global_store.login_server()
+
     await global_store.login_blueprint()
     await SseEvent(data=SseEventData(id='connect').done()).send()
     logging.warning(f"/connect: {global_store=}")
-    return version
-
+    # return version
+    return await sync()
 
 @app.get("/disconnect")
 async def disconnect():
@@ -94,11 +98,11 @@ async def disconnect():
     await SseEvent(data=SseEventData(id='apstra-username', value="")).send()
     await SseEvent(data=SseEventData(id='apstra-password', value="")).send()
 
-    await SseEvent(data=SseEventData(id='main_bp', value="").not_done()).send()
-    await SseEvent(data=SseEventData(id='tor_bp', value="").not_done()).send()
+    await SseEvent(data=SseEventData(id='main_bp', value="").init()).send()
+    await SseEvent(data=SseEventData(id='tor_bp', value="").init()).send()
 
-    await SseEvent(data=SseEventData(id='connect').not_done()).send()
-    await SseEvent(data=SseEventData(id='load-env-div').not_done()).send()
+    await SseEvent(data=SseEventData(id='connect').init()).send()
+    await SseEvent(data=SseEventData(id='load-env-div').init()).send()
     return "disconnected"
 
 
@@ -115,14 +119,19 @@ async def disconnect():
 async def sync():    
     global global_store
 
-    logging.warning(f"/sync begin {get_timestamp()=}")
-    await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).init()).send()
+    logging.warning(f"/sync begin {global_store=}")
+    await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).loading()).send()
 
-    global_store.access_switches = AccessSwitches()
-    global_store.generic_systems = None
-    access_switches = global_store.access_switches
+    # global_store.access_switches = AccessSwitches()
+    # global_store.generic_systems = None
+    # access_switches = global_store.access_switches
 
-    await global_store.migration_status.refresh()
+    await GenericSystemWorker.sync_tor_generic_systems(global_store)
+    await GenericSystemWorker.init_leaf_switches(global_store)
+
+    return {}
+
+    # await global_store.migration_status.refresh()
     await access_switches.sync_access_switches()
     logging.warning(f"/sync_access_switches end")
 
@@ -213,7 +222,7 @@ async def sse(request: Request):
             if await request.is_disconnected():
                 break
             item = await sse_queue.get()
-            logging.warning(f"######## event_generator get {get_timestamp()} {sse_queue.qsize()=} {item=}")          
+            logging.warning(f"######## event_generator get {sse_queue.qsize()=} {item=}")          
             yield item
             sse_queue.task_done()
             # set 0.05 to produce progressing
