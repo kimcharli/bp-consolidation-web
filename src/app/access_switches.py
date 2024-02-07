@@ -7,7 +7,7 @@ import json
 
 from .ck_global import global_store, DataStateEnum, sse_queue, CtEnum, SseEventEnum, SseEvent, SseEventData
 
-from .generic_systems import LeafGS
+# from .generic_systems import LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
 from .virtual_networks import VirtualNetworks
 from .vlan_cts import sync_tor_ct, sync_main_ct, referesh_ct_table

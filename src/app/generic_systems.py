@@ -566,13 +566,13 @@ class _GenericSystem():
 
 
 
-@dataclass
-class LeafGS():
-    label: str = None
-    a_48: str = None
-    a_49: str = None
-    b_48: str = None
-    b_49: str = None
+# @dataclass
+# class LeafGS():
+#     label: str = None
+#     a_48: str = None
+#     a_49: str = None
+#     b_48: str = None
+#     b_49: str = None
 
 class GenericSystemWorker():
     # generic_systems: Dict[str, _GenericSystem] = None  # init by sync_tor_generic_systems. <tbody-id>: { GenericSystem }
@@ -637,7 +637,7 @@ class GenericSystemWorker():
         
         generic_systems = global_store.generic_systems = {}
         access_switches = global_store.access_switches = {}
-        leaf_gs = global_store.leaf_gs = LeafGS()
+        leaf_gs_label = None  # this will not be used elsewhere
         tor_gs = None  # create at the first data and update global_store.tor_gs
         tor_bp = global_store.bp['tor_bp']
 
@@ -649,12 +649,12 @@ class GenericSystemWorker():
             if tor_gs is None:
                 guessed_label = cls.guess_tor_gs_label(switch_label)
                 cls.logger.warning(f"sync_tor_generic_systems() {guessed_label=}")
-                tor_gs = global_store.tor_gs = TorGS(old_label=guessed_label, link_ids=[])
-                # tor_gs.old_label = cls.guess_tor_gs_label(switch_label)
-                if tor_gs.old_label is None:
+                tor_gs = global_store.tor_gs = TorGS(label=guessed_label, link_ids=[])
+                # tor_gs.label = cls.guess_tor_gs_label(switch_label)
+                if tor_gs.label is None:
                     cls.logger.error(f"sync_tor_generic_systems() irregular label: {switch_label=}")
                     return
-                tor_gs.prefix = tor_gs.old_label[len('atl1tor-'):]
+                tor_gs.prefix = tor_gs.label[len('atl1tor-'):]
             access_switches.setdefault(switch_label, AccessSwitch(label=switch_label, tor_id=switch_id))
             old_server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             new_label = make_new_label(global_store, old_server_label)
@@ -672,17 +672,17 @@ class GenericSystemWorker():
             if switch_intf in ['et-0/0/48', 'et-0/0/49']:
                 server_data.is_leaf_gs = True
                 # server_data.new_label = server_label  # do not rename leaf_gs
-                leaf_gs.label = old_server_label
-                if switch_label.endswith(('a', 'c')):  # left tor
-                    if switch_intf == 'et-0/0/48':
-                        leaf_gs.a_48 = 'et-' + old_server_intf.split('-')[1]
-                    else:
-                        leaf_gs.a_49 = 'et-' + old_server_intf.split('-')[1]
-                else:
-                    if switch_intf == 'et-0/0/48':
-                        leaf_gs.b_48 = 'et-' + old_server_intf.split('-')[1]
-                    else:
-                        leaf_gs.b_49 = 'et-' + old_server_intf.split('-')[1]
+                leaf_gs_label = old_server_label
+                # if switch_label.endswith(('a', 'c')):  # left tor
+                #     if switch_intf == 'et-0/0/48':
+                #         leaf_gs.a_48 = 'et-' + old_server_intf.split('-')[1]
+                #     else:
+                #         leaf_gs.a_49 = 'et-' + old_server_intf.split('-')[1]
+                # else:
+                #     if switch_intf == 'et-0/0/48':
+                #         leaf_gs.b_48 = 'et-' + old_server_intf.split('-')[1]
+                #     else:
+                #         leaf_gs.b_49 = 'et-' + old_server_intf.split('-')[1]
 
             # breakpoint()
             ae_data = server_data.group_links.setdefault(old_ae_id, _GroupLink(old_ae_name=old_ae_name, old_ae_id=old_ae_id, speed=speed, links={}))
@@ -695,19 +695,19 @@ class GenericSystemWorker():
             v.index = index + 1
 
         # render leaf_gs
-        await SseEvent(data=SseEventData(id='leaf-gs-label', value=leaf_gs.label)).send()
-        await SseEvent(data=SseEventData(id='leafgs1-intf1', value=leaf_gs.a_48)).send()
-        await SseEvent(data=SseEventData(id='leafgs1-intf2', value=leaf_gs.b_48)).send()
-        await SseEvent(data=SseEventData(id='leafgs2-intf1', value=leaf_gs.a_49)).send()
-        await SseEvent(data=SseEventData(id='leafgs2-intf2', value=leaf_gs.b_49)).send()
-        await SseEvent(data=SseEventData(id='leaf-gs-box').done()).send()
+        await SseEvent(data=SseEventData(id='leaf-gs-label', value=leaf_gs_label)).send()
+        # await SseEvent(data=SseEventData(id='leafgs-48a', value=leaf_gs.a_48)).send()
+        # await SseEvent(data=SseEventData(id='leafgs-48b', value=leaf_gs.b_48)).send()
+        # await SseEvent(data=SseEventData(id='leafgs-49a', value=leaf_gs.a_49)).send()
+        # await SseEvent(data=SseEventData(id='leafgs-49b', value=leaf_gs.b_49)).send()
+        # await SseEvent(data=SseEventData(id='leaf-gs-box').done()).send()
 
         await SseEvent(data=SseEventData(id='tor1-label', value=global_store.access_switch_pair[0])).send()
         await SseEvent(data=SseEventData(id='tor2-label', value=global_store.access_switch_pair[1])).send()
         await SseEvent(data=SseEventData(id='tor1-box').done()).send()
         await SseEvent(data=SseEventData(id='tor2-box').done()).send()
 
-        cls.logger.warning(f"sync_tor_generic_systems end {len(generic_systems)=} {leaf_gs=}")
+        cls.logger.warning(f"sync_tor_generic_systems end {len(generic_systems)=}")
     
         return
 
@@ -717,25 +717,81 @@ class GenericSystemWorker():
         """
         Init leaf switches data from the access switches labels
         """
-        leaf_switches = global_store.leaf_switches = {}
+        tor_gs = global_store.tor_gs
+        leaf_switches = global_store.leaf_switches = {}        
         access_switches = global_store.access_switches
+        leaf_intf_temp = set()  # to captuer the leaf interface names
         lldp = global_store.lldp
-        for tor_switch_label in access_switches:
+        ab = ['a', 'b']
+        for tor_index, tor_switch_label in enumerate(sorted(access_switches)):
             for leaf_label, leaf_data in lldp.items():
                 for link in leaf_data:
+                    # - neighbor_interface_name: et-0/0/48
+                    #     neighbor_system_id: atl1tor-r5r15a  
+                    #     interface_name: et-0/0/16  
                     if link['neighbor_system_id'] == tor_switch_label:
-                        this_leaf = leaf_switches.setdefault(leaf_label, LeafSwitch(label=leaf_label, id=None, links=[]))
-                        this_leaf.links.append(LeafLink(leaf_intf=link['interface_name'], other_intf=link['neighbor_interface_name']))
+                        leaf_link_key = f"{ab[tor_index]}{link['neighbor_interface_name'][-2:]}"
+                        leaf_intf = link['interface_name']
+                        leaf_intf_temp.add(leaf_intf)  # just to add key
+                        leaf_sw_data = leaf_switches.setdefault(leaf_label, LeafSwitch(label=leaf_label, id=None, links={}))
+                        leaf_sw_data.links[leaf_link_key] = LeafLink(leaf_intf=leaf_intf, tor_name=tor_switch_label)
+                        # this_leaf = leaf_switches.setdefault(leaf_label, LeafSwitch(label=leaf_label, id=None, links=[]))
+                        # this_leaf.links.append(LeafLink(leaf_intf=link['interface_name'], other_intf=link['neighbor_interface_name']))
+                        await SseEvent(data=SseEventData(id=f"leafgs-{leaf_link_key}", value=leaf_intf)).send()
+                        await SseEvent(data=SseEventData(id=f"leafsw-{leaf_link_key}", value=leaf_intf)).send()
+
         await SseEvent(data=SseEventData(id='leaf1-label', value=sorted(leaf_switches)[0])).send()
         await SseEvent(data=SseEventData(id='leaf2-label', value=sorted(leaf_switches)[1])).send()
         # for leaf_label in sorted(leaf_switches):
 
+        # await SseEvent(data=SseEventData(id='leafgs-48a', value=leaf_gs.a_48)).send()
+        # await SseEvent(data=SseEventData(id='leafgs-48b', value=leaf_gs.b_48)).send()
+        # await SseEvent(data=SseEventData(id='leafgs-49a', value=leaf_gs.a_49)).send()
+        # await SseEvent(data=SseEventData(id='leafgs-49b', value=leaf_gs.b_49)).send()
+        await SseEvent(data=SseEventData(id='leaf-gs-box').done()).send()
+
+        #
+        # sync leaf switches links
+        #
+        main_bp = global_store.bp['main_bp']
+        leaf_link_query = f"""
+            node('system', label=is_in({sorted(leaf_switches)}), name='leaf')
+                .out().node('interface', if_name=is_in({sorted(leaf_intf_temp)}), name='leaf_intf')
+                .out().node('link').in_().node('interface', name='tor_intf')
+                .in_().node('system', role=not_in(['leaf']), name='tor')
+        """
+        leaf_link_nodes = main_bp.query(leaf_link_query)
+        # cls.logger.warning(f"init_leaf_switches() {leaf_link_nodes=}")
+        for nodes in leaf_link_nodes:
+            leaf_data = leaf_switches[nodes['leaf']['label']]
+            leaf_data.id = nodes['leaf']['id']
+            leaf_link_data = [x for x in leaf_data.links.values() if x.leaf_intf == nodes['leaf_intf']['if_name']][0]
+            leaf_link_data.id = nodes['leaf_intf']['id']
+            if nodes['tor']['role'] == 'access':
+                # the access switches present
+                access_switches[nodes['tor']['label']].main_id = nodes['tor']['id']
+            elif nodes['tor']['role'] == 'generic':
+                # the generic systems present
+                tor_gs.label=nodes['tor']['label']
+                tor_gs.id=nodes['tor']['id']
+                # TODO: add links, ae_id, ...
+        if tor_gs.tor_id is None:
+            await SseEvent(data=SseEventData(id='access-gs-box').hidden()).send()
+            await SseEvent(data=SseEventData(id='access-gs-label').hidden()).send()
+        if len([x.id for x in leaf_switches.values()]) == 2:
+            await SseEvent(data=SseEventData(id='leaf1-box').done()).send()
+            await SseEvent(data=SseEventData(id='leaf2-box').done()).send()
+        if len([x.main_id for x in access_switches.values()]) == 2:
+            await SseEvent(data=SseEventData(id='access1-box').done().visible()).send()
+            await SseEvent(data=SseEventData(id='access2-box').done().visible()).send()
+            await SseEvent(data=SseEventData(id='access1-label').visible()).send()
+            await SseEvent(data=SseEventData(id='access2-label').visible()).send()
 
         cls.logger.warning(f"init_leaf_switches end {leaf_switches=}")
         return
 
 
-    def sync_main_links(self):
+    def sync_main_links(self, global_store):
         """
         Pull the server information of the created access switches in main_bp
           and update the generic_systems data (refresh)

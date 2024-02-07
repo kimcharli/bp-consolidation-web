@@ -128,6 +128,7 @@ async def sync():
 
     await GenericSystemWorker.sync_tor_generic_systems(global_store)
     await GenericSystemWorker.init_leaf_switches(global_store)
+    # await GenericSystemWorker.sync_main_links(global_store)
 
     return {}
 

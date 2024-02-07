@@ -246,13 +246,15 @@ class ApstraServer:
 @dataclass
 class LeafLink():
     leaf_intf: str
-    other_intf: str
-
+    tor_name: str
+    leaf_intf_id: str = None
+    tor_gs_name: str = None
+    tor_gs_id: str = None
 @dataclass
 class LeafSwitch():
     label: str
     id: str
-    links: List[LeafLink]
+    links: Dict[str, LeafLink]  # a48, a49, b48, b49 : LeafLink
 
 @dataclass
 class AccessSwitch:
@@ -266,10 +268,10 @@ class TorGS:
     """
     The generic system present in the main blueprint to represent the TOR
     """
-    old_label: str  # the old label is guessed by tor_bp, then may be updated by the main_bp
+    label: str  # the label captured by init_leaf_switches
     link_ids: List[str]
-    old_id: str = None  # the old_id and old_ae_id will be updated by the main_bp
-    old_ae_id: str = None
+    tor_id: str = None  # the old_id and old_ae_id will be updated by the main_bp
+    tor_ae_id: str = None
     prefix: str = None
 
 @dataclass
@@ -289,10 +291,10 @@ class GlobalStore:
     migration_status: MigrationStatus = field(default_factory=MigrationStatus)
     access_switches: Dict[str, AccessSwitch] = None  # created by GenericSystemWorker::sync_tor_generic_systems
     generic_systems: Any = None  # created by GenericSystemWorker::sync_tor_generic_systems
-    tor_gs: TorGS = None  # created by GenericSystemWorker::sync_tor_generic_systems
+    tor_gs: TorGS = None  # created by GenericSystemWorker::sync_tor_generic_systems, updated by init_leaf_switches
     # tor_gs_label: Any = None # created by GenericSystemWorker::sync_tor_generic_systems
     # tor_gs_prefix: Any = None # created by GenericSystemWorker::sync_tor_generic_systems
-    leaf_gs: Any = None
+    # leaf_gs: Any = None
     leaf_switches: Dict[str, LeafSwitch] = None  # created by GenericSystemWorker::init_leaf_switches
 
     @classmethod
