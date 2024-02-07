@@ -782,10 +782,15 @@ class GenericSystemWorker():
             await SseEvent(data=SseEventData(id='leaf1-box').done()).send()
             await SseEvent(data=SseEventData(id='leaf2-box').done()).send()
         if len([x.main_id for x in access_switches.values()]) == 2:
+            await global_store.migration_status.set_as_done(True)
             await SseEvent(data=SseEventData(id='access1-box').done().visible()).send()
             await SseEvent(data=SseEventData(id='access2-box').done().visible()).send()
-            await SseEvent(data=SseEventData(id='access1-label').visible()).send()
-            await SseEvent(data=SseEventData(id='access2-label').visible()).send()
+            await SseEvent(data=SseEventData(id='access1-label', value=sorted(access_switches)[0]).visible()).send()
+            await SseEvent(data=SseEventData(id='access2-label', value=sorted(access_switches)[1]).visible()).send()
+            await SseEvent(data=SseEventData(id='peer-link').done().visible()).send()
+            await SseEvent(data=SseEventData(id='peer-link-name').done().visible()).send()
+
+            await cls.sync_main_links(global_store)
 
         cls.logger.warning(f"init_leaf_switches end {leaf_switches=}")
         return

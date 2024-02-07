@@ -176,7 +176,7 @@ class MigrationStatus(BaseModel):
         """
         if is_as_done != self.is_as_done:
             await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).enable().done()).send()
-            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).enable().not_done()).send()
+            await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).enable().init()).send()
 
     async def set_gs_done(self, is_gs_done: bool):
         """
