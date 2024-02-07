@@ -128,18 +128,18 @@ async def sync():
 
     await GenericSystemWorker.sync_tor_generic_systems(global_store)
     await GenericSystemWorker.init_leaf_switches(global_store)
-    # await GenericSystemWorker.sync_main_links(global_store)
+    await GenericSystemWorker.refresh_tor_generic_systems(global_store)
 
     return {}
 
-    # await global_store.migration_status.refresh()
-    await access_switches.sync_access_switches()
-    logging.warning(f"/sync_access_switches end")
+    # # await global_store.migration_status.refresh()
+    # await access_switches.sync_access_switches()
+    # logging.warning(f"/sync_access_switches end")
 
-    logging.warning(f"/sync_generic_systems begin")
-    # await access_switches.sync_generic_systems()
-    await global_store.generic_systems.refresh_tor_generic_systems()
-    logging.warning(f"/sync_generic_systems end")
+    # logging.warning(f"/sync_generic_systems begin")
+    # # await access_switches.sync_generic_systems()
+    # await global_store.generic_systems.refresh_tor_generic_systems()
+    # logging.warning(f"/sync_generic_systems end")
 
     logging.warning(f"/update_virtual_networks_data begin")
     await access_switches.update_virtual_networks_data()
