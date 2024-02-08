@@ -1,10 +1,8 @@
 
-# from pydantic import BaseModel
 from typing import List, Dict, Any
 from dataclasses import dataclass, field
 import logging
 import time
-import asyncio
 
 from .ck_global import sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, global_store
 # from .access_switches import DataStateEnum

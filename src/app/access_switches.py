@@ -1,16 +1,12 @@
 import logging
-# from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 import time
 import json
 
-from .ck_global import global_store, DataStateEnum, sse_queue, CtEnum, SseEventEnum, SseEvent, SseEventData
+from .ck_global import SseEvent, SseEventData
 
-# from .generic_systems import LeafGS
 from ck_apstra_api.apstra_blueprint import CkEnum
-from .virtual_networks import VirtualNetworks
-# from .vlan_cts import sync_tor_ct, sync_main_ct, referesh_ct_table
 
 
 def build_access_switch_fabric_links_dict(a_link_nodes:dict) -> dict:
@@ -84,58 +80,37 @@ class AccessSwitcheWorker:
 
     @property
     def main_bp(self):
-        return global_store.bp['main_bp']
+        return self.global_store.bp['main_bp']
 
     @property
     def tor_bp(self):
-        return global_store.bp['tor_bp']
+        return self.global_store.bp['tor_bp']
 
-    @property
-    def generic_systems(self):
-        # if global_store.generic_systems is None:
-        #     global_store.generic_systems = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, tor_gs_label=self.tor_gs.label)
-        #     self.logger.warning(f"generic_systems {global_store.generic_systems=}")
-        return global_store.generic_systems
+    # @property
+    # def generic_systems(self):
+    #     # if global_store.generic_systems is None:
+    #     #     global_store.generic_systems = GenericSystems(main_bp=self.main_bp, tor_bp=self.tor_bp, tor_gs_label=self.tor_gs.label)
+    #     #     self.logger.warning(f"generic_systems {global_store.generic_systems=}")
+    #     return self.global_store.generic_systems
 
-    @property
-    def virtual_networks(self):
-        if self.virtual_networks_data is None:
-            self.virtual_networks_data = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.bound_to)
-        return self.virtual_networks_data
+    # @property
+    # def virtual_networks(self):
+    #     if self.virtual_networks_data is None:
+    #         self.virtual_networks_data = VirtualNetworks(main_bp=self.main_bp, tor_bp=self.tor_bp, this_bound_to=self.bound_to)
+    #     return self.virtual_networks_data
 
-    # 
-    # generic systems
-    # 
-    # async def sync_generic_systems(self):
-    #     self.logger.warning(f"sync_generic_systems begin...")
-    #     # breakpoint()
-    #     # data = await self.generic_systems.sync_tor_generic_systems()  # already done by sync_access_switches
-    #     await self.generic_systems.refresh_tor_generic_systems()
-    #     self.logger.warning(f"sync_generic_systems end...")
-    #     # breakpoint()
+
+    # # 
+    # # virtual networks
+    # # 
+    # async def update_virtual_networks_data(self):
+    #     await self.virtual_networks.update_virtual_networks_data()
     #     return
 
-    # async def migrate_generic_system(self, tbody_id):
-    #     # self.generic_systems.access_switches = self.access_switches
-    #     access_switch_ids = [x.id for x in self.access_switches.values() if x.id != '']
-    #     self.logger.warning(f"migrate_generic_system: {access_switch_ids=}")
-    #     if len(access_switch_ids) != 2:
-    #         self.logger.warning(f"migrate_generic_system: access switches not ready {access_switch_ids=}")
-    #         return {}
-    #     is_migrated = await self.generic_systems.migrate_generic_system(tbody_id)
-    #     return is_migrated
 
-    # 
-    # virtual networks
-    # 
-    async def update_virtual_networks_data(self):
-        await self.virtual_networks.update_virtual_networks_data()
-        return
-
-
-    async def migrate_virtual_networks(self):
-        data = await self.virtual_networks.migrate_virtual_networks()
-        return data
+    # async def migrate_virtual_networks(self):
+    #     data = await self.virtual_networks.migrate_virtual_networks()
+    #     return data
 
 
 
@@ -143,23 +118,27 @@ class AccessSwitcheWorker:
     # compare configuration
     # 
     async def compare_config(self):
+        access_switches = self.global_store.access_switches
+        main_bp = self.global_store.bp['main_bp']
+        tor_bp = self.global_store.bp['tor_bp']
+
         switch_configs = { 'main': {}, 'tor': {} }
-        for index, (k, switch) in enumerate(self.access_switches.items()):
-            main_confg = self.main_bp.get_item(f"nodes/{switch.id}/config-rendering")['config']
-            switch_main_href = f"{global_store.env_ini.url}/#/blueprints/{self.main_bp.id}/staged/physical/selection/node-preview/{switch.id}"
+        for index, (switch) in enumerate(access_switches.values()):
+            main_confg = main_bp.get_item(f"nodes/{switch.main_id}/config-rendering")['config']
+            switch_main_href = f"{self.global_store.apstra_url}/#/blueprints/{main_bp.id}/staged/physical/selection/node-preview/{switch.main_id}"
             await SseEvent(data=SseEventData(
                 id=f"main-config-text-{index}", value=main_confg)).send()
             await SseEvent(
                            data=SseEventData(id=f"main-config-caption-{index}").set_href(switch_main_href)).send()
             
-            switch_tor_href = f"{global_store.env_ini.url}/#/blueprints/{self.tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}"
-            tor_confg = self.tor_bp.get_item(f"nodes/{switch.tor_id}/config-rendering")['config']
+            switch_tor_href = f"{self.global_store.apstra_url}/#/blueprints/{self.tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}"
+            tor_confg = tor_bp.get_item(f"nodes/{switch.tor_id}/config-rendering")['config']
             await SseEvent(data=SseEventData(
                 id=f"tor-config-text-{index}", value=tor_confg)).send()
             await SseEvent(
                            data=SseEventData(id=f"tor-config-caption-{index}").set_href(switch_tor_href).set_target()).send()
 
-
+        await SseEvent(data=SseEventData(id='compare-config').done()).send()
     #
     # access switches
     #
@@ -213,7 +192,7 @@ class AccessSwitcheWorker:
         self.logger.warning(f"sync_access_switches {self.access_switches=}")
         if len([x.id for x in self.access_switches.values() if x.id != '']) == 2:            
             # access switches are created            
-            await global_store.migration_status.set_as_done(True)
+            await self.global_store.migration_status.set_as_done(True)
             # hide access-gs-box, and show access1-box, access2-box
             await SseEvent(data=SseEventData(id='access-gs-box').hidden()).send()
             await SseEvent(data=SseEventData(id='access-gs-label').hidden()).send()
@@ -382,7 +361,7 @@ class AccessSwitcheWorker:
         await SseEvent(data=SseEventData(id='access1-label').visible()).send()
         await SseEvent(data=SseEventData(id='access2-label').visible()).send()
 
-        await global_store.migration_status.set_as_done(True)
+        await self.global_store.migration_status.set_as_done(True)
         return
 
 
@@ -400,7 +379,7 @@ class AccessSwitcheWorker:
         if not self.tor_gs.ae_id:
             self.logger.warning(f"tor_gs.ae_id is absent, but tor_gs.id is present. Something wrong")
             return False
-        main_bp = global_store.bp['main_bp']
+        main_bp = self.global_store.bp['main_bp']
 
         tor_interface_nodes_in_main = self.tor_interface_nodes_in_main
         

@@ -573,7 +573,7 @@ class GenericSystemWorker():
         """
         global_store = self.global_store
 
-        self.logger.warning(f"sync_tor_generic_systems() begin {global_store=}")
+        # self.logger.warning(f"sync_tor_generic_systems() begin {global_store=}")
 
         if global_store.generic_systems is not None or global_store.access_switches is not None:
             self.logger.error(f"sync_tor_generic_systems() called twice - generic_systems or access_switches not None {global_store.generic_systems=} {global_store.access_switches=}")
@@ -713,7 +713,7 @@ class GenericSystemWorker():
 
             self.sync_main_links()
 
-        self.logger.warning(f"init_leaf_switches end {leaf_switches=}")
+        self.logger.warning(f"init_leaf_switches end")
         return
 
 

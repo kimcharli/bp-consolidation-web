@@ -1,16 +1,12 @@
 import logging
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, field_validator
 import json
-import time
 import asyncio
 from enum import StrEnum
-from datetime import datetime
 from dataclasses import dataclass, field, asdict
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
-# from .generic_systems import GenericSystems
 
 
 sse_queue = asyncio.Queue()
@@ -256,7 +252,7 @@ class GlobalStore:
     data: dict = field(default_factory=dict)
     migration_status: MigrationStatus = field(default_factory=MigrationStatus)
 
-    accssSwitchWorker: Any = None
+    accessSwitchWorker: Any = None
     access_switches: Dict[str, AccessSwitch] = None  # created by GenericSystemWorker::sync_tor_generic_systems
 
     genericSystemWorker: Any = None
@@ -296,13 +292,10 @@ class GlobalStore:
     def leaf_switch_pair(self):
         return sorted(self.leaf_switches)
 
-    # def update_env_ini(self, data):  
-    #     self.logger.warning(f"update_env_ini(): {data=}")
-    #     self.env_ini.update(data)
-    #     return
-    
-    # def replace_env_ini(self, env_ini: EnvIni):
-    #     self.env_ini = env_ini
+    @property
+    def apstra_url(self):
+        return f"https://{self.apstra['host']}:{self.apstra['port']}"
+
 
     def login_server(self) -> str:
         self.logger.warning(f"login_server()")
@@ -327,8 +320,8 @@ class GlobalStore:
             self.bp[role] = bp
             self.logger.warning(f"login_blueprint {bp=}")
             id = bp.id
-            apstra_url = self.apstra_server.url_prefix[:-4]
-            value = f'<a href="{apstra_url}/#/blueprints/{id}/staged" target="_blank">{label}</a>'
+            # apstra_url = self.apstra_server.url_prefix[:-4]
+            value = f'<a href="{self.apstra_url}/#/blueprints/{id}/staged" target="_blank">{label}</a>'
             # data = { "id": id, "url": url, "label": label }
             await SseEvent(data=SseEventData(id=role, value=value).done()).send()
             self.logger.warning(f"login_blueprint() end")
