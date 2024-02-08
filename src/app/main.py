@@ -11,10 +11,11 @@ import os
 from pydantic import BaseModel
 import yaml
 
-from .ck_global import ServerItem, BlueprintItem, global_store, sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, GlobalStore
+from .ck_global import global_store, sse_queue, SseEvent, SseEventEnum, SseEventData, GlobalStore
 from .generic_systems import GenericSystemWorker
 from .access_switches import AccessSwitcheWorker
-from .vlan_cts import migrate_connectivity_templates
+from .vlan_cts import CtWorker
+from .virtual_networks import VirtualNetworks
 
 
 logger = logging.getLogger(__name__)
@@ -50,24 +51,9 @@ async def upload_env_ini(request: Request, file: UploadFile):
     await SseEvent(data=SseEventData(id='load-env-div').done()).send()
 
     logging.warning(f"/upload_env_ini: {global_store=}")
-    # return 'file loaded'
     return await connect()
 
 
-
-# @app.post("/update-env-ini")
-# async def update_env_ini(server: ServerItem):
-#     logging.warning(f"/update-env-ini: {server=}")
-#     global_store.update_env_ini(server)
-#     logging.warning(f"/update-env-ini: {global_store.env_ini.__dict__}")
-#     return server
-
-
-# @app.post("/login-server")
-# async def login_server(server: ServerItem):
-#     logging.warning(f"/login_server: {server=}")
-#     version = global_store.login_server(server)
-#     return version
 
 @app.get("/connect")
 async def connect():
@@ -106,14 +92,6 @@ async def disconnect():
     return "disconnected"
 
 
-# @app.post("/login-blueprint")
-# async def login_blueprint(blueprint: BlueprintItem):
-#     logging.warning(f"/login_blueprint: begin {blueprint=}")
-#     id = global_store.login_blueprint(blueprint)
-#     logging.warning(f"/login_blueprint: end {blueprint=}")
-#     return id
-
-
 # from SyncStateButton
 @app.get("/sync")
 async def sync():    
@@ -122,41 +100,27 @@ async def sync():
     logging.warning(f"/sync begin {global_store=}")
     await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).loading()).send()
 
-    # global_store.access_switches = AccessSwitches()
-    # global_store.generic_systems = None
-    # access_switches = global_store.access_switches
+    accessSwitchWorker = global_store.accessSwitchWorker = AccessSwitcheWorker(global_store=global_store)
+    genericSystemWorker = global_store.genericSystemWorker = GenericSystemWorker(global_store=global_store)
+    await genericSystemWorker.sync_tor_generic_systems()
+    await genericSystemWorker.init_leaf_switches()
+    await genericSystemWorker.refresh_tor_generic_systems()
 
-    await GenericSystemWorker.sync_tor_generic_systems(global_store)
-    await GenericSystemWorker.init_leaf_switches(global_store)
-    await GenericSystemWorker.refresh_tor_generic_systems(global_store)
+    global_store.virtualNetworks = VirtualNetworks(global_store=global_store, vns={}, this_bound_to=global_store.bound_to, bound_to={})
+    await global_store.virtualNetworks.sync_tor_vns()
 
-    return {}
+    ctWorker = global_store.ctWorker = CtWorker(global_store=global_store)
+    ctWorker.sync_tor_ct()
+    ctWorker.sync_main_ct()
+    await ctWorker.referesh_ct_table()
 
-    # # await global_store.migration_status.refresh()
-    # await access_switches.sync_access_switches()
-    # logging.warning(f"/sync_access_switches end")
-
-    # logging.warning(f"/sync_generic_systems begin")
-    # # await access_switches.sync_generic_systems()
-    # await global_store.generic_systems.refresh_tor_generic_systems()
-    # logging.warning(f"/sync_generic_systems end")
-
-    logging.warning(f"/update_virtual_networks_data begin")
-    await access_switches.update_virtual_networks_data()
-    logging.warning(f"/update_virtual_networks_data end")
-
-    logging.warning(f"/update-connectivity-template-data begin")
-    await access_switches.sync_connectivity_template()
-    logging.warning(f"/update-connectivity-template-data end")
+    logging.warning(f"/sync end")
 
     await global_store.migration_status.set_sync_done()
 
     return {}
 
-class SystemLabel(BaseModel):
-    tbody_id: str
-
-@app.post("/migrate-access-switches")
+@app.get("/migrate-access-switches")
 async def migrate_access_switches():
     """
     Remove TOR generic system in main blueprint
@@ -171,17 +135,7 @@ async def migrate_access_switches():
     return {}
 
 
-# @app.post("/migrate-generic-system")
-# async def migrate_generic_system(system_label: SystemLabel):
-#     access_switches = global_store.access_switches
-#     logging.warning(f"/migrate_generic_system begin {system_label=}")
-#     # is_migrated = await access_switches.migrate_generic_system(system_label.tbody_id)
-#     await global_store.generic_systems.migrate_generic_system(system_label.tbody_id)
-#     # await global_store.migration_status.set_gs_done(is_migrated)
-#     logging.warning(f"/migrate_generic_system end")
-#     return {}
-
-@app.post("/migrate-generic-systems")
+@app.get("/migrate-generic-systems")
 async def migrate_generic_system():
     logging.warning(f"/migrate_generic_systems begin")
     await global_store.generic_systems.migrate_generic_systems()
@@ -189,25 +143,23 @@ async def migrate_generic_system():
     return {}
 
 
-@app.post("/migrate-virtual-networks")
+@app.get("/migrate-virtual-networks")
 async def migrate_virtual_networks():
-    access_switches = global_store.access_switches
+    await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).loading()).send()
     logging.warning(f"/migrate_virtual_networks begin")
-    is_vn_done = await access_switches.migrate_virtual_networks()
-    await global_store.migration_status.set_vn_done(is_vn_done)
+    await global_store.virtualNetworks.migrate_virtual_networks()
     logging.warning(f"/migrate_virtual_networks end")
     return {}
 
-@app.post("/migrate-cts")
+@app.get("/migrate-cts")
 async def migrate_cts():
-    access_switches = global_store.access_switches
+    CtWorker = global_store.ctWorker
     logging.warning(f"/migrate_cts begin")
-    await migrate_connectivity_templates()
-    # await global_store.migration_status.set_ct_done(is_ct_done)  # done in generic_systems
+    await CtWorker.migrate_connectivity_templates()
     logging.warning(f"/migrate_cts end")
     return {}
 
-@app.post("/compare-config")
+@app.get("/compare-config")
 async def compare_config():
     access_switches = global_store.access_switches
     logging.warning(f"/compare_config begin")
@@ -223,11 +175,11 @@ async def sse(request: Request):
             if await request.is_disconnected():
                 break
             item = await sse_queue.get()
-            logging.warning(f"######## event_generator get {sse_queue.qsize()=} {item=}")          
+            # logging.warning(f"######## event_generator get {sse_queue.qsize()=} {item=}")          
             yield item
             sse_queue.task_done()
             # set 0.05 to produce progressing
-            await asyncio.sleep(0.02)
+            await asyncio.sleep(0.05)
     return EventSourceResponse(event_generator())
 
 

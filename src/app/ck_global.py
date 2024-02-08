@@ -6,7 +6,7 @@ import time
 import asyncio
 from enum import StrEnum
 from datetime import datetime
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
@@ -40,6 +40,7 @@ class CtEnum(StrEnum):
 class SseEventEnum(StrEnum):
     DATA_STATE = 'data-state'  # generic system data state
     TBODY_GS = 'tbody-gs'  # create generic system as tbody
+    UPDATE_VN = 'update-vn'  # generic system data state
     # BUTTION_DISABLE = 'disable-button'
     BUTTON_SYNC_STATE = 'sync'
     BUTTON_MIGRATE_AS = 'migrate-access-switches'
@@ -53,7 +54,8 @@ class SseEventEnum(StrEnum):
     TEXT_TOR_CONFIG = 'tor-config-text'
 
 
-class SseEventData(BaseModel):
+@dataclass
+class SseEventData:
     id: str
     state: Optional[str] = None
     value: Optional[str] = None
@@ -83,10 +85,6 @@ class SseEventData(BaseModel):
         self.state = DataStateEnum.INIT
         return self
 
-    # def not_done(self):
-    #     self.state = DataStateEnum.INIT
-    #     return self
-
     def error(self):
         self.state = DataStateEnum.ERROR
         return self
@@ -110,18 +108,20 @@ class SseEventData(BaseModel):
         return self
 
 # https://html.spec.whatwg.org/multipage/server-sent-events.html
-class SseEvent(BaseModel):
-    event: str = SseEventEnum.DATA_STATE     # SseEventEnum.DATA_STATE, SseEventEnum.TBODY_GS, SseEventEnum.BUTTION_DISABLE
+@dataclass
+class SseEvent:
     data: SseEventData
+    # event: str = field(default_factory=SseEventEnum.DATA_STATE)     # SseEventEnum.DATA_STATE, SseEventEnum.TBODY_GS, SseEventEnum.BUTTION_DISABLE
+    event: str = 'data-state'    # SseEventEnum.DATA_STATE, SseEventEnum.TBODY_GS, SseEventEnum.BUTTION_DISABLE
 
     async def send(self):
         await asyncio.sleep(0.05)
-        sse_dict = {'event': self.event, 'data': json.dumps(dict(self.data))}
-        logging.warning(f"######## SseEvent put {sse_queue.qsize()=} {self=}")        
+        sse_dict = {'event': self.event, 'data': json.dumps(asdict(self.data))}
+        # logging.warning(f"######## SseEvent put {sse_queue.qsize()=} {self=}")        
         await sse_queue.put(sse_dict)
 
-
-class MigrationStatus(BaseModel):
+@dataclass
+class MigrationStatus:
     """
     Trace and manage the migration status
     The migration button will be controlled by this class
@@ -131,38 +131,6 @@ class MigrationStatus(BaseModel):
     is_gs_done: bool = False
     is_vn_done: bool = False
     is_ct_done: bool = False
-
-    # async def refresh(self):
-    #     """
-    #     Update all the button status
-
-    #     """
-    #     if self.is_as_done:
-    #         await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).done()).send()
-    #         if self.is_gs_done:
-    #             await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).done()).send()
-    #             if self.is_vn_done:
-    #                 await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
-    #                 if self.is_ct_done:
-    #                     await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
-    #                 else:
-    #                     await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).init()).send()
-    #             else:
-    #                 # vn not done
-    #                 await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).init()).send()
-    #                 await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
-    #         else:
-    #             # gs not done
-    #             await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).init()).send()
-    #             await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).disable()).send()
-    #             await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
-
-    #     else:
-    #         # AS is not done
-    #         await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).init().enable()).send()
-    #         await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).init().disable()).send()
-    #         await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).init().disable()).send()
-    #         await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).init().disable()).send()
 
     async def set_sync_done(self):
         self.is_sync_done = True
@@ -202,22 +170,23 @@ class MigrationStatus(BaseModel):
             await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
             # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).done()).send()
 
-class ServerItem(BaseModel):
-    id: Optional[int] = None
-    host: str
-    port: int
-    username: str
-    password: str
-    main_bp_label: Optional[str] = None
-    tor_bp_label: Optional[str] = None
+# @dataclass
+# class ServerItem:
+#     id: Optional[int] = None
+#     host: str
+#     port: int
+#     username: str
+#     password: str
+#     main_bp_label: Optional[str] = None
+#     tor_bp_label: Optional[str] = None
 
-    @field_validator('id', 'port', mode='before')
-    def convert_str_to_int(cls, value) -> int:
-        return int(value)
+#     @field_validator('id', 'port', mode='before')
+#     def convert_str_to_int(cls, value) -> int:
+#         return int(value)
 
-class BlueprintItem(BaseModel):    
-    label: str
-    role: str
+# class BlueprintItem(BaseModel):    
+#     label: str
+#     role: str
 
 @dataclass
 class LinkLldp:
@@ -282,20 +251,27 @@ class GlobalStore:
 
     apstra_server: Any = None  #  ApstaServer
     bp: Dict[str, Any] = field(default_factory=dict)  # main_bp, tor_bp (CkApstraBlueprint)
-    # main_bp = None  # ApstaBlueprint
-    # tor_bp = None  # ApstaBlueprint
     tor_data: dict = field(default_factory=dict)  # 
-    # env_ini: EnvIni = EnvIni()
     logger: Any = logging.getLogger("GlobalStore")  # logging.Logger
     data: dict = field(default_factory=dict)
     migration_status: MigrationStatus = field(default_factory=MigrationStatus)
+
+    accssSwitchWorker: Any = None
     access_switches: Dict[str, AccessSwitch] = None  # created by GenericSystemWorker::sync_tor_generic_systems
+
+    genericSystemWorker: Any = None
     generic_systems: Any = None  # created by GenericSystemWorker::sync_tor_generic_systems
+
+    virtualNetworks: Any = None
+    virtual_networks: Any = None
+
     tor_gs: TorGS = None  # created by GenericSystemWorker::sync_tor_generic_systems, updated by init_leaf_switches
-    # tor_gs_label: Any = None # created by GenericSystemWorker::sync_tor_generic_systems
-    # tor_gs_prefix: Any = None # created by GenericSystemWorker::sync_tor_generic_systems
-    # leaf_gs: Any = None
     leaf_switches: Dict[str, LeafSwitch] = None  # created by GenericSystemWorker::init_leaf_switches
+    ctWorker: Any = None
+
+    @property
+    def bound_to(self):
+        return f"{self.tor_gs.label}-pair"
 
     @classmethod
     def get_blueprints(cls):

@@ -1,6 +1,7 @@
 
-from pydantic import BaseModel
+# from pydantic import BaseModel
 from typing import List, Dict, Any
+from dataclasses import dataclass, field
 import logging
 import time
 import asyncio
@@ -9,139 +10,143 @@ from .ck_global import sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEven
 # from .access_switches import DataStateEnum
 
 # TODO: minimize _VirtualNetwork content with csv_bulk line
-class _BoundTo(BaseModel):
+@dataclass
+class _BoundTo:
     vlan_id: int  # like '1323'
-class _VirtualNetwork(BaseModel):
+
+@dataclass
+class _VirtualNetwork:
     vn_id: int
-    vn_node_id: str = ''
-    vn_name: str = ''
-    rz_name: str = ''
-    vn_type: str = ''
-    reserved_vlan_id: str = ''
-    dhcp_service: str = ''
-    ipv4_enabled: str = ''
-    ipv6_enabled: str = ''
-    virtual_gateway_ipv4_enabled: str = ''
-    virtual_gateway_ipv6_enabled: str = ''
-    ipv4_subnet: str = ''
-    ipv6_subnet: str = ''
-    virtual_gateway_ipv4: str = ''
-    virtual_gateway_ipv6: str = ''
-    bound_to: Dict[str, _BoundTo] = {}  # the systems this vn is bound to (assigned to)
+    # vn_node_id: str = ''
+    # vn_name: str = ''
+    # rz_name: str = ''
+    # vn_type: str = ''
+    # reserved_vlan_id: str = ''
+    # dhcp_service: str = ''
+    # ipv4_enabled: str = ''
+    # ipv6_enabled: str = ''
+    # virtual_gateway_ipv4_enabled: str = ''
+    # virtual_gateway_ipv6_enabled: str = ''
+    # ipv4_subnet: str = ''
+    # ipv6_subnet: str = ''
+    # virtual_gateway_ipv4: str = ''
+    # virtual_gateway_ipv6: str = ''
+    bound_to: Dict[str, _BoundTo] = None  # the systems (rgs) this vn is bound to 
 
     @property
     def button_vn_id(self):
         return f"vn-{self.vn_id}"
         
-    def html_element(self, this_bound_to):
-        content = _VirtualNetworkResponse(id=self.button_vn_id, value=str(self.vn_id))
-        # content.attrs.append(_Attribute(attr='id', value=self.vn_id))
-        content.attrs.append(_Attribute(attr='class', value=DataStateEnum.DATA_STATE))
+
+    async def sse_vn(self, this_bound_to):
+        """
+        send the sse event for this vn. See if this vn is bound to the access switch pair
+        """
+        sse_data = SseEventData(id=self.button_vn_id, value=str(self.vn_id))
         if this_bound_to in self.bound_to:
-            content.attrs.append(_Attribute(attr=DataStateEnum.DATA_STATE, value=DataStateEnum.DONE))
+            # sse_data = sse_data.done()
+            await SseEvent(event=SseEventEnum.UPDATE_VN, data=sse_data.done()).send()            
         else:
-            content.attrs.append(_Attribute(attr=DataStateEnum.DATA_STATE, value=DataStateEnum.INIT))
-        return content
+            # sse_data = sse_data.init()
+            await SseEvent(event=SseEventEnum.UPDATE_VN, data=sse_data.init()).send()            
+
 
     def update(self, nodes):
+        # logging.warning(f"update {nodes=} {self=}")
         thisvn = nodes['vn']
-        self.vn_node_id = thisvn['id']
-        self.vn_name = thisvn['label']
-        self.rz_name = nodes['rz']['label']
-        self.vn_type = thisvn['vn_type']
-        # self.vn_id = thisvn['vn_id']  # this is the initializer
-        self.reserved_vlan_id = thisvn['reserved_vlan_id'] or ''
-        self.dhcp_service = nodes['vn_instance']['dhcp_enabled'] and 'yes' or ''
-        self.ipv4_enabled = thisvn['ipv4_enabled'] and 'yes' or ''
-        self.ipv6_enabled = thisvn['ipv6_enabled'] and 'yes' or ''
-        self.virtual_gateway_ipv4_enabled = thisvn['virtual_gateway_ipv4_enabled'] and 'yes' or ''
-        self.virtual_gateway_ipv6_enabled = thisvn['virtual_gateway_ipv6_enabled'] and 'yes' or ''
-        self.ipv4_subnet = thisvn['ipv4_subnet'] and thisvn['ipv4_subnet'] or ''
-        self.ipv6_subnet = thisvn['ipv6_subnet'] and thisvn['ipv6_subnet'] or ''
-        self.virtual_gateway_ipv4 = thisvn['virtual_gateway_ipv4'] and thisvn['virtual_gateway_ipv4'] or ''
-        self.virtual_gateway_ipv6 = thisvn['virtual_gateway_ipv6'] and thisvn['virtual_gateway_ipv6'] or ''
+        # self.vn_node_id = thisvn['id']
+        # self.vn_name = thisvn['label']
+        # self.rz_name = nodes['rz']['label']
+        # self.vn_type = thisvn['vn_type']
+        # # self.vn_id = thisvn['vn_id']  # this is the initializer
+        # self.reserved_vlan_id = thisvn['reserved_vlan_id'] or ''
+        # self.dhcp_service = nodes['vn_instance']['dhcp_enabled'] and 'yes' or ''
+        # self.ipv4_enabled = thisvn['ipv4_enabled'] and 'yes' or ''
+        # self.ipv6_enabled = thisvn['ipv6_enabled'] and 'yes' or ''
+        # self.virtual_gateway_ipv4_enabled = thisvn['virtual_gateway_ipv4_enabled'] and 'yes' or ''
+        # self.virtual_gateway_ipv6_enabled = thisvn['virtual_gateway_ipv6_enabled'] and 'yes' or ''
+        # self.ipv4_subnet = thisvn['ipv4_subnet'] and thisvn['ipv4_subnet'] or ''
+        # self.ipv6_subnet = thisvn['ipv6_subnet'] and thisvn['ipv6_subnet'] or ''
+        # self.virtual_gateway_ipv4 = thisvn['virtual_gateway_ipv4'] and thisvn['virtual_gateway_ipv4'] or ''
+        # self.virtual_gateway_ipv6 = thisvn['virtual_gateway_ipv6'] and thisvn['virtual_gateway_ipv6'] or ''
         self.bound_to.setdefault(nodes['redundancy_group']['label'], _BoundTo(vlan_id=nodes['vn_instance']['vlan_id']))
 
-class _Attribute(BaseModel):
-    attr: str
-    value: str
 
-class _VirtualNetworkResponse(BaseModel):
-    id: str
-    attrs: List[_Attribute] = [] 
-    value: str
-
-class _VirtualNetworksResponse(BaseModel):
-    values: List[_VirtualNetworkResponse] = []
-    caption: str = ''
-    done: bool = False
-
-
-class VirtualNetworks(BaseModel):
-    vns: Dict[int, _VirtualNetwork] = {}  # vni: _VirtualNetwork
-    main_bp: Any
-    tor_bp: Any
-    bound_to: Dict[str, _BoundTo] = {}
-    this_bound_to: str  # the access switch pair label like 'atl1tor-r5r15-pair'
+@dataclass
+class VirtualNetworks:
+    global_store: Any  # should be given at the time of creation
+    vns: Dict[int, _VirtualNetwork] = None  # all the vnis to be in this access pair: _VirtualNetwork
+    bound_to: Dict[str, _BoundTo] = None  # bound_to (of all rg in the main bp) 
+    this_bound_to: str  = None  # the access switch pair label like 'atl1tor-r5r15-pair'
     # is_all_done: bool = False
 
     logger: Any = logging.getLogger('VirtualNetworks')
 
-    def render_all(self):
-        """
-        """
-        response = _VirtualNetworksResponse()
-        response.values = [v.html_element(self.this_bound_to) for k, v in self.vns.items()]
-        response.caption = f"Virtual Networks ({len(self.vns)})"
+    @property
+    def main_bp(self):
+        return self.global_store.bp['main_bp']
+    
+    @property
+    def tor_bp(self):
+        return self.global_store.bp['tor_bp']
 
-        not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]        
-        if len(not_done_list) == 0:
-            # all vns are assigned to this access switch pair
-            global_store.migration_status.set_vn_done(True)
-            # response.done = True
-        return response
-
-    async def queue_render(self):
-        """
-        Does set_vn_done
-        """
-        # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
-
-        import json
+    async def render_all(self):
         for vn_id, vn in self.vns.items():
-            the_data = vn.html_element(self.this_bound_to).dict()
-            # self.logger.warning(f"queue_render {the_data=}")
-            sse_message = {
-                'event': 'update-vn',
-                'data': json.dumps(the_data),
-            }
-            # self.logger.warning(f"queue_render {sse_message=}")
-            await sse_queue.put(sse_message)
+            await vn.sse_vn(self.this_bound_to)
 
-        await SseEvent(
-                        data=SseEventData(id=SseEventEnum.CAPTION_VN, 
+        await SseEvent(data=SseEventData(id=SseEventEnum.CAPTION_VN, 
                             value=f'Virtual Networks ({len(self.vns)})')).send()
-        not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]
-        # if len(not_done_list) == 0:
-        #     await SseEvent(
-        #                    data=SseEventData(
-        #                        id=SseEventEnum.BUTTON_MIGRATE_VN, 
-        #                        state=DataStateEnum.DONE)).send()
-        #     # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).enable()).send()
-        #     self.is_all_done = True
-        await global_store.migration_status.set_vn_done(len(not_done_list) == 0)
+        not_done_list = [vn for vn in self.vns.values() if self.this_bound_to not in vn.bound_to]
+        await self.global_store.migration_status.set_vn_done(len(not_done_list) == 0)
 
         return
 
+    # async def queue_render(self):
+    #     """
+    #     Does set_vn_done
+    #     """
+    #     # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
 
-    async def update_virtual_networks_data(self):
+    #     # import json
+    #     # for vn_id, vn in self.vns.items():
+    #     #     the_data = vn.html_element(self.this_bound_to).dict()
+    #     #     # self.logger.warning(f"queue_render {the_data=}")
+    #     #     sse_message = {
+    #     #         'event': 'update-vn',
+    #     #         'data': json.dumps(the_data),
+    #     #     }
+    #     #     # self.logger.warning(f"queue_render {sse_message=}")
+    #     #     await sse_queue.put(sse_message)
+
+    #     for vn_id, vn in self.vns.items():
+    #         await vn.sse_vn(self.this_bound_to)
+
+
+    #     await SseEvent(
+    #                     data=SseEventData(id=SseEventEnum.CAPTION_VN, 
+    #                         value=f'Virtual Networks ({len(self.vns)})')).send()
+    #     not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]
+    #     # if len(not_done_list) == 0:
+    #     #     await SseEvent(
+    #     #                    data=SseEventData(
+    #     #                        id=SseEventEnum.BUTTON_MIGRATE_VN, 
+    #     #                        state=DataStateEnum.DONE)).send()
+    #     #     # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).enable()).send()
+    #     #     self.is_all_done = True
+    #     await global_store.migration_status.set_vn_done(len(not_done_list) == 0)
+
+    #     return
+
+
+    async def sync_tor_vns(self):
         # cls['vnis'] = [ x['vn']['vn_id'] for x in tor_bp.query("node('virtual_network', name='vn')") ]        
         for vn_node in self.tor_bp.query("node('virtual_network', name='vn')"):
             vn_id = vn_node['vn']['vn_id']
-            self.vns[vn_id] = _VirtualNetwork(vn_id=vn_node['vn']['vn_id'])
+            self.vns[vn_id] = _VirtualNetwork(vn_id=vn_node['vn']['vn_id'], bound_to={})
 
         # # TODO: take care of non RG case
         # do query for all to save time to process
+        # vn to switch matching of all the main blueprint
         main_vn_nodes_query = f"""match(
             node('virtual_network', name='vn').in_('member_vns').node('security_zone', name='rz'),
             node(name='vn').out('instantiated_by').node('vn_instance', name='vn_instance')
@@ -155,14 +160,19 @@ class VirtualNetworks(BaseModel):
             if vn_id not in self.vns:
                 # irelevant
                 continue
-            vn = self.vns[vn_id]
+            vn = self.vns[vn_id]  # _VirtualNetwork
             vn.update(nodes)
-            for k, v in vn.bound_to.items():
-                if k not in self.bound_to:
-                    self.bound_to[k] = v
+            for rg_pair, vlan_id in vn.bound_to.items():
+                if rg_pair not in self.bound_to:
+                    # logging.warning(f"bound_to {rg_pair=} {vlan_id=} {self.bound_to=} {vn=}")
+                    self.bound_to[rg_pair] = vlan_id
 
-        await self.queue_render()
-        # return self.render_all()
+        # for vn_id, vn in self.vns.items():
+        #     await vn.sse_vn(self.this_bound_to)
+
+        # await self.queue_render()
+        return await self.render_all()
+        # return
 
     def csv_headers(self) -> str:
         cols = ["vn_node_id", "vn_name", "rz_name", "vn_type", "vn_id", "reserved_vlan_id", "dhcp_service",
@@ -194,7 +204,7 @@ class VirtualNetworks(BaseModel):
         if my_bound_to_column is None:
             # TODO: 
             self.logger.error(f"{self.this_bound_to} not in exported csv")
-            return self.render_all()
+            return await self.render_all(self.bound_to)
         for vn_csv in exported_data[1:]:
             vn_id = vn_csv[4] 
             # this vn_csv is not for this access switch pair
@@ -242,7 +252,8 @@ class VirtualNetworks(BaseModel):
                 if k not in self.bound_to:
                     self.bound_to[k] = v
 
-        await self.queue_render()
+        # await self.queue_render()
+        await self.render_all(self.bound_to)
 
         await global_store.migration_status.set_vn_done(True)
         # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()
