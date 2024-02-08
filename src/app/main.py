@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from sse_starlette.sse import EventSourceResponse
 import os
 import yaml
+import json
 
 from .ck_global import global_store, sse_queue, SseEvent, SseEventEnum, SseEventData, GlobalStore
 from .generic_systems import GenericSystemWorker
@@ -37,7 +38,8 @@ async def upload_env_ini(request: Request, file: UploadFile):
 
     logger.info(f"/upload-env-ini begin")
     file_content = await file.read()
-    file_dict = yaml.safe_load(file_content)
+    file_dict = json.loads(file_content)
+    # file_dict = yaml.safe_load(file_content)
 
     global_store = GlobalStore(**file_dict)
     
@@ -128,7 +130,7 @@ async def sync():
     await global_store.migration_status.set_sync_done()
 
     logging.info(f"/sync end")
-    return {}
+    return 'sync done'
 
 @app.get("/migrate-access-switches")
 async def migrate_access_switches():
@@ -137,6 +139,7 @@ async def migrate_access_switches():
     """
     global global_store
 
+    await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).loading()).send()
     accessSwitchWorker = global_store.accessSwitchWorker
     logging.info(f"/migrate_access_switches begin")
     await accessSwitchWorker.remove_tor_gs_from_main()
@@ -152,7 +155,7 @@ async def migrate_generic_system():
     global global_store
 
     logging.info(f"/migrate_generic_systems begin")
-    await global_store.generic_systems.migrate_generic_systems()
+    await global_store.genericSystemWorker.migrate_generic_systems()
     logging.info(f"/migrate_generic_systems end")
     return {}
 

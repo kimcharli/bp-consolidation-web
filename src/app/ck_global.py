@@ -234,7 +234,7 @@ class TorGS:
     The generic system present in the main blueprint to represent the TOR
     """
     label: str  # the label captured by init_leaf_switches
-    link_ids: List[str]
+    link_ids: List[str]  # tor_gs links, the link ids captured by init_leaf_switches
     tor_id: str = None  # the old_id and old_ae_id will be updated by the main_bp
     tor_ae_id: str = None
     prefix: str = None
