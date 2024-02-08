@@ -35,7 +35,7 @@ async def upload_env_ini(request: Request, file: UploadFile):
     """
     global global_store
 
-    logger.warning(f"/upload-env-ini begin")
+    logger.info(f"/upload-env-ini begin")
     file_content = await file.read()
     file_dict = yaml.safe_load(file_content)
 
@@ -51,7 +51,7 @@ async def upload_env_ini(request: Request, file: UploadFile):
 
     await SseEvent(data=SseEventData(id='load-env-div').done()).send()
 
-    logging.warning(f"/upload_env_ini: {global_store=}")
+    logging.info(f"/upload_env_ini end")
     return await connect()
 
 
@@ -64,14 +64,14 @@ async def connect():
     """
     global global_store
 
-    logging.warning(f"/connect begin")
+    logging.info(f"/connect begin")
     await SseEvent(data=SseEventData(id='connect').loading()).send()
 
     version = global_store.login_server()
 
     await global_store.login_blueprint()
     await SseEvent(data=SseEventData(id='connect').done()).send()
-    logging.warning(f"/connect end")
+    logging.info(f"/connect end")
     # return version
     return await sync()
 
@@ -82,7 +82,7 @@ async def disconnect():
     """
     global global_store
 
-    logging.warning(f"/disconnect")
+    logging.info(f"/disconnect")
     global_store.logout_server()
     global_store = None
 
@@ -108,7 +108,7 @@ async def sync():
     """    
     global global_store
 
-    logging.warning(f"/sync begin")
+    logging.info(f"/sync begin")
     await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).loading()).send()
 
     accessSwitchWorker = global_store.accessSwitchWorker = AccessSwitcheWorker(global_store=global_store)
@@ -127,7 +127,7 @@ async def sync():
 
     await global_store.migration_status.set_sync_done()
 
-    logging.warning(f"/sync end")
+    logging.info(f"/sync end")
     return {}
 
 @app.get("/migrate-access-switches")
@@ -138,11 +138,11 @@ async def migrate_access_switches():
     global global_store
 
     accessSwitchWorker = global_store.accessSwitchWorker
-    logging.warning(f"/migrate_access_switches begin")
+    logging.info(f"/migrate_access_switches begin")
     await accessSwitchWorker.remove_tor_gs_from_main()
     await accessSwitchWorker.create_new_access_switch_pair()
     # await global_store.migration_status.set_as_done(is_access_switch_created)
-    logging.warning(f"/migrate_access_switches end")
+    logging.info(f"/migrate_access_switches end")
         
     return {}
 
@@ -151,9 +151,9 @@ async def migrate_access_switches():
 async def migrate_generic_system():
     global global_store
 
-    logging.warning(f"/migrate_generic_systems begin")
+    logging.info(f"/migrate_generic_systems begin")
     await global_store.generic_systems.migrate_generic_systems()
-    logging.warning(f"/migrate_generic_systems end")
+    logging.info(f"/migrate_generic_systems end")
     return {}
 
 
@@ -162,9 +162,9 @@ async def migrate_virtual_networks():
     global global_store
 
     await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).loading()).send()
-    logging.warning(f"/migrate_virtual_networks begin")
+    logging.info(f"/migrate_virtual_networks begin")
     await global_store.virtualNetworks.migrate_virtual_networks()
-    logging.warning(f"/migrate_virtual_networks end")
+    logging.info(f"/migrate_virtual_networks end")
     return {}
 
 @app.get("/migrate-cts")
@@ -172,20 +172,19 @@ async def migrate_cts():
     global global_store
 
     CtWorker = global_store.ctWorker
-    logging.warning(f"/migrate_cts begin")
+    logging.info(f"/migrate_cts begin")
     await CtWorker.migrate_connectivity_templates()
-    logging.warning(f"/migrate_cts end")
+    logging.info(f"/migrate_cts end")
     return {}
 
 @app.get("/compare-config")
 async def compare_config():
     global global_store
 
-    accessSwitchWorker = global_store.accessSwitchWorker
-    logging.warning(f"/compare_config begin")
-    data = await accessSwitchWorker.compare_config()
-    logging.warning(f"/compare_config end")
-    return {}
+    logging.info(f"/compare_config begin")
+    await global_store.compare_config()
+    logging.info(f"/compare_config end")
+    return 'configuration compared'
 
 
 @app.get('/sse')
@@ -195,7 +194,7 @@ async def sse(request: Request):
             if await request.is_disconnected():
                 break
             item = await sse_queue.get()
-            # logging.warning(f"######## event_generator get {sse_queue.qsize()=} {item=}")          
+            # logging.info(f"######## event_generator get {sse_queue.qsize()=} {item=}")          
             yield item
             sse_queue.task_done()
             # set 0.05 to produce progressing

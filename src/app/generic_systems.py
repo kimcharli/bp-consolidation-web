@@ -284,11 +284,11 @@ class _GenericSystem():
         if self.is_leaf_gs:
             return True
         if not self.new_gs_id:
-            # self.logger.warning(f"is_gs_done {self.new_label=} {self.new_gs_id=}")
+            # self.logger.info(f"is_gs_done {self.new_label=} {self.new_gs_id=}")
             return False
         for _, ae in self.group_links.items():
             if not ae.is_ae_done():
-                # self.logger.warning(f"is_gs_done {self.new_label=}")
+                # self.logger.info(f"is_gs_done {self.new_label=}")
                 return True
         return True
 
@@ -344,17 +344,17 @@ class _GenericSystem():
         Build LAG on each LAG links
         """
         main_bp = global_store.bp['main_bp']
-        # logging.warning(f"form_lag begin {self.new_label=}")
+        # logging.info(f"form_lag begin {self.new_label=}")
         lag_spec = {
             'links': {}
         }
         for _, ae_link in self.group_links.items():
             for link, link_spec in ae_link.build_lag_spec().items():
                 lag_spec['links'][link] = link_spec
-        # logging.warning(f"form_lag {self.new_label=} {lag_spec=}")
+        # logging.info(f"form_lag {self.new_label=} {lag_spec=}")
         if len(lag_spec['links']):
             lag_updated = main_bp.patch_leaf_server_link_labels(lag_spec)
-            # self.logger.warning(f"form_lag {lag_updated=} for {self.new_label=}")
+            # self.logger.info(f"form_lag {lag_updated=} for {self.new_label=}")
             self.refresh()
 
 
@@ -377,7 +377,7 @@ class _GenericSystem():
                 server_links = main_bp.get_server_interface_nodes(self.new_label)
                 if len(server_links):
                     break
-                self.logger.warning(f"refresh() waiting - {len(server_links)=} {i}/{max_retry} for {self.new_label}")
+                self.logger.info(f"refresh() waiting - {len(server_links)=} {i}/{max_retry} for {self.new_label}")
                 time.sleep(3)
 
         # server_links = main_bp.get_server_interface_nodes(self.new_label)
@@ -435,10 +435,10 @@ class _GenericSystem():
                 switch_label = member_link.switch
                 switch_intf = member_link.switch_intf
                 trasnsformation_id = main_bp.get_transformation_id(switch_label, switch_intf , ae_link.speed)
-                # logging.warning(f"create_generic_system() {trasnsformation_id=}")
+                # logging.info(f"create_generic_system() {trasnsformation_id=}")
                 switch_intf_id = access_switches[switch_label].id
                 if not switch_intf_id:
-                    logging.warning(f"create_generic_system() ERROR: {switch_label=} {switch_intf=} {switch_intf_id=}")
+                    logging.info(f"create_generic_system() ERROR: {switch_label=} {switch_intf=} {switch_intf_id=}")
                     return
                 generic_system_spec['links'].append({
                     'lag_mode': None,
@@ -494,7 +494,7 @@ class _GenericSystem():
         # it returns the link id(s)
         generic_system_created = main_bp.add_generic_system(generic_system_spec)
         self.message = generic_system_created
-        self.logger.warning(f"migrate() {generic_system_created=}")
+        self.logger.info(f"migrate() {generic_system_created=}")
 
         self.refresh()
         return
@@ -512,7 +512,7 @@ class _GenericSystem():
                     link_name_spec['links'].append(new_item)
         if len(link_name_spec['links']):
             cable_map_patched = main_bp.patch_cable_map(link_name_spec)
-            self.logger.warning(f"patch_interface_names {cable_map_patched=}")
+            self.logger.info(f"patch_interface_names {cable_map_patched=}")
             # TODO: wait for the finish the task
             self.refresh()
         return
@@ -573,7 +573,7 @@ class GenericSystemWorker():
         """
         global_store = self.global_store
 
-        # self.logger.warning(f"sync_tor_generic_systems() begin {global_store=}")
+        # self.logger.info(f"sync_tor_generic_systems() begin {global_store=}")
 
         if global_store.generic_systems is not None or global_store.access_switches is not None:
             self.logger.error(f"sync_tor_generic_systems() called twice - generic_systems or access_switches not None {global_store.generic_systems=} {global_store.access_switches=}")
@@ -618,7 +618,7 @@ class GenericSystemWorker():
             link_data = ae_data.links.setdefault(old_switch_intf_id, _Memberlink(switch=switch_label, switch_intf=switch_intf, old_server_intf=old_server_intf, old_tags=[], new_tags=[]))
             if tag:
                 link_data.add_old_tag(tag)
-                # self.logger.warning(f"sync_tor_generic_systems {tag=} {server_label=} {tbody_id=}")            
+                # self.logger.info(f"sync_tor_generic_systems {tag=} {server_label=} {tbody_id=}")            
         # set index number for each generic system
         for index, v in enumerate(generic_systems.values()):
             v.index = index + 1
@@ -631,7 +631,7 @@ class GenericSystemWorker():
         await SseEvent(data=SseEventData(id='tor1-box').done()).send()
         await SseEvent(data=SseEventData(id='tor2-box').done()).send()
 
-        self.logger.warning(f"sync_tor_generic_systems end {len(generic_systems)=}")
+        self.logger.info(f"sync_tor_generic_systems end {len(generic_systems)=}")
     
         return
 
@@ -680,28 +680,32 @@ class GenericSystemWorker():
                 .in_().node('system', role=not_in(['leaf']), name='tor')
         """
         leaf_link_nodes = main_bp.query(leaf_link_query)
-        # cls.logger.warning(f"init_leaf_switches() {leaf_link_nodes=}")
+        # cls.logger.info(f"init_leaf_switches() {leaf_link_nodes=}")
         for nodes in leaf_link_nodes:
             leaf_data = leaf_switches[nodes['leaf']['label']]
             leaf_data.id = nodes['leaf']['id']
             leaf_link_data = [x for x in leaf_data.links.values() if x.leaf_intf == nodes['leaf_intf']['if_name']][0]
             leaf_link_data.id = nodes['leaf_intf']['id']
+            tor_label = nodes['tor']['label']
+            tor_id = nodes['tor']['id']
             if nodes['tor']['role'] == 'access':
                 # the access switches present
-                access_switches[nodes['tor']['label']].main_id = nodes['tor']['id']
+                access_switches[tor_label].main_id = tor_id
             elif nodes['tor']['role'] == 'generic':
                 # the generic systems present
-                tor_gs.label=nodes['tor']['label']
-                tor_gs.id=nodes['tor']['id']
+                tor_gs.label=tor_label
+                tor_gs.tor_id=tor_id
                 # TODO: add links, ae_id, ...
+        self.logger.debug(f"init_leaf_switches {tor_gs=} {leaf_switches=} {access_switches=}")
         if tor_gs.tor_id is None:
             await SseEvent(data=SseEventData(id='access-gs-box').hidden()).send()
             await SseEvent(data=SseEventData(id='access-gs-label').hidden()).send()
+
         if len([x.id for x in leaf_switches.values()]) == 2:
             await SseEvent(data=SseEventData(id='leaf1-box').done()).send()
             await SseEvent(data=SseEventData(id='leaf2-box').done()).send()
 
-        if len([x.main_id for x in access_switches.values()]) == 2:
+        if len([x.main_id for x in access_switches.values() if x.main_id is not None]) == 2:
             # both access switches present
             await global_store.migration_status.set_as_done(True)
             await SseEvent(data=SseEventData(id='access1-box').done().visible()).send()
@@ -713,7 +717,7 @@ class GenericSystemWorker():
 
             self.sync_main_links()
 
-        self.logger.warning(f"init_leaf_switches end")
+        self.logger.info(f"init_leaf_switches end")
         return
 
 
@@ -726,7 +730,7 @@ class GenericSystemWorker():
         global_store = self.global_store
         generic_systems = global_store.generic_systems
 
-        logging.warning(f"refresh_tor_generic_systems begin")
+        logging.info(f"refresh_tor_generic_systems begin")
         gs_count = len(generic_systems)
         is_all_done = True
         # render each generic system
@@ -740,14 +744,14 @@ class GenericSystemWorker():
         if is_all_done:
             await global_store.migration_status.set_gs_done(True)
 
-        logging.warning(f"refresh_tor_generic_systems end")
+        logging.info(f"refresh_tor_generic_systems end")
         return
 
 
     async def migrate_generic_systems(self) -> None:
         """
         """
-        self.logger.warning(f"migrate_generic_systems begin")
+        self.logger.info(f"migrate_generic_systems begin")
         is_all_done = True
         for tbody_id, server_data in self.generic_systems.items():
             await server_data.migrate()
@@ -770,7 +774,7 @@ class GenericSystemWorker():
         access_switches = global_store.access_switches
         # update generic_systems from main_bp
         server_links = main_bp.get_switch_interface_nodes(list(access_switches))
-        logging.warning(f"sync_main_links {len(server_links)=}")
+        logging.info(f"sync_main_links {len(server_links)=}")
         for server_link in server_links:
             server_label = server_link[CkEnum.GENERIC_SYSTEM]['label']
             tbody_id = f"gs-{server_label}"

@@ -88,7 +88,7 @@ class SseEventData:
     def disable(self):
         self.disabled = True
         self.state = DataStateEnum.DISABLED
-        # logging.warning(f"SseEventData.disable() ######## {self=}")
+        # logging.info(f"SseEventData.disable() ######## {self=}")
         return self
     
     def enable(self):
@@ -113,7 +113,7 @@ class SseEvent:
     async def send(self):
         await asyncio.sleep(0.05)
         sse_dict = {'event': self.event, 'data': json.dumps(asdict(self.data))}
-        # logging.warning(f"######## SseEvent put {sse_queue.qsize()=} {self=}")        
+        # logging.info(f"######## SseEvent put {sse_queue.qsize()=} {self=}")        
         await sse_queue.put(sse_dict)
 
 @dataclass
@@ -224,8 +224,8 @@ class LeafSwitch():
 @dataclass
 class AccessSwitch:
     label: str
-    tor_id: str # for switch href
-    main_id: str = None
+    tor_id: str  # the id from tor blueprint. for switch href
+    main_id: str = None  # the if from main blueprint. for switch href
     # asn: str = field(default_factory='')  # this is not used in 4.1.2
 
 @dataclass
@@ -271,17 +271,17 @@ class GlobalStore:
 
     @classmethod
     def get_blueprints(cls):
-        cls.logger.warning(f"get_blueprints(): {cls.main_bp=} {cls.tor_bp=}")
+        cls.logger.info(f"get_blueprints(): {cls.main_bp=} {cls.tor_bp=}")
         return [cls.main_bp, cls.tor_bp]
 
     @classmethod
     def set_data(cls, key, value):
-        cls.logger.warning(f"set_data(): {key=} {value=}")
+        cls.logger.info(f"set_data(): {key=} {value=}")
         cls.data[key] = value
 
     @classmethod
     def get_data(cls, key):
-        cls.logger.warning(f"get_data(): {key=} {cls.data.get(key)=}")
+        cls.logger.info(f"get_data(): {key=} {cls.data.get(key)=}")
         return cls.data.get(key)
 
     @property
@@ -298,9 +298,9 @@ class GlobalStore:
 
 
     def login_server(self) -> str:
-        self.logger.warning(f"login_server()")
+        self.logger.info(f"login_server()")
         self.apstra_server = CkApstraSession(self.apstra['host'], int(self.apstra['port']), self.apstra['username'], self.apstra['password'])
-        self.logger.warning(f"login_server(): {self.apstra_server=}")
+        self.logger.info(f"login_server(): {self.apstra_server=}")
         return self.apstra_server.version
 
     def logout_server(self):
@@ -311,20 +311,44 @@ class GlobalStore:
         return
 
     async def login_blueprint(self):
-        self.logger.warning(f"login_blueprint")
+        self.logger.info(f"login_blueprint")
         for role in ['main_bp', 'tor_bp']:
             label = self.target[role]
         # role = blueprint.role
         # label = blueprint.label
             bp = CkApstraBlueprint(self.apstra_server, label)
             self.bp[role] = bp
-            self.logger.warning(f"login_blueprint {bp=}")
+            self.logger.info(f"login_blueprint {bp=}")
             id = bp.id
             # apstra_url = self.apstra_server.url_prefix[:-4]
             value = f'<a href="{self.apstra_url}/#/blueprints/{id}/staged" target="_blank">{label}</a>'
             # data = { "id": id, "url": url, "label": label }
             await SseEvent(data=SseEventData(id=role, value=value).done()).send()
-            self.logger.warning(f"login_blueprint() end")
+            self.logger.info(f"login_blueprint() end")
         return
-    
+
+    #
+    # compare configuration
+    # 
+    async def compare_config(self):
+        access_switches = self.global_store.access_switches
+
+        switch_configs = { 'main': {}, 'tor': {} }
+        for index, (switch) in enumerate(access_switches.values()):
+            main_confg = self.main_bp.get_item(f"nodes/{switch.main_id}/config-rendering")['config']
+            switch_main_href = f"{self.global_store.apstra_url}/#/blueprints/{self.main_bp.id}/staged/physical/selection/node-preview/{switch.main_id}"
+            await SseEvent(data=SseEventData(
+                id=f"main-config-text-{index}", value=main_confg)).send()
+            await SseEvent(
+                           data=SseEventData(id=f"main-config-caption-{index}").set_href(switch_main_href)).send()
+            
+            switch_tor_href = f"{self.global_store.apstra_url}/#/blueprints/{self.tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}"
+            tor_confg = self.tor_bp.get_item(f"nodes/{switch.tor_id}/config-rendering")['config']
+            await SseEvent(data=SseEventData(
+                id=f"tor-config-text-{index}", value=tor_confg)).send()
+            await SseEvent(
+                           data=SseEventData(id=f"tor-config-caption-{index}").set_href(switch_tor_href).set_target()).send()
+
+        await SseEvent(data=SseEventData(id='compare-config').done()).send()
+
 global_store: GlobalStore = None  # initialized by main.py
