@@ -71,11 +71,23 @@ async def connect():
 
     version = global_store.login_server()
 
+    await global_store.tor_bp_selection()
+
     await global_store.login_blueprint()
     await SseEvent(data=SseEventData(id='connect').done()).send()
     logging.info(f"/connect end")
     # return version
-    return await sync()
+    return 'connected'
+
+
+@app.get("/login-tor-bp")
+async def login_tor_bp(request: Request):
+    global global_store
+    tor_bp = request.query_params['tor-bp']
+    logging.info(f"/login-tor-bp login {tor_bp}")
+    await global_store.login_tor_blueprint(tor_bp)
+    return f'tor-bp {tor_bp} logged in'
+
 
 @app.get("/disconnect")
 async def disconnect():

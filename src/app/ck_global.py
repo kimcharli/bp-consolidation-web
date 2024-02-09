@@ -59,6 +59,8 @@ class SseEventData:
     visibility: Optional[bool] = None # for visable button
     href: Optional[str] = None
     target: Optional[str] = None
+    element: Optional[str] = None
+    selected: Optional[bool] = None
 
     def visible(self):
         self.visibility = 'visible'
@@ -103,6 +105,7 @@ class SseEventData:
         self.target = target
         return self
 
+  
 # https://html.spec.whatwg.org/multipage/server-sent-events.html
 @dataclass
 class SseEvent:
@@ -112,7 +115,11 @@ class SseEvent:
 
     async def send(self):
         await asyncio.sleep(0.05)
-        sse_dict = {'event': self.event, 'data': json.dumps(asdict(self.data))}
+        try:
+            sse_dict = {'event': self.event, 'data': json.dumps(asdict(self.data))}
+        except Exception as e:
+            logging.error(f"SseEvent.send() {e=} {self}")
+            return
         # logging.info(f"######## SseEvent put {sse_queue.qsize()=} {self=}")        
         await sse_queue.put(sse_dict)
 
@@ -192,8 +199,8 @@ class LinkLldp:
 
 @dataclass
 class BpTarget:
+    tor_bp: str
     main_bp: str = 'ATLANTA-Master'
-    tor_bp: str = 'AZ-1_1-R5R15'
     tor_im_new: str = '_ATL-AS-5120-48T'
     cabling_maps_yaml_file: str = 'tests/fixtures/sample-cabling-maps.yaml'
 
@@ -269,20 +276,20 @@ class GlobalStore:
     def bound_to(self):
         return f"{self.tor_gs.label}-pair"
 
-    @classmethod
-    def get_blueprints(cls):
-        cls.logger.info(f"get_blueprints(): {cls.main_bp=} {cls.tor_bp=}")
-        return [cls.main_bp, cls.tor_bp]
+    # @classmethod
+    # def get_blueprints(cls):
+    #     cls.logger.info(f"get_blueprints(): {cls.main_bp=} {cls.tor_bp=}")
+    #     return [cls.main_bp, cls.tor_bp]
 
-    @classmethod
-    def set_data(cls, key, value):
-        cls.logger.info(f"set_data(): {key=} {value=}")
-        cls.data[key] = value
+    # @classmethod
+    # def set_data(cls, key, value):
+    #     cls.logger.info(f"set_data(): {key=} {value=}")
+    #     cls.data[key] = value
 
-    @classmethod
-    def get_data(cls, key):
-        cls.logger.info(f"get_data(): {key=} {cls.data.get(key)=}")
-        return cls.data.get(key)
+    # @classmethod
+    # def get_data(cls, key):
+    #     cls.logger.info(f"get_data(): {key=} {cls.data.get(key)=}")
+    #     return cls.data.get(key)
 
     @property
     def access_switch_pair(self):
@@ -323,7 +330,8 @@ class GlobalStore:
             # apstra_url = self.apstra_server.url_prefix[:-4]
             value = f'<a href="{self.apstra_url}/#/blueprints/{id}/staged" target="_blank">{label}</a>'
             # data = { "id": id, "url": url, "label": label }
-            await SseEvent(data=SseEventData(id=role, value=value).done()).send()
+            # await SseEvent(data=SseEventData(id=role, value=value).done()).send()
+            await SseEvent(data=SseEventData(id=role).done()).send()
             self.logger.info(f"login_blueprint() end")
         return
 
@@ -350,5 +358,32 @@ class GlobalStore:
                            data=SseEventData(id=f"tor-config-caption-{index}").set_href(switch_tor_href).set_target()).send()
 
         await SseEvent(data=SseEventData(id='compare-config').done()).send()
+
+
+    #
+    # Tor blueprint selection
+    #    
+    async def tor_bp_selection(self):
+        blueprints = self.apstra_server.get_items('blueprints')
+        for bp in blueprints['items']:
+            label = bp['label']
+            if bp['design'] == 'two_stage_l3clos':
+                if label == self.target['tor_bp']:
+                    await SseEvent(data=SseEventData(id='tor_bp', element='option', value=label, selected=True)).send()
+                else:
+                    await SseEvent(data=SseEventData(id='tor_bp', element='option', value=label)).send()
+        # self.logger.info(f"tor_bp_selection(): {blueprints['items'][0]=}")        
+        return
+
+    async def login_tor_blueprint(self, tor_bp_label: str):
+        self.logger.info(f"login_tor_blueprint {tor_bp_label=}")
+        self.target['tor_bp'] = tor_bp_label
+        self.bp['tor_bp'] = CkApstraBlueprint(self.apstra_server, tor_bp_label)
+        # self.logger.info(f"login_tor_blueprint {self.bp['tor_bp']=}")
+        # id = self.bp['tor_bp'].id
+        # value = f'<a href="{self.apstra_url}/#/blueprints/{id}/staged" target="_blank">{tor_bp_label}</a>'
+        # await SseEvent(data=SseEventData(id='tor_bp', value=value).done()).send()
+        await SseEvent(data=SseEventData(id='tor_bp').done()).send()
+        return
 
 global_store: GlobalStore = None  # initialized by main.py

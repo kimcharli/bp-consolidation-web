@@ -489,6 +489,7 @@ class _GenericSystem():
         generic_system_spec['new_systems'].append(new_system)
         # TODO: catch error message
         # it returns the link id(s)
+        self.logger.info(f"create_generic_system() {self.new_label=} {generic_system_spec['links']=}")
         generic_system_created = main_bp.add_generic_system(generic_system_spec)
         self.message = generic_system_created
         self.logger.info(f"create_generic_system() end {self.new_label=} {generic_system_created=}")
@@ -718,6 +719,8 @@ class GenericSystemWorker():
         if tor_gs.tor_id is None:
             await SseEvent(data=SseEventData(id='access-gs-box').hidden()).send()
             await SseEvent(data=SseEventData(id='access-gs-label').hidden()).send()
+        else:
+            await SseEvent(data=SseEventData(id='access-gs-label', value=tor_gs.label)).send()
 
         if len([x.id for x in leaf_switches.values()]) == 2:
             await SseEvent(data=SseEventData(id='leaf1-box').done()).send()
@@ -771,6 +774,9 @@ class GenericSystemWorker():
         """
         self.logger.info(f"migrate_generic_systems begin")
         is_all_done = True
+
+        self.logger.info(f"migrate_generic_systems {self.global_store.access_switches=}")
+
         for tbody_id, server_data in self.global_store.generic_systems.items():
             await server_data.migrate(self.global_store)
             if not server_data.is_gs_done():

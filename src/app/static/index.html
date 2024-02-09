@@ -66,11 +66,11 @@
         <header class="header">
             <table class="no-border">
                 <tr class="no-border">
-                    <td class="no-border" style="width: 100%;">
+                    <td class="no-border" style="width: 50%;">
                         <a href="/"><img style="object-position: left top;" src="/images/home.svg" alt="Home" width="30" height="30"></a>
                         <a href="/css/style.css"><img src="/images/css-3.svg" alt="style.css" width="30" height="30"></a>
                     </td>
-                    <td class="no-border">
+                    <td class="no-border" style="width: 50%;">
                         <table>
                             <tr>
                                 <th>server</th>
@@ -79,10 +79,10 @@
                                 <th>password</th>
                             </tr>
                             <tr>
-                                <td><input id="apstra-host" data-id readonly></th>
-                                <td><input id="apstra-port" readonly></th>
-                                <td><input id="apstra-username" readonly></th>
-                                <td><input id="apstra-password" type="password" readonly /></th>
+                                <td><label id="apstra-host" data-id readonly></label></td>
+                                <td><label id="apstra-port" readonly></label></td>
+                                <td><label id="apstra-username" readonly></label></td>
+                                <!-- <td><label id="apstra-password" type="password" readonly /></td> -->
                             </tr>
                         </table>
                     </td>
@@ -96,8 +96,10 @@
         </div>
 
 
-        <div id="tor_bp" class="tor-blueprint data-state" data-id data-state="init">
-            T
+        <div class="tor-blueprint">
+            <select id="tor_bp" name="tor-bp" class="tor-blueprint data-state" data-id data-state="init" hx-get="/login-tor-bp" hx-target="#last-message">
+                <!-- <option value="0">T</option> -->
+            </select>
         </div>
 
 

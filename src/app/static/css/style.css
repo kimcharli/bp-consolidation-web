@@ -48,10 +48,10 @@
     text-align: left;
     border: solid 1px;
 }
-.tor-blueprint::before {
+/* .tor-blueprint::before {
     content: "TOR Blueprint: ";
     font-weight: bold;
-}
+} */
 
 .main-access-switch {
     grid-area: main-access-switch;
@@ -346,4 +346,7 @@ svg .data-state[data-state="error"] {
     fill: var(--global-error-color);
 }
 
-
+/* blueprint */
+#tor_bp {
+    width: 100%;
+}

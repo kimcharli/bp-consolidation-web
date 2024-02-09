@@ -9,16 +9,25 @@ eventSource.addEventListener('data-state', (event) => {
     const date = new Date();
     const timestamp = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
     console.log(`sse data-state at ${timestamp} data=${data}`)
-    const target = document.getElementById(data.id);
+    let target = document.getElementById(data.id);
     // console.log('sse data-state', target)
     try {
-        if (data.state !== null) target.dataset.state = data.state;
-        // null check undefined too
-        if (data.value !== null) target.innerHTML = data.value;
-        if (data.visibility !== null) target.style.visibility = data.visibility;
-        if (data.href !== null) target.href = data.href;
-        if (data.target !== null) target.target = data.target;
-        if (data.disabled != null) target.disabled = data.disabled;
+        if (data.element !== null) {
+            const newElement = document.createElement(data.element);
+            target.appendChild(newElement);
+            // newElement.innerHTML = data.value;
+            if (data.value !== null) newElement.innerHTML = data.value;
+            if (data.value !== null) newElement.value = data.value;
+            if (data.selected !== null) newElement.setAttribute('selected', data.selected);
+        } else {
+            if (data.state !== null) target.dataset.state = data.state;
+            // null check undefined too
+            if (data.value !== null) target.innerHTML = data.value;
+            if (data.visibility !== null) target.style.visibility = data.visibility;
+            if (data.href !== null) target.href = data.href;
+            if (data.target !== null) target.target = data.target;
+            if (data.disabled != null) target.disabled = data.disabled;    
+        }  
     } catch (error) {
         console.log('sse data-state error', error, 'for data', data)
     }
