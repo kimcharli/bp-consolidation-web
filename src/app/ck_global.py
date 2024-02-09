@@ -4,6 +4,7 @@ import json
 import asyncio
 from enum import StrEnum
 from dataclasses import dataclass, field, asdict
+from datetime import datetime
 
 from ck_apstra_api.apstra_session import CkApstraSession
 from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
@@ -11,9 +12,9 @@ from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
 
 sse_queue = asyncio.Queue()
 
-# def get_timestamp() -> str:
-#     timestamp = datetime.now().strftime('%Y%m%d %H:%M:%S:%f')
-#     return timestamp
+def get_timestamp() -> str:
+    timestamp = datetime.now().strftime('%H:%M:%S:%f')
+    return timestamp
 
 class DataStateEnum(StrEnum):
     LOADED = 'done'
@@ -61,6 +62,9 @@ class SseEventData:
     target: Optional[str] = None
     element: Optional[str] = None
     selected: Optional[bool] = None
+    do_remove: Optional[bool] = None
+    just_value: Optional[bool] = None  # to reset file upload
+    add_text: str = '' # to add text to the value
 
     def visible(self):
         self.visibility = 'visible'
@@ -105,7 +109,11 @@ class SseEventData:
         self.target = target
         return self
 
+    def remove(self):
+        self.do_remove = True
+        return self
   
+
 # https://html.spec.whatwg.org/multipage/server-sent-events.html
 @dataclass
 class SseEvent:
@@ -122,6 +130,18 @@ class SseEvent:
             return
         # logging.info(f"######## SseEvent put {sse_queue.qsize()=} {self=}")        
         await sse_queue.put(sse_dict)
+    
+    # async def event_box(self, text):
+    #     self.data=SseEventData(id='event-box-text').add_text(text + '\n')
+    #     await self.send()
+
+
+async def sse_logging(text, logger=None):
+    if logger:
+        logger.info(text)
+    else:
+        logging.info(text)
+    await SseEvent(data=SseEventData(id='event-box-text', add_text=f"{get_timestamp()} {text}\n")).send()
 
 @dataclass
 class MigrationStatus:
@@ -252,20 +272,21 @@ class GlobalStore:
     target: BpTarget
     lldp: Dict[str, List[LinkLldp]]  # leaf: []
 
+    stop_signal: bool = True  # True on load, enable on start of work, to cancel the tasks. set by disconnect and reset_tor_data
     apstra_server: Any = None  #  ApstaServer
     bp: Dict[str, Any] = field(default_factory=dict)  # main_bp, tor_bp (CkApstraBlueprint)
     tor_data: dict = field(default_factory=dict)  # 
     logger: Any = logging.getLogger("GlobalStore")  # logging.Logger
     data: dict = field(default_factory=dict)
-    migration_status: MigrationStatus = field(default_factory=MigrationStatus)
+    migration_status: MigrationStatus = None  # set by post_init
 
     accessSwitchWorker: Any = None
     access_switches: Dict[str, AccessSwitch] = None  # created by GenericSystemWorker::sync_tor_generic_systems
 
-    genericSystemWorker: Any = None
+    genericSystemWorker: Any = None # initiated by main.py::sync, can be reset by main.py::login_tor_bp
     generic_systems: Any = None  # created by GenericSystemWorker::sync_tor_generic_systems
 
-    virtualNetworks: Any = None
+    virtualNetworks: Any = None  # initiated by main.py::sync, can be reset by main.py::login_tor_bp
     virtual_networks: Any = None
 
     tor_gs: TorGS = None  # created by GenericSystemWorker::sync_tor_generic_systems, updated by init_leaf_switches
@@ -275,21 +296,6 @@ class GlobalStore:
     @property
     def bound_to(self):
         return f"{self.tor_gs.label}-pair"
-
-    # @classmethod
-    # def get_blueprints(cls):
-    #     cls.logger.info(f"get_blueprints(): {cls.main_bp=} {cls.tor_bp=}")
-    #     return [cls.main_bp, cls.tor_bp]
-
-    # @classmethod
-    # def set_data(cls, key, value):
-    #     cls.logger.info(f"set_data(): {key=} {value=}")
-    #     cls.data[key] = value
-
-    # @classmethod
-    # def get_data(cls, key):
-    #     cls.logger.info(f"get_data(): {key=} {cls.data.get(key)=}")
-    #     return cls.data.get(key)
 
     @property
     def access_switch_pair(self):
@@ -303,55 +309,63 @@ class GlobalStore:
     def apstra_url(self):
         return f"https://{self.apstra['host']}:{self.apstra['port']}"
 
+    async def sse_logging(self, text):
+        await sse_logging(text, self.logger)
 
-    def login_server(self) -> str:
-        self.logger.info(f"login_server()")
+    async def post_init(self):
+        self.migration_status = MigrationStatus()
+
+    async def login_server(self) -> str:
+        await self.sse_logging(f"login_server()")
         self.apstra_server = CkApstraSession(self.apstra['host'], int(self.apstra['port']), self.apstra['username'], self.apstra['password'])
-        self.logger.info(f"login_server(): {self.apstra_server=}")
+        await self.sse_logging(f"login_server(): {self.apstra_server=}")
         return self.apstra_server.version
 
     def logout_server(self):
         # self.logout_blueprint()
+        self.stop_signal = True
         if self.apstra_server:
             self.apstra_server.logout() 
         self.apstra_server = None
         return
 
     async def login_blueprint(self):
-        self.logger.info(f"login_blueprint")
+        await self.sse_logging(f"login_blueprint")
         for role in ['main_bp', 'tor_bp']:
             label = self.target[role]
         # role = blueprint.role
         # label = blueprint.label
             bp = CkApstraBlueprint(self.apstra_server, label)
             self.bp[role] = bp
-            self.logger.info(f"login_blueprint {bp=}")
+            await self.sse_logging(f"login_blueprint {bp=}")
             id = bp.id
             # apstra_url = self.apstra_server.url_prefix[:-4]
             value = f'<a href="{self.apstra_url}/#/blueprints/{id}/staged" target="_blank">{label}</a>'
             # data = { "id": id, "url": url, "label": label }
-            # await SseEvent(data=SseEventData(id=role, value=value).done()).send()
+            await SseEvent(data=SseEventData(id=role, value=value).done()).send()
             await SseEvent(data=SseEventData(id=role).done()).send()
-            self.logger.info(f"login_blueprint() end")
+            await self.sse_logging(f"login_blueprint() end")
         return
 
     #
     # compare configuration
     # 
     async def compare_config(self):
-        access_switches = self.global_store.access_switches
+        access_switches = self.access_switches
+        main_bp = self.bp['main_bp']
+        tor_bp = self.bp['tor_bp']
 
         switch_configs = { 'main': {}, 'tor': {} }
         for index, (switch) in enumerate(access_switches.values()):
-            main_confg = self.main_bp.get_item(f"nodes/{switch.main_id}/config-rendering")['config']
-            switch_main_href = f"{self.global_store.apstra_url}/#/blueprints/{self.main_bp.id}/staged/physical/selection/node-preview/{switch.main_id}"
+            main_confg = main_bp.get_item(f"nodes/{switch.main_id}/config-rendering")['config']
+            switch_main_href = f"{self.apstra_url}/#/blueprints/{main_bp.id}/staged/physical/selection/node-preview/{switch.main_id}"
             await SseEvent(data=SseEventData(
                 id=f"main-config-text-{index}", value=main_confg)).send()
             await SseEvent(
                            data=SseEventData(id=f"main-config-caption-{index}").set_href(switch_main_href)).send()
             
-            switch_tor_href = f"{self.global_store.apstra_url}/#/blueprints/{self.tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}"
-            tor_confg = self.tor_bp.get_item(f"nodes/{switch.tor_id}/config-rendering")['config']
+            switch_tor_href = f"{self.apstra_url}/#/blueprints/{tor_bp.id}/staged/physical/selection/node-preview/{switch.tor_id}"
+            tor_confg = tor_bp.get_item(f"nodes/{switch.tor_id}/config-rendering")['config']
             await SseEvent(data=SseEventData(
                 id=f"tor-config-text-{index}", value=tor_confg)).send()
             await SseEvent(
@@ -369,14 +383,49 @@ class GlobalStore:
             label = bp['label']
             if bp['design'] == 'two_stage_l3clos':
                 if label == self.target['tor_bp']:
-                    await SseEvent(data=SseEventData(id='tor_bp', element='option', value=label, selected=True)).send()
+                    await SseEvent(data=SseEventData(id='tor_bp_select', element='option', value=label, selected=True)).send()
                 else:
-                    await SseEvent(data=SseEventData(id='tor_bp', element='option', value=label)).send()
+                    await SseEvent(data=SseEventData(id='tor_bp_select', element='option', value=label)).send()
         # self.logger.info(f"tor_bp_selection(): {blueprints['items'][0]=}")        
         return
 
+    async def reset_tor_data(self):
+        await self.sse_logging(f"reset_tor_data() begin")
+        await SseEvent(data=SseEventData(id='main-config-text-0', value='')).send()
+        await SseEvent(data=SseEventData(id='tor-config-text-0', value='')).send()
+        await SseEvent(data=SseEventData(id='main-config-text-1', value='')).send()
+        await SseEvent(data=SseEventData(id='tor-config-text-1', value='')).send()
+
+        if self.virtualNetworks:
+            await self.virtualNetworks.remove()
+            self.virtual_networks = None
+            self.virtualNetworks = None
+
+        if self.genericSystemWorker:
+            await self.genericSystemWorker.remove()
+            self.generic_systems = None
+            self.genericSystemWorker = None
+
+        if self.accessSwitchWorker:
+            await self.accessSwitchWorker.remove()
+            self.access_switches = None
+            self.accessSwitchWorker = None
+
+        await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_SYNC_STATE).init()).send()
+        await SseEvent(data=SseEventData(id='connect').init()).send()
+
+        self.tor_gs = None
+        self.leaf_switches = None
+        self.ctWorker = None
+        self.tor_data = {}
+        self.migration_status = MigrationStatus()
+
+        await self.sse_logging(f"reset_tor_data() end")
+        pass
+
     async def login_tor_blueprint(self, tor_bp_label: str):
-        self.logger.info(f"login_tor_blueprint {tor_bp_label=}")
+        await self.sse_logging(f"login_tor_blueprint {tor_bp_label=}")
+        self.stop_signal = True
         self.target['tor_bp'] = tor_bp_label
         self.bp['tor_bp'] = CkApstraBlueprint(self.apstra_server, tor_bp_label)
         # self.logger.info(f"login_tor_blueprint {self.bp['tor_bp']=}")

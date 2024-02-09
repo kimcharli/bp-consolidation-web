@@ -3,11 +3,10 @@ from typing import List, Dict, Any
 from dataclasses import dataclass, field
 import logging
 import time
+import asyncio
 
-from .ck_global import sse_queue, DataStateEnum, SseEvent, SseEventEnum, SseEventData, global_store
-# from .access_switches import DataStateEnum
+from .ck_global import SseEvent, SseEventEnum, SseEventData, global_store, sse_logging
 
-# TODO: minimize _VirtualNetwork content with csv_bulk line
 @dataclass
 class _BoundTo:
     vlan_id: int  # like '1323'
@@ -15,20 +14,6 @@ class _BoundTo:
 @dataclass
 class _VirtualNetwork:
     vn_id: int
-    # vn_node_id: str = ''
-    # vn_name: str = ''
-    # rz_name: str = ''
-    # vn_type: str = ''
-    # reserved_vlan_id: str = ''
-    # dhcp_service: str = ''
-    # ipv4_enabled: str = ''
-    # ipv6_enabled: str = ''
-    # virtual_gateway_ipv4_enabled: str = ''
-    # virtual_gateway_ipv6_enabled: str = ''
-    # ipv4_subnet: str = ''
-    # ipv6_subnet: str = ''
-    # virtual_gateway_ipv4: str = ''
-    # virtual_gateway_ipv6: str = ''
     bound_to: Dict[str, _BoundTo] = None  # the systems (rgs) this vn is bound to 
 
     @property
@@ -48,25 +33,13 @@ class _VirtualNetwork:
             # sse_data = sse_data.init()
             await SseEvent(event=SseEventEnum.UPDATE_VN, data=sse_data.init()).send()            
 
+    async def remove(self):
+        await SseEvent(data=SseEventData(id=self.button_vn_id).remove()).send()
+        
 
     def update(self, nodes):
         # logging.warning(f"update {nodes=} {self=}")
         thisvn = nodes['vn']
-        # self.vn_node_id = thisvn['id']
-        # self.vn_name = thisvn['label']
-        # self.rz_name = nodes['rz']['label']
-        # self.vn_type = thisvn['vn_type']
-        # # self.vn_id = thisvn['vn_id']  # this is the initializer
-        # self.reserved_vlan_id = thisvn['reserved_vlan_id'] or ''
-        # self.dhcp_service = nodes['vn_instance']['dhcp_enabled'] and 'yes' or ''
-        # self.ipv4_enabled = thisvn['ipv4_enabled'] and 'yes' or ''
-        # self.ipv6_enabled = thisvn['ipv6_enabled'] and 'yes' or ''
-        # self.virtual_gateway_ipv4_enabled = thisvn['virtual_gateway_ipv4_enabled'] and 'yes' or ''
-        # self.virtual_gateway_ipv6_enabled = thisvn['virtual_gateway_ipv6_enabled'] and 'yes' or ''
-        # self.ipv4_subnet = thisvn['ipv4_subnet'] and thisvn['ipv4_subnet'] or ''
-        # self.ipv6_subnet = thisvn['ipv6_subnet'] and thisvn['ipv6_subnet'] or ''
-        # self.virtual_gateway_ipv4 = thisvn['virtual_gateway_ipv4'] and thisvn['virtual_gateway_ipv4'] or ''
-        # self.virtual_gateway_ipv6 = thisvn['virtual_gateway_ipv6'] and thisvn['virtual_gateway_ipv6'] or ''
         self.bound_to.setdefault(nodes['redundancy_group']['label'], _BoundTo(vlan_id=nodes['vn_instance']['vlan_id']))
 
 
@@ -88,8 +61,12 @@ class VirtualNetworks:
     def tor_bp(self):
         return self.global_store.bp['tor_bp']
 
+    async def sse_logging(self, text: str):
+        await sse_logging(text, self.logger)
+
+
     async def render_all(self):
-        for vn_id, vn in self.vns.items():
+        for vn in self.vns.values():
             await vn.sse_vn(self.this_bound_to)
 
         await SseEvent(data=SseEventData(id=SseEventEnum.CAPTION_VN, 
@@ -99,41 +76,14 @@ class VirtualNetworks:
 
         return
 
-    # async def queue_render(self):
-    #     """
-    #     Does set_vn_done
-    #     """
-    #     # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).disable()).send()
-
-    #     # import json
-    #     # for vn_id, vn in self.vns.items():
-    #     #     the_data = vn.html_element(self.this_bound_to).dict()
-    #     #     # self.logger.warning(f"queue_render {the_data=}")
-    #     #     sse_message = {
-    #     #         'event': 'update-vn',
-    #     #         'data': json.dumps(the_data),
-    #     #     }
-    #     #     # self.logger.warning(f"queue_render {sse_message=}")
-    #     #     await sse_queue.put(sse_message)
-
-    #     for vn_id, vn in self.vns.items():
-    #         await vn.sse_vn(self.this_bound_to)
-
-
-    #     await SseEvent(
-    #                     data=SseEventData(id=SseEventEnum.CAPTION_VN, 
-    #                         value=f'Virtual Networks ({len(self.vns)})')).send()
-    #     not_done_list = [vn_id for vn_id, vn in self.vns.items() if self.this_bound_to not in vn.bound_to]
-    #     # if len(not_done_list) == 0:
-    #     #     await SseEvent(
-    #     #                    data=SseEventData(
-    #     #                        id=SseEventEnum.BUTTON_MIGRATE_VN, 
-    #     #                        state=DataStateEnum.DONE)).send()
-    #     #     # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_CT).enable()).send()
-    #     #     self.is_all_done = True
-    #     await global_store.migration_status.set_vn_done(len(not_done_list) == 0)
-
-    #     return
+    async def remove(self):
+        for vn in self.vns.values():
+            await vn.remove()
+        await SseEvent(data=SseEventData(id=SseEventEnum.CAPTION_VN, 
+                            value=f'Virtual Networks (0)')).send()
+        await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).init()).send(), 
+        await self.global_store.migration_status.set_vn_done(False)
+        await asyncio.sleep(1)
 
 
     async def sync_tor_vns(self):
@@ -201,7 +151,7 @@ class VirtualNetworks:
         # breakpoint()
         if my_bound_to_column is None:
             # TODO: 
-            self.logger.error(f"{self.this_bound_to} not in exported csv")
+            await self.sse_logging(f"{self.this_bound_to} not in exported csv")
             return await self.render_all(self.bound_to)
         for vn_csv in exported_data[1:]:
             vn_id = vn_csv[4] 
@@ -217,19 +167,24 @@ class VirtualNetworks:
 
         if len(build_data) > 1:
             patched = self.main_bp.patch_virtual_networks_csv_bulk('\n'.join(build_data))
-            self.logger.warning(f"migrate_virtual_networks {patched=} {patched.content=}")
+            # TODO: WARNING
+            await self.sse_logging(f"migrate_virtual_networks {patched=} {patched.content=}")
             task_id = patched.json()['task_id']
             max_wait = 30
             for i in range(max_wait):
-                task_state = self.main_bp.get_item(f"tasks/{task_id}")                
-                self.logger.warning(f"{task_state['status']=}")
+                task_state = self.main_bp.get_item(f"tasks/{task_id}")   
+                # TODO: WARNING  
+                await self.sse_logging(f"{task_state['status']=}")
                 if task_state['status'] != 'in_progress':
                     break
-                self.logger.warning(f"Waiting for the task to finish {i}/{max_wait}")
+                # TODO: WARNING
+                await self.sse_logging(f"Waiting for the task to finish {i}/{max_wait}")
                 time.sleep(3)  # should block and wait. should NOT use asyncio.sleep
-            self.logger.warning(f"task succeeded")
+            # TODO: WARNING
+            await self.sse_logging(f"task succeeded")
         else:
-            self.logger.warning("no change")
+            # TODO: WARNING
+            await self.sse_logging("no change")
         
         main_vn_nodes_query = f"""match(
             node('virtual_network', name='vn').in_('member_vns').node('security_zone', name='rz'),
@@ -251,7 +206,7 @@ class VirtualNetworks:
                     self.bound_to[k] = v
 
         # await self.queue_render()
-        await self.render_all(self.bound_to)
+        await self.render_all()
 
         await global_store.migration_status.set_vn_done(True)
         # await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_VN).done()).send()

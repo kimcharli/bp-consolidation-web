@@ -8,7 +8,7 @@
 
     <link href="/css/style.css" rel="stylesheet" />
 
-    <script src="/js/dexie.js"></script>
+    <!-- <script src="/js/dexie.js"></script> -->
     <script src="/js/main.js"></script>
     <script src="/js/htmx.min.js"></script>
 </head>
@@ -20,7 +20,7 @@
             <div id="load-env-div" class="data-state" style="padding-left: 6px;padding-right: 6px;font-family: Arial;font-size: 14px;" data-state="init">
                 Load
                 <img id="disconnect" src="/images/trash.svg" alt="trash env" align="right" hx-get="/disconnect" hx-target="#last-message"/>
-                <a href="/static/env-example.yml" download="env-example.yml"><img src="/images/download.svg" align="right" /></a>
+                <a href="/static/env-example.json" download="env-example.json"><img src="/images/download.svg" align="right" /></a>
                 <img id="upload-env-ini-img" src="/images/upload.svg" alt="Upload ini" align="right" onclick="document.getElementById('upload-env-ini-input').click()"/><input type="file" id="upload-env-ini-input" name="file"  hx-encoding="multipart/form-data" hx-post="/upload-env-ini" hx-target="#last-message" hx-trigger="change" style="display: none;">
                 
                 <!-- <form hx-encoding="multipart/form-data" hx-post="/upload-env-ini" hx-target="#last-message" > -->
@@ -63,6 +63,10 @@
 
     <div class="container">
 
+        <section id="event-box" class="event-box">
+            <pre id="event-box-text"></pre>
+        </section>
+
         <header class="header">
             <table class="no-border">
                 <tr class="no-border">
@@ -92,14 +96,15 @@
 
 
         <div id="main_bp" class="main-blueprint data-state" data-id data-state="init">
-            M
+            
         </div>
 
 
-        <div class="tor-blueprint">
-            <select id="tor_bp" name="tor-bp" class="tor-blueprint data-state" data-id data-state="init" hx-get="/login-tor-bp" hx-target="#last-message">
-                <!-- <option value="0">T</option> -->
+        <div class="tor-blueprint data-state" data-id data-state="init">
+            <select id="tor_bp_select" name="tor-bp" class="tor-blueprin" hx-get="/login-tor-bp" hx-target="#last-message">
+                <option value="">choose tor blueprint</option>
             </select>
+            <label id="tor_bp" class="data-state" data-state="init">ToR Blueprint: </label>    <!-- <option value="0">T</option> -->
         </div>
 
 

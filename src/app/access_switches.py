@@ -3,10 +3,9 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 import time
 import json
+import asyncio
 
-from .ck_global import SseEvent, SseEventData
-
-from ck_apstra_api.apstra_blueprint import CkEnum
+from .ck_global import SseEvent, SseEventData, SseEventEnum, sse_logging
 
 
 
@@ -46,6 +45,12 @@ class AccessSwitcheWorker:
     def tor_gs(self):
         return self.global_store.tor_gs
 
+    async def sse_logging(self, text: str):
+        await sse_logging(text, self.logger)
+
+    async def remove(self):
+        await SseEvent(data=SseEventData(id=SseEventEnum.BUTTON_MIGRATE_AS).init()).send()
+        return
 
     def build_switch_pair_spec(self) -> dict:
         '''
@@ -101,16 +106,16 @@ class AccessSwitcheWorker:
         # ATL-AS-LOOPBACK with 10.29.8.0/22
         
         if len([x for x in self.global_store.access_switches.values() if x.main_id is not None]):
-            logging.info(f"create_new_access_switch_pair: access switches are already created")
+            await self.sse_logging(f"create_new_access_switch_pair: access switches are already created")
             return
         # main_bp = self.main_bp
         switch_pair_spec = self.build_switch_pair_spec()
 
         REDUNDANCY_GROUP = 'redundancy_group'
         
-        self.logger.info(f"create_new_access_switch_pair: {switch_pair_spec['links']=}")
+        await self.sse_logging(f"create_new_access_switch_pair: {switch_pair_spec['links']=}")
         access_switch_pair_created = self.main_bp.add_generic_system(switch_pair_spec)
-        logging.info(f"{access_switch_pair_created=}")
+        await self.sse_logging(f"{access_switch_pair_created=}")
 
         # wait for the new system to be created
         while True:
@@ -123,7 +128,7 @@ class AccessSwitcheWorker:
             # There should be 5 links (including the peer link)
             if len(new_systems) == 2:
                 break
-            logging.info(f"Waiting for new systems to be created: {len(new_systems)=}")
+            await self.sse_logging(f"Waiting for new systems to be created: {len(new_systems)=}")
             time.sleep(3)
 
         # The first entry is the peer link
@@ -144,7 +149,7 @@ class AccessSwitcheWorker:
             elif given_label[-1] == '2':
                 new_label = self.access_switch_pair[1]
             else:
-                logging.info(f"skipp chaning name {given_label=}")
+                await self.sse_logging(f"skipp chaning name {given_label=}")
                 continue
             self.main_bp.patch_node_single(
                 leaf['leaf']['id'], 
@@ -162,7 +167,7 @@ class AccessSwitcheWorker:
                 self.global_store.access_switches[access_label].main_id = main_id
             if len([x for x in self.global_store.access_switches.values() if x.main_id is not None]) == 2:
                 break
-            self.logger.info(f"create_new_access_switch_pair: Waiting for access switches to be created: {i}/10")
+            await self.sse_logging(f"create_new_access_switch_pair: Waiting for access switches to be created: {i}/10")
             time.sleep(3)
 
         await SseEvent(data=SseEventData(id='access1-box').visible().done()).send()
@@ -184,12 +189,12 @@ class AccessSwitcheWorker:
         remove the generic system (links)
         Return True if the generic system is removed
         """
-        self.logger.info('remove_tor_gs_from_main - begin {self.tor_gs=}')
+        await self.sse_logging('remove_tor_gs_from_main - begin {self.tor_gs=}')
         if not self.tor_gs.tor_id:
-            self.logger.info(f"tor_gs_id is absent. No need to remove")
+            await self.sse_logging(f"tor_gs_id is absent. No need to remove")
             return True
         if not self.tor_gs.ae_id:
-            self.logger.error(f"tor_gs.ae_id is absent, but tor_gs.id is present. Something wrong")
+            await self.sse_logging(f"tor_gs.ae_id is absent, but tor_gs.id is present. Something wrong")
             return False
         # main_bp = self.global_store.bp['main_bp']
 
@@ -197,13 +202,13 @@ class AccessSwitcheWorker:
         
         # remove the connectivity templates assigned to the generic system
         cts_to_remove = self.main_bp.get_interface_cts(self.tor_gs.ae_id)
-        logging.info(f"remove_tor_gs_from_main - {len(cts_to_remove)=}")
+        await self.sse_logging(f"remove_tor_gs_from_main - {len(cts_to_remove)=}")
 
         # damping CTs in chunks
         while len(cts_to_remove) > 0:
             throttle_number = 50
             cts_chunk = cts_to_remove[:throttle_number]
-            self.logger.info(f"Removing Connecitivity Templates on this links: {len(cts_chunk)=}")
+            await self.sse_logging(f"Removing Connecitivity Templates on this links: {len(cts_chunk)=}")
             batch_ct_spec = {
                 "operations": [
                     {
@@ -241,11 +246,12 @@ class AccessSwitcheWorker:
             if_generic_system_present = self.main_bp.query(f"node('system', label='{self.tor_gs.label}')")
             if len(if_generic_system_present) == 0:
                 break
-            logging.info(f"{if_generic_system_present=}")
+            await sse_logging(f"{if_generic_system_present=}")
             time.sleep(3)
         # the generic system is gone.            
         await SseEvent(data=SseEventData(id='access-gs-label').hidden()).send()
         await SseEvent(data=SseEventData(id='access-gs-box').hidden()).send()
+        await asyncio.sleep(3)
 
         return
 

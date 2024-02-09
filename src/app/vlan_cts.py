@@ -5,7 +5,7 @@ from typing import Any
 
 from ck_apstra_api.apstra_blueprint import CkEnum
 
-from .ck_global import CtEnum, DataStateEnum, SseEvent, SseEventEnum, SseEventData, global_store
+from .ck_global import CtEnum, DataStateEnum, SseEvent, SseEventEnum, SseEventData, sse_logging
 
 
 @dataclass
@@ -32,7 +32,12 @@ interface_vlan_query = f"""match(
 class CtWorker:
     global_store: Any
 
-    def sync_tor_ct(self) -> dict:
+    logger: Any = logging.getLogger("CtWorker") 
+
+    async def sse_logging(self, text: str):
+        await sse_logging(text, self.logger)
+
+    async def sync_tor_ct(self) -> dict:
         """
         Pull the single vlan cts for the switch pair
         """
@@ -42,9 +47,9 @@ class CtWorker:
         switch_label_pair = global_store.access_switch_pair
         the_bp = global_store.bp['tor_bp']
 
-        logging.info(f"sync_tor_ct begin {the_bp.label=} {switch_label_pair=}")
+        await self.sse_logging(f"sync_tor_ct begin {the_bp.label=} {switch_label_pair=}")
         interface_vlan_nodes = the_bp.query(interface_vlan_query)
-        logging.info(f"sync_tor_ct BP:{the_bp.label} {len(interface_vlan_nodes)=}")
+        await self.sse_logging(f"sync_tor_ct BP:{the_bp.label} {len(interface_vlan_nodes)=}")
         # why so many (3172) entries?
 
         for nodes in interface_vlan_nodes:
@@ -59,7 +64,7 @@ class CtWorker:
 
         return {}
 
-    def sync_main_ct(self):
+    async def sync_main_ct(self):
         """
         Refresh the single vlan cts for the switch pair
         """
@@ -72,7 +77,7 @@ class CtWorker:
         # get the data from main blueprint
         interface_vlan_nodes = the_bp.query(interface_vlan_query)
         if len(interface_vlan_nodes) == 0:
-            logging.info(f"sync_main_ct: no data for {the_bp.label=} {switch_label_pair=}")
+            await self.sse_logging(f"sync_main_ct: no data for {the_bp.label=} {switch_label_pair=}")
             return {}
 
         for nodes in interface_vlan_nodes:
@@ -154,7 +159,7 @@ class CtWorker:
                         continue
                     tagged_ct_nodes = [x for x in ct_vlan_nodes if x[CtEnum.VN_NODE]['vn_id'] == str(vn_id) and 'vlan_tagged' in x[CtEnum.SINGLE_VLAN_NODE]['attributes']]
                     if len(tagged_ct_nodes) == 0:
-                        logging.info(f"migrate_connectivity_templates: no tagged vlan ct for {vn_id=} ####")
+                        await self.sse_logging(f"migrate_connectivity_templates: no tagged vlan ct for {vn_id=} ####")
                         continue
                     ct_id = tagged_ct_nodes[0][CtEnum.CT_NODE]['id']
                     ct_data.new_ct_id = ct_id
@@ -164,16 +169,20 @@ class CtWorker:
                         continue
                     untagged_ct_nodes = [x for x in ct_vlan_nodes if x[CtEnum.VN_NODE]['vn_id'] == str(vn_id) and 'untagged' in x[CtEnum.SINGLE_VLAN_NODE]['attributes']]
                     if len(untagged_ct_nodes) == 0:
-                        logging.info(f"migrate_connectivity_templates: no untagged vlan ct for {vn_id=} ####")
+                        await self.sse_logging(f"migrate_connectivity_templates: no untagged vlan ct for {vn_id=} ####")
                         break
                     ct_id = untagged_ct_nodes[0][CtEnum.CT_NODE]['id']
                     ct_data.new_ct_id = ct_id
                     ct_data_queue.append(ct_data)
                 total_cts = len(ct_data_queue)
                 while len(ct_data_queue) > 0:
+                    if self.global_store.stop_signal:
+                        self.sse_logging(f"migrate_connectivity_templates: stop signal received")
+                        return
                     throttle_number = 50
                     cts_chunk = ct_data_queue[:throttle_number]
                     interface_id = ae_data.new_ae_id if ae_data.new_ae_id else [x for x in ae_data.links.values()][0].new_switch_intf_id
+                    await self.sse_logging(f"migrate_connectivity_templates: doing batch {len(cts_chunk)=}")
                     batch_ct_spec = {
                         "operations": [
                             {
@@ -192,7 +201,7 @@ class CtWorker:
                     }
                     batch_result = main_bp.batch(batch_ct_spec, params={"comment": "batch-api"})
                     if batch_result.status_code != 201:
-                        logging.info(f"migrate_connectivity_templates: {ae_data=} {len(cts_chunk)=} {batch_ct_spec=} {batch_result=} {batch_result.content=}")
+                        await self.sse_logging(f"migrate_connectivity_templates: {ae_data=} {len(cts_chunk)=} {batch_ct_spec=} {batch_result=} {batch_result.content=}")
                     del ct_data_queue[:throttle_number]
                     cell_state = DataStateEnum.DONE if ae_data.is_ct_done else DataStateEnum.INIT
 

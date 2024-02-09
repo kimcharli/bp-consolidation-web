@@ -6,13 +6,21 @@ console.log('eventSource', eventSource);
 
 eventSource.addEventListener('data-state', (event) => {
     const data = JSON.parse(event.data);
-    const date = new Date();
-    const timestamp = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-    console.log(`sse data-state at ${timestamp} data=${data}`)
+    // const date = new Date();
+    // const timestamp = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+    // console.log(`sse data-state at ${timestamp} data=${data}`)
     let target = document.getElementById(data.id);
     // console.log('sse data-state', target)
     try {
-        if (data.element !== null) {
+        if (data.do_remove !== null) {
+            target.remove();
+        } else if (data.just_value !== null) {
+            target.value = data.just_value;
+        } else if (data.add_text !== null && data.add_text !== '') {
+            target.innerHTML += data.add_text;
+            const p = target.parentElement;
+            p.scrollTop = p.scrollHeight;
+        } else if (data.element !== null) {
             const newElement = document.createElement(data.element);
             target.appendChild(newElement);
             // newElement.innerHTML = data.value;
@@ -35,7 +43,7 @@ eventSource.addEventListener('data-state', (event) => {
 
 eventSource.addEventListener('tbody-gs', (event) => {
     const data = JSON.parse(event.data);
-    console.log('sse tbody-gs', data)
+    // console.log('sse tbody-gs', data)
     const the_table = document.getElementById('generic-systems-table');
     let tbody = document.getElementById(data.id);
     if ( tbody == null ) {
@@ -66,20 +74,4 @@ eventSource.addEventListener('update-vn', (event) => {
     // window.scrollTo(0, document.body.scrollHeight);
 });        
 
-
-
-// window.addEventListener("load", (event) => {
-//     console.log("page is fully loaded");
-
-
-//     // const uploadFileButton = new UploadFileButton();
-//     console.log('added syncStateButton')
-//     const migrateAccessSwitchesButton = new MigrateAccessSwitchesButton();
-//     const migrateGenericSystemsButton = new MigrateGenericSystemsButton();
-//     // const migrateVirtualNetworksButtion = new MigrateVirtualNetworksButton();
-//     // const migrateCTsButton = new MigrateCTsButton();
-//     const compareConfigsButton = new CompareConfigsButton();
-//     // CkIDB.openDB(connectButton);
-
-// });
 
