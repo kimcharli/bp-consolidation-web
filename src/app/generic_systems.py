@@ -809,7 +809,8 @@ class GenericSystemWorker():
                 is_all_done = False
         if is_all_done:
             await self.global_store.migration_status.set_gs_done(True)
-        
+        else:
+            await SseEvent(SseEventData(id=SseEventEnum.BUTTON_MIGRATE_GS).init()).send()
         return
 
 

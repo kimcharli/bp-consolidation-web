@@ -12,9 +12,9 @@ from ck_apstra_api.apstra_blueprint import CkApstraBlueprint, CkEnum
 
 sse_queue = asyncio.Queue()
 
-def get_timestamp() -> str:
-    timestamp = datetime.now().strftime('%H:%M:%S:%f')
-    return timestamp
+# def get_timestamp() -> str:
+#     timestamp = datetime.now().strftime('%H:%M:%S:%f')
+#     return timestamp
 
 class DataStateEnum(StrEnum):
     LOADED = 'done'
@@ -141,7 +141,7 @@ async def sse_logging(text, logger=None):
         logger.info(text)
     else:
         logging.info(text)
-    await SseEvent(data=SseEventData(id='event-box-text', add_text=f"{get_timestamp()} {text}\n")).send()
+    await SseEvent(data=SseEventData(id='event-box-text', add_text=f"{datetime.now():%H:%M:%S:%f} {text}\n")).send()
 
 @dataclass
 class MigrationStatus:
